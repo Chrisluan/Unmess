@@ -286,6 +286,8 @@ const messages = {
           quickAnswers: "Quick Answers",
           queues: "Queues",
           administration: "Administration",
+          superAdmin: "Company Management",
+          companies: "Companies",
           users: "Users",
           settings: "Settings",
         },
@@ -315,6 +317,64 @@ const messages = {
           deleteMessage:
             "Are you sure? It cannot be reverted! Tickets in this queue will still exist, but will not have any queues assigned.",
         },
+      },
+      companies: {
+        title: "Companies",
+        table: {
+          name: "Name",
+          document: "Document",
+          email: "Email",
+          plan: "Plan",
+          status: "Status",
+          actions: "Actions",
+        },
+        buttons: {
+          add: "Add company",
+        },
+        status: {
+          active: "Active",
+          suspended: "Suspended",
+          canceled: "Canceled",
+        },
+        confirmationModal: {
+          deleteTitle: "Delete",
+          deleteMessage:
+            "Are you sure? It cannot be reverted! You can only delete companies with no users linked to them.",
+        },
+        toasts: {
+          deleted: "Company deleted successfully!",
+        },
+      },
+      companyModal: {
+        title: {
+          add: "Add Company",
+          edit: "Edit Company",
+        },
+        form: {
+          companyData: "Company Data",
+          name: "Name",
+          document: "Document",
+          email: "Email",
+          phone: "Phone",
+          plan: "Plan",
+          planBasic: "Basic",
+          planPro: "Pro",
+          planEnterprise: "Enterprise",
+          status: "Status",
+          statusActive: "Active",
+          statusSuspended: "Suspended",
+          statusCanceled: "Canceled",
+          adminData: "Admin User",
+          adminName: "Admin name",
+          adminEmail: "Admin email",
+          adminPassword: "Admin password",
+        },
+        buttons: {
+          okAdd: "Add",
+          okEdit: "Save",
+          cancel: "Cancel",
+        },
+        success: "Company saved successfully!",
       },
       queueSelect: {
         inputLabel: "Queues",
@@ -445,6 +505,11 @@ const messages = {
           "User creation was disabled by administrator.",
         ERR_NO_PERMISSION: "You don't have permission to access this resource.",
         ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
+        ERR_NO_COMPANY_FOUND: "No company found with this ID.",
+        ERR_DUPLICATED_COMPANY_DOCUMENT:
+          "A company with this document already exists.",
+        ERR_COMPANY_HAS_USERS:
+          "Cannot delete a company that still has users linked to it.",
         ERR_NO_SETTING_FOUND: "No setting found with this ID.",
         ERR_NO_CONTACT_FOUND: "No contact found with this ID.",
         ERR_NO_TICKET_FOUND: "No ticket found with this ID.",

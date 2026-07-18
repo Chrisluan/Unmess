@@ -15,6 +15,7 @@ import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
+import BusinessOutlinedIcon from "@material-ui/icons/BusinessOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -125,6 +126,23 @@ const MainListItems = (props) => {
               to="/settings"
               primary={i18n.t("mainDrawer.listItems.settings")}
               icon={<SettingsOutlinedIcon />}
+            />
+          </>
+        )}
+      />
+      <Can
+        role={user.profile}
+        perform="drawer-super-items:view"
+        yes={() => (
+          <>
+            <Divider />
+            <ListSubheader inset>
+              {i18n.t("mainDrawer.listItems.superAdmin")}
+            </ListSubheader>
+            <ListItemLink
+              to="/companies"
+              primary={i18n.t("mainDrawer.listItems.companies")}
+              icon={<BusinessOutlinedIcon />}
             />
           </>
         )}

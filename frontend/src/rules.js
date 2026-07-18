@@ -14,6 +14,10 @@ const rules = {
 			"contacts-page:deleteContact",
 		],
 	},
+
+	super: {
+		static: ["drawer-super-items:view"],
+	},
 };
 
 export default rules;

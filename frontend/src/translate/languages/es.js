@@ -290,6 +290,8 @@ const messages = {
           quickAnswers: "Respuestas rápidas",
           queues: "Linhas",
           administration: "Administración",
+          superAdmin: "Gestión de Empresas",
+          companies: "Empresas",
           users: "Usuarios",
           settings: "Configuración",
         },
@@ -319,6 +321,64 @@ const messages = {
           deleteMessage:
             "¿Estás seguro? ¡Esta acción no se puede revertir! Los tickets en esa cola seguirán existiendo, pero ya no tendrán ninguna cola asignada.",
         },
+      },
+      companies: {
+        title: "Empresas",
+        table: {
+          name: "Nombre",
+          document: "Documento",
+          email: "Correo",
+          plan: "Plan",
+          status: "Estado",
+          actions: "Acciones",
+        },
+        buttons: {
+          add: "Agregar empresa",
+        },
+        status: {
+          active: "Activa",
+          suspended: "Suspendida",
+          canceled: "Cancelada",
+        },
+        confirmationModal: {
+          deleteTitle: "Eliminar",
+          deleteMessage:
+            "¿Estás seguro? ¡Esta acción no se puede revertir! Solo se pueden eliminar empresas sin usuarios vinculados.",
+        },
+        toasts: {
+          deleted: "¡Empresa eliminada con éxito!",
+        },
+      },
+      companyModal: {
+        title: {
+          add: "Agregar Empresa",
+          edit: "Editar Empresa",
+        },
+        form: {
+          companyData: "Datos de la Empresa",
+          name: "Nombre",
+          document: "Documento",
+          email: "Correo",
+          phone: "Teléfono",
+          plan: "Plan",
+          planBasic: "Básico",
+          planPro: "Profesional",
+          planEnterprise: "Enterprise",
+          status: "Estado",
+          statusActive: "Activa",
+          statusSuspended: "Suspendida",
+          statusCanceled: "Cancelada",
+          adminData: "Usuario Administrador",
+          adminName: "Nombre del administrador",
+          adminEmail: "Correo del administrador",
+          adminPassword: "Contraseña del administrador",
+        },
+        buttons: {
+          okAdd: "Agregar",
+          okEdit: "Guardar",
+          cancel: "Cancelar",
+        },
+        success: "¡Empresa guardada con éxito!",
       },
       queueSelect: {
         inputLabel: "Linhas",
@@ -451,6 +511,11 @@ const messages = {
           "La creación de usuarios fue deshabilitada por el administrador.",
         ERR_NO_PERMISSION: "No tienes permiso para acceder a este recurso.",
         ERR_DUPLICATED_CONTACT: "Ya existe un contacto con este número.",
+        ERR_NO_COMPANY_FOUND: "No se encontró ninguna empresa con este ID.",
+        ERR_DUPLICATED_COMPANY_DOCUMENT:
+          "Ya existe una empresa registrada con este documento.",
+        ERR_COMPANY_HAS_USERS:
+          "No se puede eliminar una empresa que todavía tiene usuarios vinculados.",
         ERR_NO_SETTING_FOUND:
           "No se encontró ninguna configuración con este ID.",
         ERR_NO_CONTACT_FOUND: "No se encontró ningún contacto con este ID.",
