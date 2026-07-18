@@ -25,7 +25,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const { quickAnswers, count, hasMore } = await ListQuickAnswerService({
     searchParam,
-    pageNumber
+    pageNumber,
+    companyId: req.user.companyId
   });
 
   return res.json({ quickAnswers, count, hasMore });
@@ -46,11 +47,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   const quickAnswer = await CreateQuickAnswerService({
-    ...newQuickAnswer
+    ...newQuickAnswer,
+    companyId: req.user.companyId
   });
 
   const io = getIO();
-  io.emit("quickAnswer", {
+  io.to(`company-${req.user.companyId}`).emit("quickAnswer", {
     action: "create",
     quickAnswer
   });
@@ -61,7 +63,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { quickAnswerId } = req.params;
 
-  const quickAnswer = await ShowQuickAnswerService(quickAnswerId);
+  const quickAnswer = await ShowQuickAnswerService(
+    quickAnswerId,
+    req.user.companyId
+  );
 
   return res.status(200).json(quickAnswer);
 };
@@ -87,11 +92,12 @@ export const update = async (
 
   const quickAnswer = await UpdateQuickAnswerService({
     quickAnswerData,
-    quickAnswerId
+    quickAnswerId,
+    companyId: req.user.companyId
   });
 
   const io = getIO();
-  io.emit("quickAnswer", {
+  io.to(`company-${req.user.companyId}`).emit("quickAnswer", {
     action: "update",
     quickAnswer
   });
@@ -105,10 +111,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { quickAnswerId } = req.params;
 
-  await DeleteQuickAnswerService(quickAnswerId);
+  await DeleteQuickAnswerService(quickAnswerId, req.user.companyId);
 
   const io = getIO();
-  io.emit("quickAnswer", {
+  io.to(`company-${req.user.companyId}`).emit("quickAnswer", {
     action: "delete",
     quickAnswerId
   });

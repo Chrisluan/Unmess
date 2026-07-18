@@ -2,11 +2,16 @@ import faker from "faker";
 import AppError from "../../../errors/AppError";
 import AuthUserService from "../../../services/UserServices/AuthUserService";
 import CreateUserService from "../../../services/UserServices/CreateUserService";
+import Company from "../../../models/Company";
 import { disconnect, truncate } from "../../utils/database";
 
 describe("Auth", () => {
+  let companyId: number;
+
   beforeEach(async () => {
     await truncate();
+    const company = await Company.create({ name: faker.company.companyName() });
+    companyId = company.id;
   });
 
   afterEach(async () => {
@@ -24,7 +29,8 @@ describe("Auth", () => {
     await CreateUserService({
       name: faker.name.findName(),
       email,
-      password
+      password,
+      companyId
     });
 
     const response = await AuthUserService({
@@ -52,7 +58,8 @@ describe("Auth", () => {
     await CreateUserService({
       name: faker.name.findName(),
       email: "mail@test.com",
-      password: faker.internet.password()
+      password: faker.internet.password(),
+      companyId
     });
 
     try {

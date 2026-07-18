@@ -4,6 +4,7 @@ import Setting from "../../models/Setting";
 interface Response {
   key: string;
   value: string;
+  companyId: number;
 }
 const ListSettingByKeyService = async (
   value: string
@@ -16,7 +17,7 @@ const ListSettingByKeyService = async (
     throw new AppError("ERR_NO_API_TOKEN_FOUND", 404);
   }
 
-  return { key: settings.key, value: settings.value };
+  return { key: settings.key, value: settings.value, companyId: settings.companyId };
 };
 
 export default ListSettingByKeyService;

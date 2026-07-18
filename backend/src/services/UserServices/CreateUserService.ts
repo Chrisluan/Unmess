@@ -11,6 +11,7 @@ interface Request {
   queueIds?: number[];
   profile?: string;
   whatsappId?: number;
+  companyId: number;
 }
 
 interface Response {
@@ -18,6 +19,7 @@ interface Response {
   name: string;
   id: number;
   profile: string;
+  companyId: number;
 }
 
 const CreateUserService = async ({
@@ -26,7 +28,8 @@ const CreateUserService = async ({
   name,
   queueIds = [],
   profile = "admin",
-  whatsappId
+  whatsappId,
+  companyId
 }: Request): Promise<Response> => {
   const schema = Yup.object().shape({
     name: Yup.string().required().min(2),
@@ -39,7 +42,7 @@ const CreateUserService = async ({
         async value => {
           if (!value) return false;
           const emailExists = await User.findOne({
-            where: { email: value }
+            where: { email: value, companyId }
           });
           return !emailExists;
         }
@@ -59,6 +62,7 @@ const CreateUserService = async ({
       password,
       name,
       profile,
+      companyId,
       whatsappId: whatsappId ? whatsappId : null
     },
     { include: ["queues", "whatsapp"] }

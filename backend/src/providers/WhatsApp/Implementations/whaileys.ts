@@ -1058,7 +1058,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
         const updatedWhatsapp = await Whatsapp.findByPk(sessionId);
         if (updatedWhatsapp) {
-          io.emit("whatsappSession", {
+          io.to(`company-${updatedWhatsapp.companyId}`).emit("whatsappSession", {
             action: "update",
             session: updatedWhatsapp
           });
@@ -1081,7 +1081,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
         const updatedWhatsapp = await Whatsapp.findByPk(sessionId);
         if (updatedWhatsapp) {
-          io.emit("whatsappSession", {
+          io.to(`company-${updatedWhatsapp.companyId}`).emit("whatsappSession", {
             action: "update",
             session: updatedWhatsapp
           });
@@ -1098,7 +1098,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         await flushPendingCredsSave(sessionId);
 
         await whatsapp.update({ status: "OPENING" });
-        io.emit("whatsappSession", {
+        io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
           action: "update",
           session: whatsapp
         });
@@ -1124,7 +1124,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
       const updatedWhatsapp = await Whatsapp.findByPk(sessionId);
       if (updatedWhatsapp) {
-        io.emit("whatsappSession", {
+        io.to(`company-${updatedWhatsapp.companyId}`).emit("whatsappSession", {
           action: "update",
           session: updatedWhatsapp
         });
@@ -1139,7 +1139,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         status: "qrcode"
       });
 
-      io.emit("whatsappSession", {
+      io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
         action: "update",
         session: whatsapp
       });
@@ -1227,7 +1227,7 @@ const logout = async (sessionId: number): Promise<void> => {
 
     const updatedWhatsapp = await Whatsapp.findByPk(sessionId);
     if (updatedWhatsapp) {
-      getIO().emit("whatsappSession", {
+      getIO().to(`company-${updatedWhatsapp.companyId}`).emit("whatsappSession", {
         action: "update",
         session: updatedWhatsapp
       });

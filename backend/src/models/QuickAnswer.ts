@@ -6,8 +6,11 @@ import {
   UpdatedAt,
   Model,
   PrimaryKey,
-  AutoIncrement
+  AutoIncrement,
+  ForeignKey,
+  BelongsTo
 } from "sequelize-typescript";
+import Company from "./Company";
 
 @Table
 class QuickAnswer extends Model<QuickAnswer> {
@@ -27,6 +30,13 @@ class QuickAnswer extends Model<QuickAnswer> {
 
   @UpdatedAt
   updatedAt: Date;
+
+  @ForeignKey(() => Company)
+  @Column
+  companyId: number;
+
+  @BelongsTo(() => Company)
+  company: Company;
 }
 
 export default QuickAnswer;

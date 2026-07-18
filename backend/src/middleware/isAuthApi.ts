@@ -25,6 +25,15 @@ const isAuthApi = async (
     if (getToken.value !== token) {
       throw new AppError("ERR_SESSION_EXPIRED", 401);
     }
+
+    // O token de API pertence a uma Setting de uma empresa específica.
+    // Injetamos o companyId no req.user para que o ApiController opere
+    // sempre no escopo correto da empresa dona do token.
+    req.user = {
+      id: "",
+      profile: "api",
+      companyId: getToken.companyId
+    };
   } catch (err) {
     console.log(err);
     throw new AppError(

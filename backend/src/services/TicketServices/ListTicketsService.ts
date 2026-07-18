@@ -17,6 +17,7 @@ interface Request {
   userId: string;
   withUnreadMessages?: string;
   queueIds: number[];
+  companyId: number;
 }
 
 interface Response {
@@ -33,9 +34,11 @@ const ListTicketsService = async ({
   date,
   showAll,
   userId,
-  withUnreadMessages
+  withUnreadMessages,
+  companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
+    companyId,
     [Op.or]: [{ userId }, { status: "pending" }],
     queueId: { [Op.or]: [queueIds, null] }
   };
@@ -60,7 +63,7 @@ const ListTicketsService = async ({
   ];
 
   if (showAll === "true") {
-    whereCondition = { queueId: { [Op.or]: [queueIds, null] } };
+    whereCondition = { companyId, queueId: { [Op.or]: [queueIds, null] } };
   }
 
   if (status) {
@@ -93,6 +96,7 @@ const ListTicketsService = async ({
 
     whereCondition = {
       ...whereCondition,
+      companyId,
       [Op.or]: [
         {
           "$contact.name$": where(
@@ -115,6 +119,7 @@ const ListTicketsService = async ({
 
   if (date) {
     whereCondition = {
+      companyId,
       createdAt: {
         [Op.between]: [+startOfDay(parseISO(date)), +endOfDay(parseISO(date))]
       }
@@ -126,6 +131,7 @@ const ListTicketsService = async ({
     const userQueueIds = user.queues.map(queue => queue.id);
 
     whereCondition = {
+      companyId,
       [Op.or]: [{ userId }, { status: "pending" }],
       queueId: { [Op.or]: [userQueueIds, null] },
       unreadMessages: { [Op.gt]: 0 }

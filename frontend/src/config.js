@@ -8,7 +8,7 @@ function getConfig(name, defaultValue = null) {
 }
 
 export function getBackendUrl() {
-  return getConfig("VITE_BACKEND_URL");
+  return getConfig("VITE_BACKEND_URL", "http://localhost:3000");
 }
 
 export function getHoursCloseTicketsAuto() {

@@ -37,10 +37,12 @@ interface ContactData {
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { companyId } = req.user;
 
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
-    pageNumber
+    pageNumber,
+    companyId
   });
 
   return res.json({ contacts, count, hasMore });
@@ -54,7 +56,8 @@ export const getContact = async (
 
   const contact = await GetContactService({
     name,
-    number
+    number,
+    companyId: req.user.companyId
   });
 
   return res.status(200).json(contact);
@@ -77,10 +80,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(newContact.number);
-  const validNumber: any = await CheckContactNumber(newContact.number);
+  await CheckIsValidContact(newContact.number, req.user.companyId);
+  const validNumber: any = await CheckContactNumber(
+    newContact.number,
+    req.user.companyId
+  );
 
-  const profilePicUrl = await GetProfilePicUrl(validNumber);
+  const profilePicUrl = await GetProfilePicUrl(validNumber, req.user.companyId);
 
   let name = newContact.name;
   let number = validNumber;
@@ -92,11 +98,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     number,
     email,
     extraInfo,
-    profilePicUrl
+    profilePicUrl,
+    companyId: req.user.companyId
   });
 
   const io = getIO();
-  io.emit("contact", {
+  io.to(`company-${req.user.companyId}`).emit("contact", {
     action: "create",
     contact
   });
@@ -107,7 +114,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { contactId } = req.params;
 
-  const contact = await ShowContactService(contactId);
+  const contact = await ShowContactService(contactId, req.user.companyId);
 
   return res.status(200).json(contact);
 };
@@ -132,14 +139,18 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(contactData.number);
+  await CheckIsValidContact(contactData.number, req.user.companyId);
 
   const { contactId } = req.params;
 
-  const contact = await UpdateContactService({ contactData, contactId });
+  const contact = await UpdateContactService({
+    contactData,
+    contactId,
+    companyId: req.user.companyId
+  });
 
   const io = getIO();
-  io.emit("contact", {
+  io.to(`company-${req.user.companyId}`).emit("contact", {
     action: "update",
     contact
   });
@@ -153,10 +164,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { contactId } = req.params;
 
-  await DeleteContactService(contactId);
+  await DeleteContactService(contactId, req.user.companyId);
 
   const io = getIO();
-  io.emit("contact", {
+  io.to(`company-${req.user.companyId}`).emit("contact", {
     action: "delete",
     contactId
   });

@@ -16,12 +16,13 @@ interface Request {
   email?: string;
   profilePicUrl?: string;
   extraInfo?: ExtraInfo[];
+  companyId: number;
 }
 
 const emitContact = (action: "update" | "create", contact: Contact) => {
   const io = getIO();
 
-  io.emit("contact", { action, contact });
+  io.to(`company-${contact.companyId}`).emit("contact", { action, contact });
 };
 
 const CreateOrUpdateContactService = async ({
@@ -31,14 +32,15 @@ const CreateOrUpdateContactService = async ({
   profilePicUrl,
   isGroup,
   email = "",
-  extraInfo = []
+  extraInfo = [],
+  companyId
 }: Request): Promise<Contact> => {
   const number = isGroup ? rawNumber : rawNumber.replace(/[^0-9]/g, "");
   if (!number && !lid) throw new Error("Either number or lid must be provided");
 
   const [contactByNumber, contactByLid] = await Promise.all([
-    number ? Contact.findOne({ where: { number } }) : null,
-    lid ? Contact.findOne({ where: { lid } }) : null
+    number ? Contact.findOne({ where: { number, companyId } }) : null,
+    lid ? Contact.findOne({ where: { lid, companyId } }) : null
   ]);
 
   const shouldMerge =
@@ -47,7 +49,7 @@ const CreateOrUpdateContactService = async ({
   if (shouldMerge) {
     await Ticket.update(
       { contactId: contactByNumber.id },
-      { where: { contactId: contactByLid.id } }
+      { where: { contactId: contactByLid.id, companyId } }
     );
 
     await contactByLid.destroy();
@@ -96,7 +98,8 @@ const CreateOrUpdateContactService = async ({
     profilePicUrl,
     email,
     isGroup,
-    extraInfo
+    extraInfo,
+    companyId
   });
 
   emitContact("create", created);

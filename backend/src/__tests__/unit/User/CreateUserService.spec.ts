@@ -1,11 +1,16 @@
 import faker from "faker";
 import AppError from "../../../errors/AppError";
 import CreateUserService from "../../../services/UserServices/CreateUserService";
+import Company from "../../../models/Company";
 import { disconnect, truncate } from "../../utils/database";
 
 describe("User", () => {
+  let companyId: number;
+
   beforeEach(async () => {
     await truncate();
+    const company = await Company.create({ name: faker.company.companyName() });
+    companyId = company.id;
   });
 
   afterEach(async () => {
@@ -20,7 +25,8 @@ describe("User", () => {
     const user = await CreateUserService({
       name: faker.name.findName(),
       email: faker.internet.email(),
-      password: faker.internet.password()
+      password: faker.internet.password(),
+      companyId
     });
 
     expect(user).toHaveProperty("id");
@@ -30,14 +36,16 @@ describe("User", () => {
     await CreateUserService({
       name: faker.name.findName(),
       email: "teste@sameemail.com",
-      password: faker.internet.password()
+      password: faker.internet.password(),
+      companyId
     });
 
     try {
       await CreateUserService({
         name: faker.name.findName(),
         email: "teste@sameemail.com",
-        password: faker.internet.password()
+        password: faker.internet.password(),
+        companyId
       });
     } catch (err) {
       expect(err).toBeInstanceOf(AppError);

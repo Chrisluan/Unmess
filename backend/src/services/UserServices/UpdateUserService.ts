@@ -16,6 +16,7 @@ interface UserData {
 interface Request {
   userData: UserData;
   userId: string | number;
+  companyId: number;
 }
 
 interface Response {
@@ -27,9 +28,14 @@ interface Response {
 
 const UpdateUserService = async ({
   userData,
-  userId
+  userId,
+  companyId
 }: Request): Promise<Response | undefined> => {
   const user = await ShowUserService(userId);
+
+  if (user.companyId !== companyId) {
+    throw new AppError("ERR_NO_PERMISSION", 403);
+  }
 
   const schema = Yup.object().shape({
     name: Yup.string().min(2),

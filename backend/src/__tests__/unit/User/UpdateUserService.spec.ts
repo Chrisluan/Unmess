@@ -2,11 +2,16 @@ import faker from "faker";
 import AppError from "../../../errors/AppError";
 import CreateUserService from "../../../services/UserServices/CreateUserService";
 import UpdateUserService from "../../../services/UserServices/UpdateUserService";
+import Company from "../../../models/Company";
 import { disconnect, truncate } from "../../utils/database";
 
 describe("User", () => {
+  let companyId: number;
+
   beforeEach(async () => {
     await truncate();
+    const company = await Company.create({ name: faker.company.companyName() });
+    companyId = company.id;
   });
 
   afterEach(async () => {
@@ -21,11 +26,13 @@ describe("User", () => {
     const newUser = await CreateUserService({
       name: faker.name.findName(),
       email: faker.internet.email(),
-      password: faker.internet.password()
+      password: faker.internet.password(),
+      companyId
     });
 
     const updatedUser = await UpdateUserService({
       userId: newUser.id,
+      companyId,
       userData: {
         name: "New name",
         email: "newmail@email.com"
@@ -43,16 +50,17 @@ describe("User", () => {
       email: faker.internet.email()
     };
 
-    expect(UpdateUserService({ userId, userData })).rejects.toBeInstanceOf(
-      AppError
-    );
+    expect(
+      UpdateUserService({ userId, userData, companyId })
+    ).rejects.toBeInstanceOf(AppError);
   });
 
   it("should not be able to updated an user with invalid data", async () => {
     const newUser = await CreateUserService({
       name: faker.name.findName(),
       email: faker.internet.email(),
-      password: faker.internet.password()
+      password: faker.internet.password(),
+      companyId
     });
 
     const userId = newUser.id;
@@ -61,8 +69,8 @@ describe("User", () => {
       email: "test.worgn.email"
     };
 
-    expect(UpdateUserService({ userId, userData })).rejects.toBeInstanceOf(
-      AppError
-    );
+    expect(
+      UpdateUserService({ userId, userData, companyId })
+    ).rejects.toBeInstanceOf(AppError);
   });
 });

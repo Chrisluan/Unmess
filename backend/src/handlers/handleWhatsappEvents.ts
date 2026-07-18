@@ -110,7 +110,8 @@ const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
 };
 
 const processVcardMessage = async (
-  messagePayload: MessagePayload
+  messagePayload: MessagePayload,
+  companyId: number
 ): Promise<void> => {
   if (messagePayload.type !== "vcard") return;
 
@@ -135,7 +136,8 @@ const processVcardMessage = async (
       phoneNumbers.map(({ number }) =>
         CreateContactService({
           name: contactName,
-          number: number.replace(/\D/g, "")
+          number: number.replace(/\D/g, ""),
+          companyId
         })
       )
     );
@@ -223,12 +225,16 @@ export const handleMessage = async (
   try {
     const processedMessage = processLocationMessage(messagePayload);
 
+    const whatsapp = await ShowWhatsAppService(contextPayload.whatsappId);
+    const { companyId } = whatsapp;
+
     const contact = await CreateOrUpdateContactService({
       name: contactPayload.name,
       number: contactPayload.number,
       lid: contactPayload.lid,
       profilePicUrl: contactPayload.profilePicUrl,
-      isGroup: contactPayload.isGroup
+      isGroup: contactPayload.isGroup,
+      companyId
     });
 
     let groupContact: Contact | undefined;
@@ -238,11 +244,11 @@ export const handleMessage = async (
         number: contextPayload.groupContact.number,
         lid: contextPayload.groupContact.lid,
         profilePicUrl: contextPayload.groupContact.profilePicUrl,
-        isGroup: contextPayload.groupContact.isGroup
+        isGroup: contextPayload.groupContact.isGroup,
+        companyId
       });
     }
 
-    const whatsapp = await ShowWhatsAppService(contextPayload.whatsappId);
     if (
       contextPayload.unreadMessages === 0 &&
       whatsapp.farewellMessage &&
@@ -291,7 +297,7 @@ export const handleMessage = async (
 
     await CreateMessageService({ messageData });
 
-    await processVcardMessage(processedMessage);
+    await processVcardMessage(processedMessage, ticket.companyId);
 
     if (
       !ticket.queue &&
@@ -336,6 +342,11 @@ export const handleMessageAck = async (
           model: Message,
           as: "quotedMsg",
           include: ["contact"]
+        },
+        {
+          model: Ticket,
+          as: "ticket",
+          attributes: ["id", "companyId"]
         }
       ]
     });
@@ -346,10 +357,12 @@ export const handleMessageAck = async (
 
     await messageToUpdate.update({ ack });
 
-    io.to(messageToUpdate.ticketId.toString()).emit("appMessage", {
-      action: "update",
-      message: messageToUpdate
-    });
+    io.to(`company-${messageToUpdate.ticket.companyId}`)
+      .to(messageToUpdate.ticketId.toString())
+      .emit("appMessage", {
+        action: "update",
+        message: messageToUpdate
+      });
   } catch (err) {
     Sentry.captureException(err);
     logger.error(`Error handling message ack: ${err}`);

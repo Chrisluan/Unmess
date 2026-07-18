@@ -19,7 +19,7 @@ interface WhatsappData {
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const whatsapps = await ListWhatsAppsService();
+  const whatsapps = await ListWhatsAppsService(req.user.companyId);
 
   return res.status(200).json(whatsapps);
 };
@@ -40,19 +40,20 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     isDefault,
     greetingMessage,
     farewellMessage,
-    queueIds
+    queueIds,
+    companyId: req.user.companyId
   });
 
   StartWhatsAppSession(whatsapp);
 
   const io = getIO();
-  io.emit("whatsapp", {
+  io.to(`company-${req.user.companyId}`).emit("whatsapp", {
     action: "update",
     whatsapp
   });
 
   if (oldDefaultWhatsapp) {
-    io.emit("whatsapp", {
+    io.to(`company-${req.user.companyId}`).emit("whatsapp", {
       action: "update",
       whatsapp: oldDefaultWhatsapp
     });
@@ -64,7 +65,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { whatsappId } = req.params;
 
-  const whatsapp = await ShowWhatsAppService(whatsappId);
+  const whatsapp = await ShowWhatsAppService(whatsappId, req.user.companyId);
 
   return res.status(200).json(whatsapp);
 };
@@ -78,17 +79,18 @@ export const update = async (
 
   const { whatsapp, oldDefaultWhatsapp } = await UpdateWhatsAppService({
     whatsappData,
-    whatsappId
+    whatsappId,
+    companyId: req.user.companyId
   });
 
   const io = getIO();
-  io.emit("whatsapp", {
+  io.to(`company-${req.user.companyId}`).emit("whatsapp", {
     action: "update",
     whatsapp
   });
 
   if (oldDefaultWhatsapp) {
-    io.emit("whatsapp", {
+    io.to(`company-${req.user.companyId}`).emit("whatsapp", {
       action: "update",
       whatsapp: oldDefaultWhatsapp
     });
@@ -103,11 +105,11 @@ export const remove = async (
 ): Promise<Response> => {
   const { whatsappId } = req.params;
 
-  await DeleteWhatsAppService(whatsappId);
+  await DeleteWhatsAppService(whatsappId, req.user.companyId);
   whatsappProvider.removeSession(+whatsappId);
 
   const io = getIO();
-  io.emit("whatsapp", {
+  io.to(`company-${req.user.companyId}`).emit("whatsapp", {
     action: "delete",
     whatsappId: +whatsappId
   });

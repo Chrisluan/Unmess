@@ -39,6 +39,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
+  const { companyId } = req.user;
 
   let queueIds: number[] = [];
 
@@ -54,7 +55,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     showAll,
     userId,
     queueIds,
-    withUnreadMessages
+    withUnreadMessages,
+    companyId
   });
 
   return res.status(200).json({ tickets, count, hasMore });
@@ -63,13 +65,20 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { contactId, status, userId }: TicketData = req.body;
 
-  const ticket = await CreateTicketService({ contactId, status, userId });
+  const ticket = await CreateTicketService({
+    contactId,
+    status,
+    userId,
+    companyId: req.user.companyId
+  });
 
   const io = getIO();
-  io.to(ticket.status).emit("ticket", {
-    action: "update",
-    ticket
-  });
+  io.to(`company-${req.user.companyId}`)
+    .to(ticket.status)
+    .emit("ticket", {
+      action: "update",
+      ticket
+    });
 
   return res.status(200).json(ticket);
 };
@@ -77,7 +86,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const contact = await ShowTicketService(ticketId);
+  const contact = await ShowTicketService(ticketId, req.user.companyId);
 
   return res.status(200).json(contact);
 };
@@ -91,7 +100,8 @@ export const update = async (
 
   const { ticket } = await UpdateTicketService({
     ticketData,
-    ticketId
+    ticketId,
+    companyId: req.user.companyId
   });
 
   if (ticket.status === "closed") {
@@ -116,13 +126,17 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const ticket = await DeleteTicketService(ticketId);
+  const ticket = await DeleteTicketService(ticketId, req.user.companyId);
 
   const io = getIO();
-  io.to(ticket.status).to(ticketId).to("notification").emit("ticket", {
-    action: "delete",
-    ticketId: +ticketId
-  });
+  io.to(`company-${req.user.companyId}`)
+    .to(ticket.status)
+    .to(ticketId)
+    .to("notification")
+    .emit("ticket", {
+      action: "delete",
+      ticketId: +ticketId
+    });
 
   return res.status(200).json({ message: "ticket deleted" });
 };

@@ -69,7 +69,8 @@ const FindOrCreateTicketService = async (
       status: "pending",
       isGroup: !!groupContact,
       unreadMessages,
-      whatsappId
+      whatsappId,
+      companyId: groupContact ? groupContact.companyId : contact.companyId
     });
   }
 

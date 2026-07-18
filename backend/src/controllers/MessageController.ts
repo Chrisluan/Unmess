@@ -27,7 +27,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   const { count, messages, ticket, hasMore } = await ListMessagesService({
     pageNumber,
-    ticketId
+    ticketId,
+    companyId: req.user.companyId
   });
 
   SetTicketMessagesAsRead(ticket);
@@ -40,7 +41,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { body, quotedMsg }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
 
-  const ticket = await ShowTicketService(ticketId);
+  const ticket = await ShowTicketService(ticketId, req.user.companyId);
 
   SetTicketMessagesAsRead(ticket);
 
@@ -63,13 +64,15 @@ export const remove = async (
 ): Promise<Response> => {
   const { messageId } = req.params;
 
-  const message = await DeleteWhatsAppMessage(messageId);
+  const message = await DeleteWhatsAppMessage(messageId, req.user.companyId);
 
   const io = getIO();
-  io.to(message.ticketId.toString()).emit("appMessage", {
-    action: "update",
-    message
-  });
+  io.to(`company-${req.user.companyId}`)
+    .to(message.ticketId.toString())
+    .emit("appMessage", {
+      action: "update",
+      message
+    });
 
   return res.send();
 };

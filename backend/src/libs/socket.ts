@@ -7,6 +7,15 @@ import authConfig from "../config/auth";
 
 let io: SocketIO;
 
+interface TokenPayload {
+  id: string;
+  username: string;
+  profile: string;
+  companyId: number;
+  iat: number;
+  exp: number;
+}
+
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
@@ -16,14 +25,21 @@ export const initIO = (httpServer: Server): SocketIO => {
 
   io.on("connection", socket => {
     const { token } = socket.handshake.query;
-    let tokenData = null;
+    let tokenData: TokenPayload | null = null;
     try {
-      tokenData = verify(token, authConfig.secret);
+      tokenData = verify(token, authConfig.secret) as TokenPayload;
       logger.debug(JSON.stringify(tokenData), "io-onConnection: tokenData");
     } catch (error) {
       logger.error(JSON.stringify(error), "Error decoding token");
       socket.disconnect();
       return io;
+    }
+
+    // Isola os eventos de cada socket na room da própria empresa (tenant),
+    // evitando que uma empresa receba eventos (tickets, contatos, etc.)
+    // de outra empresa através do mesmo servidor Socket.io compartilhado.
+    if (tokenData?.companyId) {
+      socket.join(`company-${tokenData.companyId}`);
     }
 
     logger.info("Client Connected");

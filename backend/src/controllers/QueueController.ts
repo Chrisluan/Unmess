@@ -7,7 +7,7 @@ import ShowQueueService from "../services/QueueService/ShowQueueService";
 import UpdateQueueService from "../services/QueueService/UpdateQueueService";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const queues = await ListQueuesService();
+  const queues = await ListQueuesService(req.user.companyId);
 
   return res.status(200).json(queues);
 };
@@ -15,10 +15,15 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { name, color, greetingMessage } = req.body;
 
-  const queue = await CreateQueueService({ name, color, greetingMessage });
+  const queue = await CreateQueueService({
+    name,
+    color,
+    greetingMessage,
+    companyId: req.user.companyId
+  });
 
   const io = getIO();
-  io.emit("queue", {
+  io.to(`company-${req.user.companyId}`).emit("queue", {
     action: "update",
     queue
   });
@@ -29,7 +34,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { queueId } = req.params;
 
-  const queue = await ShowQueueService(queueId);
+  const queue = await ShowQueueService(queueId, req.user.companyId);
 
   return res.status(200).json(queue);
 };
@@ -40,10 +45,10 @@ export const update = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
 
-  const queue = await UpdateQueueService(queueId, req.body);
+  const queue = await UpdateQueueService(queueId, req.body, req.user.companyId);
 
   const io = getIO();
-  io.emit("queue", {
+  io.to(`company-${req.user.companyId}`).emit("queue", {
     action: "update",
     queue
   });
@@ -57,10 +62,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
 
-  await DeleteQueueService(queueId);
+  await DeleteQueueService(queueId, req.user.companyId);
 
   const io = getIO();
-  io.emit("queue", {
+  io.to(`company-${req.user.companyId}`).emit("queue", {
     action: "delete",
     queueId: +queueId
   });

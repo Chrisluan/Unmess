@@ -451,7 +451,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     const args: string = process.env.CHROME_ARGS || "";
 
     const wbot: Session = new Client({
-      session: sessionCfg,
+      
       authStrategy: new LocalAuth({ clientId: `bd_${whatsapp.id}` }),
       puppeteer: {
         // headless: false, // TODO make sure chromium closes on session disconnection / delete
@@ -481,7 +481,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         sessions.push(wbot);
       }
 
-      io.emit("whatsappSession", {
+      io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
         action: "update",
         session: whatsapp
       });
@@ -505,7 +505,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         retries: whatsapp.retries + 1
       });
 
-      io.emit("whatsappSession", {
+      io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
         action: "update",
         session: whatsapp
       });
@@ -521,7 +521,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           retries: 0
         });
 
-        io.emit("whatsappSession", {
+        io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
           action: "update",
           session: whatsapp
         });
@@ -544,7 +544,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
       try {
         await whatsapp.update({ status: newState });
 
-        io.emit("whatsappSession", {
+        io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
           action: "update",
           session: whatsapp
         });
@@ -558,7 +558,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
       try {
         await whatsapp.update({ status: "OPENING", session: "" });
 
-        io.emit("whatsappSession", {
+        io.to(`company-${whatsapp.companyId}`).emit("whatsappSession", {
           action: "update",
           session: whatsapp
         });

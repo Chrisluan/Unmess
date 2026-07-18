@@ -11,6 +11,7 @@ import WhatsappQueue from "../models/WhatsappQueue";
 import UserQueue from "../models/UserQueue";
 import QuickAnswer from "../models/QuickAnswer";
 import WppKey from "../models/WppKey";
+import Company from "../models/Company";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -19,6 +20,7 @@ const dbConfig = require("../config/database");
 const sequelize = new Sequelize(dbConfig);
 
 const models = [
+  Company,
   User,
   Contact,
   Ticket,
