@@ -18,6 +18,7 @@ import Queue from "./Queue";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
 import Company from "./Company";
+import TicketStatus from "./TicketStatus";
 
 @Table
 class Ticket extends Model<Ticket> {
@@ -82,6 +83,19 @@ class Ticket extends Model<Ticket> {
 
   @BelongsTo(() => Company)
   company: Company;
+
+  @ForeignKey(() => TicketStatus)
+  @Column
+  closingStatusId: number;
+
+  @BelongsTo(() => TicketStatus)
+  closingStatus: TicketStatus;
+
+  @Column
+  firstResponseAt: Date;
+
+  @Column
+  closedAt: Date;
 }
 
 export default Ticket;

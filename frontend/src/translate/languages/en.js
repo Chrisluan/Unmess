@@ -49,6 +49,22 @@ const messages = {
           closed: {
             title: "Closed"
           }
+        },
+        metrics: {
+          avgFirstResponse: "Avg. first response time",
+          avgHandling: "Avg. handling time",
+          totalPeriod: "Total in period",
+          closed: "Closed",
+          byAgent: "Performance by agent",
+          byQueue: "Chats by queue",
+          byClosingStatus: "Closing reasons",
+          noData: "No closed chats with a defined status yet.",
+          table: {
+            agent: "Agent",
+            total: "Total",
+            avgFirstResponse: "First response",
+            avgHandling: "Handling",
+          },
         }
       },
       connections: {
@@ -207,6 +223,13 @@ const messages = {
           password: "Password",
           profile: "Profile",
           whatsapp: "Default Connection",
+          permissionGroup: "Permission group",
+        },
+        profiles: {
+          vendedor: "Salesperson",
+          producao: "Production",
+          instalacao: "Installation",
+          financeiro: "Finance",
         },
         buttons: {
           okAdd: "Add",
@@ -214,6 +237,51 @@ const messages = {
           cancel: "Cancel",
         },
         success: "User saved successfully.",
+      },
+      permissionGroups: {
+        title: "Team - Permission Groups",
+        table: {
+          name: "Name",
+          actions: "Actions",
+        },
+        buttons: {
+          add: "Add group",
+        },
+        confirmationModal: {
+          deleteTitle: "Delete",
+          deleteMessage:
+            "Are you sure? It cannot be reverted! You can only delete groups with no users linked to them.",
+        },
+        toasts: {
+          deleted: "Group deleted successfully!",
+        },
+      },
+      permissionGroupModal: {
+        title: {
+          add: "Add Permission Group",
+          edit: "Edit Permission Group",
+        },
+        form: {
+          name: "Group name",
+          permissions: "Permissions",
+        },
+        permissions: {
+          "chats:viewAll": "View all chats",
+          "chats:delete": "Delete chats",
+          "chats:transfer": "Transfer chats",
+          "customers:manage": "Manage customers",
+          "users:manage": "Manage users",
+          "queues:manage": "Manage queues",
+          "settings:manage": "Manage settings",
+          "reports:view": "View reports",
+          "financial:manage": "Manage financials",
+        },
+        buttons: {
+          okAdd: "Add",
+          okEdit: "Save",
+          cancel: "Cancel",
+        },
+        success: "Group saved successfully!",
       },
       chat: {
         noTicketMessage: "Select a ticket to start chatting.",
@@ -289,6 +357,7 @@ const messages = {
           superAdmin: "Company Management",
           companies: "Companies",
           users: "Users",
+          permissionGroups: "Team",
           settings: "Settings",
         },
         appBar: {

@@ -118,6 +118,11 @@ const MainListItems = (props) => {
               icon={<PeopleAltOutlinedIcon />}
             />
             <ListItemLink
+              to="/permission-groups"
+              primary={i18n.t("mainDrawer.listItems.permissionGroups")}
+              icon={<PeopleAltOutlinedIcon />}
+            />
+            <ListItemLink
               to="/queues"
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}

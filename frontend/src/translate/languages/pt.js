@@ -49,6 +49,22 @@ const messages = {
           closed: {
             title: "Finalizado"
           }
+        },
+        metrics: {
+          avgFirstResponse: "Tempo médio de 1ª resposta",
+          avgHandling: "Tempo médio de atendimento",
+          totalPeriod: "Total no período",
+          closed: "Finalizados",
+          byAgent: "Desempenho por atendente",
+          byQueue: "Chats por setor",
+          byClosingStatus: "Motivos de finalização",
+          noData: "Nenhum chat finalizado com status definido ainda.",
+          table: {
+            agent: "Atendente",
+            total: "Total",
+            avgFirstResponse: "1ª resposta",
+            avgHandling: "Atendimento",
+          },
         }
       },
       connections: {
@@ -209,6 +225,13 @@ const messages = {
           password: "Senha",
           profile: "Perfil",
           whatsapp: "Conexão Padrão",
+          permissionGroup: "Grupo de permissão",
+        },
+        profiles: {
+          vendedor: "Vendedor",
+          producao: "Produção",
+          instalacao: "Instalação",
+          financeiro: "Financeiro",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -216,6 +239,51 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Usuário salvo com sucesso.",
+      },
+      permissionGroups: {
+        title: "Equipe - Grupos de Permissão",
+        table: {
+          name: "Nome",
+          actions: "Ações",
+        },
+        buttons: {
+          add: "Adicionar grupo",
+        },
+        confirmationModal: {
+          deleteTitle: "Excluir",
+          deleteMessage:
+            "Você tem certeza? Essa ação não pode ser revertida! Só é possível excluir grupos que não possuam mais usuários vinculados.",
+        },
+        toasts: {
+          deleted: "Grupo excluído com sucesso!",
+        },
+      },
+      permissionGroupModal: {
+        title: {
+          add: "Adicionar Grupo de Permissão",
+          edit: "Editar Grupo de Permissão",
+        },
+        form: {
+          name: "Nome do grupo",
+          permissions: "Permissões",
+        },
+        permissions: {
+          "chats:viewAll": "Ver todos os chats",
+          "chats:delete": "Excluir chats",
+          "chats:transfer": "Transferir chats",
+          "customers:manage": "Gerenciar clientes",
+          "users:manage": "Gerenciar usuários",
+          "queues:manage": "Gerenciar setores",
+          "settings:manage": "Gerenciar configurações",
+          "reports:view": "Ver relatórios",
+          "financial:manage": "Gerenciar financeiro",
+        },
+        buttons: {
+          okAdd: "Adicionar",
+          okEdit: "Salvar",
+          cancel: "Cancelar",
+        },
+        success: "Grupo salvo com sucesso!",
       },
       chat: {
         noTicketMessage: "Selecione um ticket para começar a conversar.",
@@ -292,6 +360,7 @@ const messages = {
           superAdmin: "Gestão de Empresas",
           companies: "Empresas",
           users: "Usuários",
+          permissionGroups: "Equipe",
           settings: "Configurações",
         },
         appBar: {

@@ -11,6 +11,8 @@ interface UserData {
   profile?: string;
   queueIds?: number[];
   whatsappId?: number;
+  permissionGroupId?: number;
+  customPermissions?: { add?: string[]; remove?: string[] };
 }
 
 interface Request {
@@ -50,7 +52,9 @@ const UpdateUserService = async ({
     profile,
     name,
     queueIds = [],
-    whatsappId
+    whatsappId,
+    permissionGroupId,
+    customPermissions
   } = userData;
 
   try {
@@ -64,7 +68,12 @@ const UpdateUserService = async ({
     password,
     profile,
     name,
-    whatsappId: whatsappId ? whatsappId : null
+    whatsappId: whatsappId ? whatsappId : null,
+    permissionGroupId:
+      permissionGroupId !== undefined ? permissionGroupId : user.permissionGroupId,
+    customPermissions: customPermissions
+      ? JSON.stringify(customPermissions)
+      : user.customPermissions
   });
 
   await user.$set("queues", queueIds);

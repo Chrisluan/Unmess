@@ -1,22 +1,16 @@
 import { QueryInterface } from "sequelize";
 
+// DESATIVADO: Settings agora é escopada por empresa (companyId), e essa
+// configuração não tem mais uso (a rota /signup, que ela controlava, foi
+// removida no modelo multi-tenant). Cada empresa pode ter suas próprias
+// Settings criadas normalmente pela tela de configurações do admin.
+
 module.exports = {
-  up: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkInsert(
-      "Settings",
-      [
-        {
-          key: "userCreation",
-          value: "enabled",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ],
-      {}
-    );
+  up: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   },
 
-  down: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkDelete("Settings", {});
+  down: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   }
 };

@@ -1,23 +1,16 @@
 import { QueryInterface } from "sequelize";
-import { v4 as uuidv4 } from "uuid";
+
+// DESATIVADO: Settings (incluindo o token de API) agora é escopada por
+// empresa (companyId). Cada empresa deve gerar seu próprio "userApiToken"
+// pela tela de Configurações depois de criada, em vez de um token global
+// compartilhado entre todos os tenants.
 
 module.exports = {
-  up: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkInsert(
-      "Settings",
-      [
-        {
-          key: "userApiToken",
-          value: uuidv4(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ],
-      {}
-    );
+  up: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   },
 
-  down: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkDelete("Settings", {});
+  down: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   }
 };

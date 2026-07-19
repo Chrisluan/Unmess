@@ -12,6 +12,9 @@ import UserQueue from "../models/UserQueue";
 import QuickAnswer from "../models/QuickAnswer";
 import WppKey from "../models/WppKey";
 import Company from "../models/Company";
+import TicketStatus from "../models/TicketStatus";
+import BusinessHour from "../models/BusinessHour";
+import PermissionGroup from "../models/PermissionGroup";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -32,7 +35,10 @@ const models = [
   WhatsappQueue,
   UserQueue,
   QuickAnswer,
-  WppKey
+  WppKey,
+  TicketStatus,
+  BusinessHour,
+  PermissionGroup
 ];
 
 sequelize.addModels(models);

@@ -21,6 +21,8 @@ import CreateContactService from "../services/ContactServices/CreateContactServi
 
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
+import IsWithinBusinessHours from "../helpers/IsWithinBusinessHours";
+import Setting from "../models/Setting";
 
 const writeFileAsync = promisify(writeFile);
 
@@ -162,6 +164,17 @@ const handleQueueLogic = async (
     return;
   }
 
+  // Setor padrão: quando o admin marca uma fila como padrão, o atendimento
+  // cai direto nela, sem exigir que o cliente escolha uma opção no menu.
+  const defaultQueue = queues.find(queue => queue.isDefault);
+  if (defaultQueue) {
+    await UpdateTicketService({
+      ticketData: { queueId: defaultQueue.id },
+      ticketId: ticket.id
+    });
+    return;
+  }
+
   const selectedOption = messageBody;
   const choosenQueue = queues[+selectedOption - 1];
 
@@ -263,6 +276,41 @@ export const handleMessage = async (
       contextPayload.unreadMessages,
       groupContact
     );
+
+    // Mensagem automática de fora do expediente: dispara só na primeira
+    // mensagem não lida do ticket (evita floodar o cliente a cada mensagem)
+    // e só quando a empresa configurou e habilitou essa automação.
+    if (
+      !processedMessage.fromMe &&
+      contextPayload.unreadMessages === 1 &&
+      processedMessage.type !== "vcard"
+    ) {
+      const outOfHoursSetting = await Setting.findOne({
+        where: { key: "outOfHoursMessageEnabled", companyId }
+      });
+
+      if (outOfHoursSetting?.value === "enabled") {
+        const isOpen = await IsWithinBusinessHours(companyId);
+
+        if (!isOpen) {
+          const messageSetting = await Setting.findOne({
+            where: { key: "outOfHoursMessage", companyId }
+          });
+
+          if (messageSetting?.value) {
+            try {
+              await whatsappProvider.sendMessage(
+                contextPayload.whatsappId,
+                `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+                formatBody(`\u200e${messageSetting.value}`, ticket)
+              );
+            } catch (error) {
+              logger.error("Error sending out-of-hours message:", error);
+            }
+          }
+        }
+      }
+    }
 
     const messageData: any = {
       id: processedMessage.id,

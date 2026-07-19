@@ -1,26 +1,17 @@
 import { QueryInterface } from "sequelize";
 
+// DESATIVADO: no modelo multi-tenant, usuários precisam pertencer a uma
+// empresa (companyId). Criar um admin "solto" aqui geraria um usuário sem
+// acesso útil ao sistema. Use o seed "create-super-admin" para o acesso
+// inicial, e a tela /companies (ou POST /companies) para criar cada empresa
+// junto com seu próprio usuário admin.
+
 module.exports = {
-  up: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkInsert(
-      "Users",
-      [
-        {
-          name: "Administrador",
-          email: "admin@whaticket.com",
-          passwordHash:
-            "$2a$08$WaEmpmFDD/XkDqorkpQ42eUZozOqRCPkPcTkmHHMyuTGUOkI8dHsq",
-          profile: "admin",
-          tokenVersion: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ],
-      {}
-    );
+  up: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   },
 
-  down: (queryInterface: QueryInterface) => {
-    return queryInterface.bulkDelete("Users", {});
+  down: (_queryInterface: QueryInterface) => {
+    return Promise.resolve();
   }
 };

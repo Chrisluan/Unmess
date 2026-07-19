@@ -10,7 +10,8 @@ import {
   Unique,
   BelongsToMany,
   ForeignKey,
-  BelongsTo
+  BelongsTo,
+  Default
 } from "sequelize-typescript";
 import User from "./User";
 import UserQueue from "./UserQueue";
@@ -36,6 +37,10 @@ class Queue extends Model<Queue> {
 
   @Column
   greetingMessage: string;
+
+  @Default(false)
+  @Column
+  isDefault: boolean;
 
   @CreatedAt
   createdAt: Date;

@@ -97,11 +97,13 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
+  const { isTransfer } = req.body;
 
   const { ticket } = await UpdateTicketService({
     ticketData,
     ticketId,
-    companyId: req.user.companyId
+    companyId: req.user.companyId,
+    isTransfer
   });
 
   if (ticket.status === "closed") {

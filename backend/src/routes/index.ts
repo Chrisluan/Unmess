@@ -12,6 +12,10 @@ import queueRoutes from "./queueRoutes";
 import quickAnswerRoutes from "./quickAnswerRoutes";
 import apiRoutes from "./apiRoutes";
 import companyRoutes from "./companyRoutes";
+import permissionGroupRoutes from "./permissionGroupRoutes";
+import ticketStatusRoutes from "./ticketStatusRoutes";
+import businessHourRoutes from "./businessHourRoutes";
+import dashboardRoutes from "./dashboardRoutes";
 
 const routes = Router();
 
@@ -27,5 +31,9 @@ routes.use(queueRoutes);
 routes.use(quickAnswerRoutes);
 routes.use("/api/messages", apiRoutes);
 routes.use(companyRoutes);
+routes.use(permissionGroupRoutes);
+routes.use(ticketStatusRoutes);
+routes.use(businessHourRoutes);
+routes.use(dashboardRoutes);
 
 export default routes;

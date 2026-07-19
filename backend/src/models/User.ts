@@ -21,6 +21,7 @@ import Queue from "./Queue";
 import UserQueue from "./UserQueue";
 import Whatsapp from "./Whatsapp";
 import Company from "./Company";
+import PermissionGroup from "./PermissionGroup";
 
 @Table
 class User extends Model<User> {
@@ -62,6 +63,18 @@ class User extends Model<User> {
 
   @BelongsTo(() => Company)
   company: Company;
+
+  @ForeignKey(() => PermissionGroup)
+  @Column
+  permissionGroupId: number;
+
+  @BelongsTo(() => PermissionGroup)
+  permissionGroup: PermissionGroup;
+
+  // Overrides individuais além do grupo de permissão, formato:
+  // { "add": ["chats:delete"], "remove": ["users:manage"] }
+  @Column(DataType.TEXT)
+  customPermissions: string;
 
   @CreatedAt
   createdAt: Date;

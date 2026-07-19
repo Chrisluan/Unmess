@@ -13,6 +13,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { i18n } from "../../translate/i18n";
 
 import Chart from "./Chart"
+import DashboardMetrics from "./DashboardMetrics"
 
 const useStyles = makeStyles(theme => ({
 	container: {
@@ -109,6 +110,7 @@ const Dashboard = () => {
 						</Paper>
 					</Grid>
 				</Grid>
+				<DashboardMetrics />
 			</Container>
 		</div>
 	)

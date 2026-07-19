@@ -28,7 +28,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
-  const { email, password, name, profile, queueIds, whatsappId } = req.body;
+  const { email, password, name, profile, queueIds, whatsappId, permissionGroupId } = req.body;
 
   if (req.user.profile !== "admin" && req.user.profile !== "super") {
     throw new AppError("ERR_NO_PERMISSION", 403);
@@ -41,6 +41,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     profile,
     queueIds,
     whatsappId,
+    permissionGroupId,
     companyId: req.user.companyId
   });
 

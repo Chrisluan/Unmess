@@ -89,7 +89,20 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
 	const [showPassword, setShowPassword] = useState(false);
 	const [whatsappId, setWhatsappId] = useState(false);
+	const [permissionGroupId, setPermissionGroupId] = useState("");
+	const [permissionGroups, setPermissionGroups] = useState([]);
 	const {loading, whatsApps} = useWhatsApps();
+
+	useEffect(() => {
+		(async () => {
+			try {
+				const { data } = await api.get("/permission-groups");
+				setPermissionGroups(data);
+			} catch (err) {
+				toastError(err);
+			}
+		})();
+	}, []);
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -102,6 +115,7 @@ const UserModal = ({ open, onClose, userId }) => {
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds);
 				setWhatsappId(data.whatsappId ? data.whatsappId : '');
+				setPermissionGroupId(data.permissionGroupId ? data.permissionGroupId : '');
 			} catch (err) {
 				toastError(err);
 			}
@@ -116,7 +130,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds };
+		const userData = { ...values, whatsappId, permissionGroupId: permissionGroupId || null, queueIds: selectedQueueIds };
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
@@ -229,11 +243,34 @@ const UserModal = ({ open, onClose, userId }) => {
 													>
 														<MenuItem value="admin">Admin</MenuItem>
 														<MenuItem value="user">User</MenuItem>
+														<MenuItem value="vendedor">{i18n.t("userModal.profiles.vendedor")}</MenuItem>
+														<MenuItem value="producao">{i18n.t("userModal.profiles.producao")}</MenuItem>
+														<MenuItem value="instalacao">{i18n.t("userModal.profiles.instalacao")}</MenuItem>
+														<MenuItem value="financeiro">{i18n.t("userModal.profiles.financeiro")}</MenuItem>
 													</Field>
 												</>
 											)}
 										/>
 									</FormControl>
+									<Can
+										role={loggedInUser.profile}
+										perform="user-modal:editProfile"
+										yes={() => (
+											<FormControl variant="outlined" margin="dense" className={classes.formControl}>
+												<InputLabel>{i18n.t("userModal.form.permissionGroup")}</InputLabel>
+												<Select
+													value={permissionGroupId}
+													onChange={(e) => setPermissionGroupId(e.target.value)}
+													label={i18n.t("userModal.form.permissionGroup")}
+												>
+													<MenuItem value="">&nbsp;</MenuItem>
+													{permissionGroups.map((group) => (
+														<MenuItem key={group.id} value={group.id}>{group.name}</MenuItem>
+													))}
+												</Select>
+											</FormControl>
+										)}
+									/>
 								</div>
 								<Can
 									role={loggedInUser.profile}
