@@ -36,7 +36,7 @@ const messages = {
       dashboard: {
         charts: {
           perDay: {
-            title: "Tickets today: ",
+            title: "Chats today: ",
           },
         },
         messages: {
@@ -144,7 +144,7 @@ const messages = {
           deleteTitle: "Delete",
           importTitlte: "Import contacts",
           deleteMessage:
-            "Are you sure you want to delete this contact? All related tickets will be lost.",
+            "Are you sure you want to delete this contact? All related chats will be lost.",
           importMessage: "Do you want to import all contacts from the phone?",
         },
         buttons: {
@@ -284,7 +284,7 @@ const messages = {
         success: "Group saved successfully!",
       },
       chat: {
-        noTicketMessage: "Select a ticket to start chatting.",
+        noTicketMessage: "Select a chat to start chatting.",
       },
       ticketsManager: {
         buttons: {
@@ -296,7 +296,7 @@ const messages = {
       },
       tickets: {
         toasts: {
-          deleted: "The ticket you were on has been deleted.",
+          deleted: "The chat you were on has been deleted.",
         },
         notification: {
           message: "Message from",
@@ -307,14 +307,14 @@ const messages = {
           search: { title: "Search" },
         },
         search: {
-          placeholder: "Search tickets and messages.",
+          placeholder: "Search chats and messages.",
         },
         buttons: {
           showAll: "All",
         },
       },
       transferTicketModal: {
-        title: "Transfer Ticket",
+        title: "Transfer Chat",
         fieldLabel: "Type to search for users",
         fieldQueueLabel: "Transfer to queue",
         fieldConnectionLabel: "Transfer to connection",
@@ -330,14 +330,14 @@ const messages = {
         pendingHeader: "Queue",
         assignedHeader: "Working on",
         noTicketsTitle: "Nothing here!",
-        noTicketsMessage: "No tickets found with this status or search term.",
+        noTicketsMessage: "No chats found with this status or search term.",
         connectionTitle: "Connection that is currently being used.",
         buttons: {
           accept: "Accept",
         },
       },
       newTicketModal: {
-        title: "Create Ticket",
+        title: "Create Chat",
         fieldLabel: "Type to search for a contact",
         add: "Add",
         buttons: {
@@ -349,7 +349,7 @@ const messages = {
         listItems: {
           dashboard: "Dashboard",
           connections: "Connections",
-          tickets: "Tickets",
+          tickets: "Chats",
           contacts: "Contacts",
           quickAnswers: "Quick Answers",
           queues: "Queues",
@@ -384,7 +384,7 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Delete",
           deleteMessage:
-            "Are you sure? It cannot be reverted! Tickets in this queue will still exist, but will not have any queues assigned.",
+            "Are you sure? It cannot be reverted! Chats in this queue will still exist, but will not have any queues assigned.",
         },
       },
       companies: {
@@ -485,12 +485,21 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Delete",
           deleteMessage:
-            "All user data will be lost. Users' open tickets will be moved to queue.",
+            "All user data will be lost. Users' open chats will be moved to queue.",
         },
       },
       settings: {
         success: "Settings saved successfully.",
         title: "Settings",
+        tabs: {
+          general: "General",
+          businessHours: "Business Hours",
+          ticketStatuses: "Closing Statuses",
+          autoMessages: "Automatic Messages",
+        },
+        buttons: {
+          save: "Save",
+        },
         settings: {
           userCreation: {
             name: "User creation",
@@ -498,6 +507,80 @@ const messages = {
               enabled: "Enabled",
               disabled: "Disabled",
             },
+          },
+          apiToken: {
+            name: "API Token",
+            generate: "Generate new token",
+            helper: "Use this token to authenticate external integrations with this company's messages API.",
+          },
+        },
+        businessHours: {
+          description: "Set the days and hours your company provides service. Outside this period, the automatic message configured in the 'Automatic Messages' tab can be sent to the customer.",
+          table: {
+            day: "Day",
+            enabled: "Enabled",
+            start: "Start",
+            end: "End",
+          },
+          weekDays: {
+            0: "Sunday",
+            1: "Monday",
+            2: "Tuesday",
+            3: "Wednesday",
+            4: "Thursday",
+            5: "Friday",
+            6: "Saturday",
+          },
+        },
+        ticketStatuses: {
+          buttons: {
+            add: "Add status",
+            cancel: "Cancel",
+            okAdd: "Add",
+            okEdit: "Save",
+          },
+          table: {
+            name: "Name",
+            type: "Type",
+            default: "Default",
+            actions: "Actions",
+          },
+          types: {
+            pending: "Waiting",
+            open: "In service",
+            closed: "Closed",
+          },
+          yes: "Yes",
+          no: "No",
+          confirmationModal: {
+            deleteTitle: "Delete",
+            deleteMessage: "Are you sure? This action cannot be undone!",
+          },
+          toasts: {
+            deleted: "Status deleted successfully!",
+          },
+          success: "Status saved successfully!",
+          modal: {
+            title: {
+              add: "Add Status",
+              edit: "Edit Status",
+            },
+            name: "Status name",
+            color: "Color",
+            type: "Linked to",
+            isDefault: "Use as default for this type",
+          },
+        },
+        autoMessages: {
+          outOfHours: {
+            toggle: "Send automatic message outside business hours",
+            description: "Automatically sent when the customer starts a conversation outside the configured business hours.",
+            placeholder: "E.g.: Hi {{cliente.nome}}, we're currently outside business hours. We'll get back to you soon!",
+          },
+          transfer: {
+            toggle: "Send automatic message when transferring a chat",
+            description: "Automatically sent when a chat is transferred to another agent or queue.",
+            placeholder: "E.g.: Hi {{cliente.nome}}, your chat was transferred to {{setor}} and will continue with {{atendente}}.",
           },
         },
       },
@@ -514,7 +597,7 @@ const messages = {
       },
       messagesInput: {
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
-        placeholderClosed: "Reopen or accept this ticket to send a message.",
+        placeholderClosed: "Reopen or accept this chat to send a message.",
         signMessage: "Sign",
       },
       contactDrawer: {
@@ -528,9 +611,9 @@ const messages = {
         delete: "Delete",
         transfer: "Transfer",
         confirmationModal: {
-          title: "Delete ticket #",
+          title: "Delete chat #",
           titleFrom: "from contact ",
-          message: "Attention! All ticket's related messages will be lost.",
+          message: "Attention! All chat's related messages will be lost.",
         },
         buttons: {
           delete: "Delete",
@@ -568,7 +651,7 @@ const messages = {
           "Error sending WhatsApp message. Check connections page.",
         ERR_DELETE_WAPP_MSG: "Couldn't delete message from WhatsApp.",
         ERR_OTHER_OPEN_TICKET:
-          "There's already an open ticket for this contact.",
+          "There's already an open chat for this contact.",
         ERR_SESSION_EXPIRED: "Session expired. Please login.",
         ERR_USER_CREATION_DISABLED:
           "User creation was disabled by administrator.",
@@ -581,11 +664,11 @@ const messages = {
           "Cannot delete a company that still has users linked to it.",
         ERR_NO_SETTING_FOUND: "No setting found with this ID.",
         ERR_NO_CONTACT_FOUND: "No contact found with this ID.",
-        ERR_NO_TICKET_FOUND: "No ticket found with this ID.",
+        ERR_NO_TICKET_FOUND: "No chat found with this ID.",
         ERR_NO_USER_FOUND: "No user found with this ID.",
         ERR_NO_WAPP_FOUND: "No WhatsApp found with this ID.",
         ERR_CREATING_MESSAGE: "Error while creating message on database.",
-        ERR_CREATING_TICKET: "Error while creating ticket on database.",
+        ERR_CREATING_TICKET: "Error while creating chat on database.",
         ERR_FETCH_WAPP_MSG:
           "Error fetching the message in WhtasApp, maybe it is too old.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:

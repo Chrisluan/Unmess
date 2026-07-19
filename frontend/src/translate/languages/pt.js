@@ -36,7 +36,7 @@ const messages = {
       dashboard: {
         charts: {
           perDay: {
-            title: "Tickets hoje: ",
+            title: "Chats hoje: ",
           },
         },
         messages: {
@@ -146,7 +146,7 @@ const messages = {
           deleteTitle: "Deletar ",
           importTitlte: "Importar contatos",
           deleteMessage:
-            "Tem certeza que deseja deletar este contato? Todos os tickets relacionados serão perdidos.",
+            "Tem certeza que deseja deletar este contato? Todos os chats relacionados serão perdidos.",
           importMessage: "Deseja importas todos os contatos do telefone?",
         },
         buttons: {
@@ -286,7 +286,7 @@ const messages = {
         success: "Grupo salvo com sucesso!",
       },
       chat: {
-        noTicketMessage: "Selecione um ticket para começar a conversar.",
+        noTicketMessage: "Selecione um chat para começar a conversar.",
       },
       ticketsManager: {
         buttons: {
@@ -298,7 +298,7 @@ const messages = {
       },
       tickets: {
         toasts: {
-          deleted: "O ticket que você estava foi deletado.",
+          deleted: "O chat que você estava foi deletado.",
         },
         notification: {
           message: "Mensagem de",
@@ -309,14 +309,14 @@ const messages = {
           search: { title: "Busca" },
         },
         search: {
-          placeholder: "Buscar tickets e mensagens",
+          placeholder: "Buscar chats e mensagens",
         },
         buttons: {
           showAll: "Todos",
         },
       },
       transferTicketModal: {
-        title: "Transferir Ticket",
+        title: "Transferir Chat",
         fieldLabel: "Digite para buscar usuários",
         fieldQueueLabel: "Transferir para fila",
         fieldConnectionLabel: "Transferir para conexão",
@@ -333,14 +333,14 @@ const messages = {
         assignedHeader: "Atendendo",
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
-          "Nenhum ticket encontrado com esse status ou termo pesquisado",
+          "Nenhum chat encontrado com esse status ou termo pesquisado",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         buttons: {
           accept: "Aceitar",
         },
       },
       newTicketModal: {
-        title: "Criar Ticket",
+        title: "Criar Chat",
         fieldLabel: "Digite para pesquisar o contato",
         add: "Adicionar",
         buttons: {
@@ -352,7 +352,7 @@ const messages = {
         listItems: {
           dashboard: "Dashboard",
           connections: "Conexões",
-          tickets: "Tickets",
+          tickets: "Chats",
           contacts: "Contatos",
           quickAnswers: "Respostas Rápidas",
           queues: "Filas",
@@ -387,7 +387,7 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Você tem certeza? Essa ação não pode ser revertida! Os tickets dessa fila continuarão existindo, mas não terão mais nenhuma fila atribuída.",
+            "Você tem certeza? Essa ação não pode ser revertida! Os chats dessa fila continuarão existindo, mas não terão mais nenhuma fila atribuída.",
         },
       },
       companies: {
@@ -489,12 +489,21 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Todos os dados do usuário serão perdidos. Os tickets abertos deste usuário serão movidos para a fila.",
+            "Todos os dados do usuário serão perdidos. Os chats abertos deste usuário serão movidos para a fila.",
         },
       },
       settings: {
         success: "Configurações salvas com sucesso.",
         title: "Configurações",
+        tabs: {
+          general: "Geral",
+          businessHours: "Horário de Atendimento",
+          ticketStatuses: "Status de Finalização",
+          autoMessages: "Mensagens Automáticas",
+        },
+        buttons: {
+          save: "Salvar",
+        },
         settings: {
           userCreation: {
             name: "Criação de usuário",
@@ -502,6 +511,80 @@ const messages = {
               enabled: "Ativado",
               disabled: "Desativado",
             },
+          },
+          apiToken: {
+            name: "Token da API",
+            generate: "Gerar novo token",
+            helper: "Use este token para autenticar integrações externas com a API de mensagens desta empresa.",
+          },
+        },
+        businessHours: {
+          description: "Defina os dias e horários em que sua empresa realiza atendimento. Fora desse período, a mensagem automática configurada na aba 'Mensagens Automáticas' pode ser enviada ao cliente.",
+          table: {
+            day: "Dia",
+            enabled: "Ativo",
+            start: "Início",
+            end: "Fim",
+          },
+          weekDays: {
+            0: "Domingo",
+            1: "Segunda-feira",
+            2: "Terça-feira",
+            3: "Quarta-feira",
+            4: "Quinta-feira",
+            5: "Sexta-feira",
+            6: "Sábado",
+          },
+        },
+        ticketStatuses: {
+          buttons: {
+            add: "Adicionar status",
+            cancel: "Cancelar",
+            okAdd: "Adicionar",
+            okEdit: "Salvar",
+          },
+          table: {
+            name: "Nome",
+            type: "Tipo",
+            default: "Padrão",
+            actions: "Ações",
+          },
+          types: {
+            pending: "Aguardando",
+            open: "Em atendimento",
+            closed: "Finalizado",
+          },
+          yes: "Sim",
+          no: "Não",
+          confirmationModal: {
+            deleteTitle: "Excluir",
+            deleteMessage: "Você tem certeza? Essa ação não pode ser revertida!",
+          },
+          toasts: {
+            deleted: "Status excluído com sucesso!",
+          },
+          success: "Status salvo com sucesso!",
+          modal: {
+            title: {
+              add: "Adicionar Status",
+              edit: "Editar Status",
+            },
+            name: "Nome do status",
+            color: "Cor",
+            type: "Vinculado a",
+            isDefault: "Usar como padrão para este tipo",
+          },
+        },
+        autoMessages: {
+          outOfHours: {
+            toggle: "Enviar mensagem automática fora do horário de atendimento",
+            description: "Enviada automaticamente quando o cliente inicia contato fora do horário configurado.",
+            placeholder: "Ex: Olá {{cliente.nome}}, no momento estamos fora do horário de atendimento. Retornaremos assim que possível!",
+          },
+          transfer: {
+            toggle: "Enviar mensagem automática ao transferir o atendimento",
+            description: "Enviada automaticamente quando um chat é transferido de atendente ou setor.",
+            placeholder: "Ex: Olá {{cliente.nome}}, seu atendimento foi transferido para o setor {{setor}} e será continuado por {{atendente}}.",
           },
         },
       },
@@ -519,7 +602,7 @@ const messages = {
       messagesInput: {
         placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
         placeholderClosed:
-          "Reabra ou aceite esse ticket para enviar uma mensagem.",
+          "Reabra ou aceite esse chat para enviar uma mensagem.",
         signMessage: "Assinar",
       },
       contactDrawer: {
@@ -533,9 +616,9 @@ const messages = {
         delete: "Deletar",
         transfer: "Transferir",
         confirmationModal: {
-          title: "Deletar o ticket do contato",
+          title: "Deletar o chat do contato",
           message:
-            "Atenção! Todas as mensagens relacionadas ao ticket serão perdidas.",
+            "Atenção! Todas as mensagens relacionadas ao chat serão perdidas.",
         },
         buttons: {
           delete: "Excluir",

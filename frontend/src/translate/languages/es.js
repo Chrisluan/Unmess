@@ -37,7 +37,7 @@ const messages = {
       dashboard: {
         charts: {
           perDay: {
-            title: "Tickets hoy: ",
+            title: "Chats hoy: ",
           },
         },
         messages: {
@@ -146,7 +146,7 @@ const messages = {
           deleteTitle: "Borrar",
           importTitlte: "Importar contactos",
           deleteMessage:
-            "¿Estás seguro que deseas borrar este contacto? Todos los tickets relacionados se perderán.",
+            "¿Estás seguro que deseas borrar este contacto? Todos los chats relacionados se perderán.",
           importMessage:
             "¿Quieres importar todos los contactos desde tu teléfono?",
         },
@@ -287,7 +287,7 @@ const messages = {
         success: "¡Grupo guardado con éxito!",
       },
       chat: {
-        noTicketMessage: "Selecciona un ticket para empezar a chatear.",
+        noTicketMessage: "Selecciona un chat para empezar a chatear.",
       },
       ticketsManager: {
         buttons: {
@@ -299,7 +299,7 @@ const messages = {
       },
       tickets: {
         toasts: {
-          deleted: "El ticket en el que estabas ha sido borrado.",
+          deleted: "El chat en el que estabas ha sido borrado.",
         },
         notification: {
           message: "Mensaje de",
@@ -310,14 +310,14 @@ const messages = {
           search: { title: "Buscar" },
         },
         search: {
-          placeholder: "Buscar tickets y mensajes.",
+          placeholder: "Buscar chats y mensajes.",
         },
         buttons: {
           showAll: "Todos",
         },
       },
       transferTicketModal: {
-        title: "Transferir Ticket",
+        title: "Transferir Chat",
         fieldLabel: "Escriba para buscar usuarios",
         fieldQueueLabel: "Transferir a la cola",
         fieldConnectionLabel: "Transferir to conexión",
@@ -335,13 +335,13 @@ const messages = {
         noTicketsTitle: "¡Nada acá!",
         connectionTitle: "Conexión que se está utilizando actualmente.",
         noTicketsMessage:
-          "No se encontraron tickets con este estado o término de búsqueda",
+          "No se encontraron chats con este estado o término de búsqueda",
         buttons: {
           accept: "Acceptar",
         },
       },
       newTicketModal: {
-        title: "Crear Ticket",
+        title: "Crear Chat",
         fieldLabel: "Escribe para buscar un contacto",
         add: "Añadir",
         buttons: {
@@ -353,7 +353,7 @@ const messages = {
         listItems: {
           dashboard: "Dashboard",
           connections: "Conexiones",
-          tickets: "Tickets",
+          tickets: "Chats",
           contacts: "Contactos",
           quickAnswers: "Respuestas rápidas",
           queues: "Linhas",
@@ -388,7 +388,7 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Eliminar",
           deleteMessage:
-            "¿Estás seguro? ¡Esta acción no se puede revertir! Los tickets en esa cola seguirán existiendo, pero ya no tendrán ninguna cola asignada.",
+            "¿Estás seguro? ¡Esta acción no se puede revertir! Los chats en esa cola seguirán existiendo, pero ya no tendrán ninguna cola asignada.",
         },
       },
       companies: {
@@ -490,12 +490,21 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Borrar",
           deleteMessage:
-            "Toda la información del usuario se perderá. Los tickets abiertos de los usuarios se moverán a la cola.",
+            "Toda la información del usuario se perderá. Los chats abiertos de los usuarios se moverán a la cola.",
         },
       },
       settings: {
         success: "Configuración guardada satisfactoriamente.",
         title: "Configuración",
+        tabs: {
+          general: "General",
+          businessHours: "Horario de Atención",
+          ticketStatuses: "Estados de Finalización",
+          autoMessages: "Mensajes Automáticos",
+        },
+        buttons: {
+          save: "Guardar",
+        },
         settings: {
           userCreation: {
             name: "Creación de usuarios",
@@ -503,6 +512,80 @@ const messages = {
               enabled: "Habilitado",
               disabled: "Deshabilitado",
             },
+          },
+          apiToken: {
+            name: "Token de API",
+            generate: "Generar nuevo token",
+            helper: "Use este token para autenticar integraciones externas con la API de mensajes de esta empresa.",
+          },
+        },
+        businessHours: {
+          description: "Defina los días y horarios en que su empresa atiende. Fuera de ese período, el mensaje automático configurado en la pestaña 'Mensajes Automáticos' puede enviarse al cliente.",
+          table: {
+            day: "Día",
+            enabled: "Activo",
+            start: "Inicio",
+            end: "Fin",
+          },
+          weekDays: {
+            0: "Domingo",
+            1: "Lunes",
+            2: "Martes",
+            3: "Miércoles",
+            4: "Jueves",
+            5: "Viernes",
+            6: "Sábado",
+          },
+        },
+        ticketStatuses: {
+          buttons: {
+            add: "Agregar estado",
+            cancel: "Cancelar",
+            okAdd: "Agregar",
+            okEdit: "Guardar",
+          },
+          table: {
+            name: "Nombre",
+            type: "Tipo",
+            default: "Predeterminado",
+            actions: "Acciones",
+          },
+          types: {
+            pending: "Esperando",
+            open: "En atención",
+            closed: "Finalizado",
+          },
+          yes: "Sí",
+          no: "No",
+          confirmationModal: {
+            deleteTitle: "Eliminar",
+            deleteMessage: "¿Estás seguro? ¡Esta acción no se puede revertir!",
+          },
+          toasts: {
+            deleted: "¡Estado eliminado con éxito!",
+          },
+          success: "¡Estado guardado con éxito!",
+          modal: {
+            title: {
+              add: "Agregar Estado",
+              edit: "Editar Estado",
+            },
+            name: "Nombre del estado",
+            color: "Color",
+            type: "Vinculado a",
+            isDefault: "Usar como predeterminado para este tipo",
+          },
+        },
+        autoMessages: {
+          outOfHours: {
+            toggle: "Enviar mensaje automático fuera del horario de atención",
+            description: "Se envía automáticamente cuando el cliente inicia contacto fuera del horario configurado.",
+            placeholder: "Ej: Hola {{cliente.nome}}, en este momento estamos fuera del horario de atención. ¡Responderemos en breve!",
+          },
+          transfer: {
+            toggle: "Enviar mensaje automático al transferir la atención",
+            description: "Se envía automáticamente cuando un chat se transfiere a otro agente o sector.",
+            placeholder: "Ej: Hola {{cliente.nome}}, tu atención fue transferida al sector {{setor}} y continuará con {{atendente}}.",
           },
         },
       },
@@ -520,7 +603,7 @@ const messages = {
       messagesInput: {
         placeholderOpen: "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
         placeholderClosed:
-          "Vuelva a abrir o acepte este ticket para enviar un mensaje.",
+          "Vuelva a abrir o acepte este chat para enviar un mensaje.",
         signMessage: "Firmar",
       },
       contactDrawer: {
@@ -534,10 +617,10 @@ const messages = {
         delete: "Borrar",
         transfer: "Transferir",
         confirmationModal: {
-          title: "¿Borrar ticket #",
+          title: "¿Borrar chat #",
           titleFrom: "del contacto ",
           message:
-            "¡Atención! Todos los mensajes Todos los mensajes relacionados con el ticket se perderán.",
+            "¡Atención! Todos los mensajes Todos los mensajes relacionados con el chat se perderán.",
         },
         buttons: {
           delete: "Borrar",
@@ -574,7 +657,7 @@ const messages = {
         ERR_SENDING_WAPP_MSG:
           "Error al enviar el mensaje de WhatsApp. Verifique la página de conexiones.",
         ERR_DELETE_WAPP_MSG: "No se pudo borrar el mensaje de WhatsApp.",
-        ERR_OTHER_OPEN_TICKET: "Ya hay un ticket abierto para este contacto.",
+        ERR_OTHER_OPEN_TICKET: "Ya hay un chat abierto para este contacto.",
         ERR_SESSION_EXPIRED: "Sesión caducada. Inicie sesión.",
         ERR_USER_CREATION_DISABLED:
           "La creación de usuarios fue deshabilitada por el administrador.",
@@ -588,11 +671,11 @@ const messages = {
         ERR_NO_SETTING_FOUND:
           "No se encontró ninguna configuración con este ID.",
         ERR_NO_CONTACT_FOUND: "No se encontró ningún contacto con este ID.",
-        ERR_NO_TICKET_FOUND: "No se encontró ningún ticket con este ID.",
+        ERR_NO_TICKET_FOUND: "No se encontró ningún chat con este ID.",
         ERR_NO_USER_FOUND: "No se encontró ningún usuario con este ID.",
         ERR_NO_WAPP_FOUND: "No se encontró WhatsApp con este ID.",
         ERR_CREATING_MESSAGE: "Error al crear el mensaje en la base de datos.",
-        ERR_CREATING_TICKET: "Error al crear el ticket en la base de datos.",
+        ERR_CREATING_TICKET: "Error al crear el chat en la base de datos.",
         ERR_FETCH_WAPP_MSG:
           "Error al obtener el mensaje en WhtasApp, tal vez sea demasiado antiguo.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:
