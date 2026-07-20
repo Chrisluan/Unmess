@@ -95,6 +95,8 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				onClose={handleCloseTransferTicketModal}
 				ticketid={ticket.id}
 				ticketWhatsappId={ticket.whatsappId}
+				currentQueueId={ticket.queueId}
+				currentUserId={ticket.userId}
 			/>
 		</>
 	);

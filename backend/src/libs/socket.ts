@@ -19,7 +19,10 @@ interface TokenPayload {
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL
+      origin: [
+      "http://localhost:3001",
+      "http://192.168.1.11:3001"
+    ],
     }
   });
 

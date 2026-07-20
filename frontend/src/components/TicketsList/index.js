@@ -153,7 +153,7 @@ const reducer = (state, action) => {
 };
 
 	const TicketsList = (props) => {
-		const { status, searchParam, showAll, selectedQueueIds, updateCount, style } =
+		const { status, tab, searchParam, showAll, selectedQueueIds, updateCount, style } =
 			props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
@@ -163,18 +163,19 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds]);
+	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
 		searchParam,
 		status,
+		tab,
 		showAll,
 		queueIds: JSON.stringify(selectedQueueIds),
 	});
 
 	useEffect(() => {
-		if (!status && !searchParam) return;
+		if (!status && !tab && !searchParam) return;
 		dispatch({
 			type: "LOAD_TICKETS",
 			payload: tickets,
@@ -184,9 +185,30 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		const socket = openSocket();
 
-		const shouldUpdateTicket = ticket => !searchParam &&
-			(!ticket.userId || ticket.userId === user?.id || showAll) &&
-			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+		const belongsToTab = ticket => {
+			if (tab === "myTickets") {
+				return ticket.status === "open" && ticket.userId === user?.id;
+			}
+			if (tab === "attending") {
+				return (
+					ticket.status === "open" &&
+					!!ticket.userId &&
+					ticket.userId !== user?.id &&
+					ticket.queueId &&
+					selectedQueueIds.indexOf(ticket.queueId) > -1
+				);
+			}
+			if (tab === "waiting") {
+				return ticket.status === "pending" && !ticket.userId && !ticket.queueId;
+			}
+			// Fallback (aba "closed"/"search" ou uso antigo baseado só em status)
+			return (
+				(!ticket.userId || ticket.userId === user?.id || showAll) &&
+				(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1)
+			);
+		};
+
+		const shouldUpdateTicket = ticket => !searchParam && belongsToTab(ticket);
 
 		const notBelongsToUserQueues = ticket =>
 			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
@@ -214,7 +236,7 @@ const reducer = (state, action) => {
 				});
 			}
 
-			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
+			if (data.action === "update" && !shouldUpdateTicket(data.ticket)) {
 				dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
 			}
 
@@ -244,7 +266,7 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, searchParam, showAll, user, selectedQueueIds]);
+	}, [status, tab, searchParam, showAll, user, selectedQueueIds]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

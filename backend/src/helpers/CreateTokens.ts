@@ -2,27 +2,28 @@ import { sign } from "jsonwebtoken";
 import authConfig from "../config/auth";
 import User from "../models/User";
 
-export const createAccessToken = (user: User): string => {
+export const createAccessToken = (user: User | any): string => {
   const { secret, expiresIn } = authConfig;
 
   return sign(
     {
-      usarname: user.name,
+      username: user.name,
       profile: user.profile,
       id: user.id,
-      companyId: user.companyId
+      companyId: user.companyId ?? null,
+      companyName: user.companyName ?? null,
     },
     secret,
-    {
-      expiresIn
-    }
+    { expiresIn }
   );
 };
 
 export const createRefreshToken = (user: User): string => {
   const { refreshSecret, refreshExpiresIn } = authConfig;
 
-  return sign({ id: user.id, tokenVersion: user.tokenVersion }, refreshSecret, {
-    expiresIn: refreshExpiresIn
-  });
+  return sign(
+    { id: user.id, tokenVersion: user.tokenVersion },
+    refreshSecret,
+    { expiresIn: refreshExpiresIn }
+  );
 };

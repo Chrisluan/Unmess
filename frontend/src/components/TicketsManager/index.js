@@ -87,13 +87,14 @@ const TicketsManager = () => {
   const classes = useStyles();
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("open");
+  const [tabOpen, setTabOpen] = useState("myTickets");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
   const { user } = useContext(AuthContext);
-  const [openCount, setOpenCount] = useState(0);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [myTicketsCount, setMyTicketsCount] = useState(0);
+  const [attendingCount, setAttendingCount] = useState(0);
+  const [waitingCount, setWaitingCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
 
@@ -241,40 +242,60 @@ const TicketsManager = () => {
             label={
               <Badge
                 className={classes.badge}
-                badgeContent={openCount}
+                badgeContent={myTicketsCount}
                 color="primary"
               >
-                {i18n.t("ticketsList.assignedHeader")}
+                {i18n.t("ticketsList.myTicketsHeader")}
               </Badge>
             }
-            value={"open"}
+            value={"myTickets"}
           />
           <Tab
             label={
               <Badge
                 className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
+                badgeContent={attendingCount}
+                color="primary"
               >
-                {i18n.t("ticketsList.pendingHeader")}
+                {i18n.t("ticketsList.attendingHeader")}
               </Badge>
             }
-            value={"pending"}
+            value={"attending"}
+          />
+          <Tab
+            label={
+              <Badge
+                className={classes.badge}
+                badgeContent={waitingCount}
+                color="secondary"
+              >
+                {i18n.t("ticketsList.waitingHeader")}
+              </Badge>
+            }
+            value={"waiting"}
           />
         </Tabs>
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
-            status="open"
-            showAll={showAllTickets}
+            tab="myTickets"
+            showAll={false}
             selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setOpenCount(val)}
-            style={applyPanelStyle("open")}
+            updateCount={(val) => setMyTicketsCount(val)}
+            style={applyPanelStyle("myTickets")}
           />
           <TicketsList
-            status="pending"
+            tab="attending"
+            showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setPendingCount(val)}
-            style={applyPanelStyle("pending")}
+            updateCount={(val) => setAttendingCount(val)}
+            style={applyPanelStyle("attending")}
+          />
+          <TicketsList
+            tab="waiting"
+            showAll={true}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => setWaitingCount(val)}
+            style={applyPanelStyle("waiting")}
           />
         </Paper>
       </TabPanel>

@@ -12,6 +12,7 @@ import {
   IconButton,
   Menu,
   Switch,
+  Button,
 } from "@material-ui/core";
 import MenuIcon from "@material-ui/icons/Menu";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
@@ -131,11 +132,12 @@ const LoggedInLayout = ({ children }) => {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { handleLogout, loading } = useContext(AuthContext);
+  const { handleLogout, handleLeaveCompany, loading, user } = useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
-  const { user } = useContext(AuthContext);
   const { darkMode, toggleTheme } = useThemeContext();
+
+  const isSuperInCompany = user?.profile === "super" && !!user?.companyId;
 
   useEffect(() => {
     if (document.body.offsetWidth > 600) {
@@ -169,6 +171,11 @@ const LoggedInLayout = ({ children }) => {
   const handleClickLogout = () => {
     handleCloseMenu();
     handleLogout();
+  };
+
+  const handleClickLeaveCompany = () => {
+    handleCloseMenu();
+    handleLeaveCompany();
   };
 
   const drawerClose = () => {
@@ -214,6 +221,30 @@ const LoggedInLayout = ({ children }) => {
         position="absolute"
         className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
       >
+        {/* Banner de contexto — visível apenas quando super está operando em empresa */}
+        {isSuperInCompany && (
+          <div style={{
+            backgroundColor: "#1565c0",
+            color: "#fff",
+            fontSize: 12,
+            padding: "3px 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}>
+            <span>
+              🏢 Operando como <strong>Super Admin</strong> na empresa <strong>{user.companyName || `#${user.companyId}`}</strong>
+            </span>
+            <Button
+              size="small"
+              style={{ color: "#fff", borderColor: "rgba(255,255,255,0.5)", fontSize: 11, padding: "1px 8px" }}
+              variant="outlined"
+              onClick={handleClickLeaveCompany}
+            >
+              Trocar empresa
+            </Button>
+          </div>
+        )}
         <Toolbar variant="dense" className={classes.toolbar}>
           <IconButton
             edge="start"
@@ -277,6 +308,11 @@ const LoggedInLayout = ({ children }) => {
               <MenuItem onClick={handleOpenUserModal}>
                 {i18n.t("mainDrawer.appBar.user.profile")}
               </MenuItem>
+              {isSuperInCompany && (
+                <MenuItem onClick={handleClickLeaveCompany}>
+                  Trocar empresa
+                </MenuItem>
+              )}
               <MenuItem onClick={handleClickLogout}>
                 {i18n.t("mainDrawer.appBar.user.logout")}
               </MenuItem>

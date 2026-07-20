@@ -8,6 +8,7 @@ interface QueueData {
   name?: string;
   color?: string;
   greetingMessage?: string;
+  isDefault?: boolean;
 }
 
 const UpdateQueueService = async (
@@ -52,6 +53,15 @@ const UpdateQueueService = async (
   }
 
   const queue = await ShowQueueService(queueId, companyId);
+
+  // Só pode existir um setor padrão por empresa. Ao marcar este como
+  // padrão, desmarca qualquer outro que já fosse.
+  if (queueData.isDefault === true) {
+    await Queue.update(
+      { isDefault: false },
+      { where: { companyId, id: { [Op.not]: queueId } } }
+    );
+  }
 
   await queue.update(queueData);
 

@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 
 import {
   Button,
+  Chip,
   IconButton,
   makeStyles,
   Paper,
@@ -204,6 +205,9 @@ const Queues = () => {
                 {i18n.t("queues.table.greeting")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("queues.table.isDefault")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("queues.table.actions")}
               </TableCell>
             </TableRow>
@@ -235,6 +239,15 @@ const Queues = () => {
                         {queue.greetingMessage}
                       </Typography>
                     </div>
+                  </TableCell>
+                  <TableCell align="center">
+                    {queue.isDefault && (
+                      <Chip
+                        size="small"
+                        color="primary"
+                        label={i18n.t("queues.table.isDefault")}
+                      />
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     <IconButton

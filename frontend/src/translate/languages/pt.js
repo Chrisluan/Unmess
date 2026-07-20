@@ -207,6 +207,8 @@ const messages = {
           name: "Nome",
           color: "Cor",
           greetingMessage: "Mensagem de saudação",
+          isDefault: "Setor padrão",
+          isDefaultHelp: "Conversas sem setor definido caem automaticamente neste setor. Só pode existir um setor padrão por vez.",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -323,14 +325,20 @@ const messages = {
         fieldQueuePlaceholder: "Selecione uma fila",
         fieldConnectionPlaceholder: "Selecione uma conexão",
         noOptions: "Nenhum usuário encontrado com esse nome",
+        removeQueueHelp: "Se remover a fila e não sobrar nenhuma, o ticket cai automaticamente no setor padrão.",
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
+          removeUser: "Remover atendente",
+          removeQueue: "Remover fila",
         },
       },
       ticketsList: {
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
+        myTicketsHeader: "Meus",
+        attendingHeader: "Em Atendimento",
+        waitingHeader: "Aguardando atendimento",
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
           "Nenhum chat encontrado com esse status ou termo pesquisado",
@@ -379,6 +387,7 @@ const messages = {
           name: "Nome",
           color: "Cor",
           greeting: "Mensagem de saudação",
+          isDefault: "Padrão",
           actions: "Ações",
         },
         buttons: {

@@ -19,7 +19,7 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ColorPicker from "../ColorPicker";
-import { IconButton, InputAdornment } from "@material-ui/core";
+import { IconButton, InputAdornment, FormControlLabel, Switch, Typography } from "@material-ui/core";
 import { Colorize } from "@material-ui/icons";
 
 const useStyles = makeStyles(theme => ({
@@ -70,6 +70,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
 		name: "",
 		color: "",
 		greetingMessage: "",
+		isDefault: false,
 	};
 
 	const [colorPickerModalOpen, setColorPickerModalOpen] = useState(false);
@@ -94,6 +95,7 @@ const QueueModal = ({ open, onClose, queueId }) => {
 				name: "",
 				color: "",
 				greetingMessage: "",
+				isDefault: false,
 			});
 		};
 	}, [queueId, open]);
@@ -212,6 +214,23 @@ const QueueModal = ({ open, onClose, queueId }) => {
 										variant="outlined"
 										margin="dense"
 									/>
+								</div>
+								<div style={{ marginTop: 8 }}>
+									<FormControlLabel
+										label={i18n.t("queueModal.form.isDefault")}
+										control={
+											<Field
+												as={Switch}
+												type="checkbox"
+												name="isDefault"
+												checked={values.isDefault}
+												color="primary"
+											/>
+										}
+									/>
+									<Typography variant="caption" color="textSecondary" display="block">
+										{i18n.t("queueModal.form.isDefaultHelp")}
+									</Typography>
 								</div>
 							</DialogContent>
 							<DialogActions>

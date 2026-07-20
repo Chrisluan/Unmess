@@ -2,52 +2,69 @@ import User from "../../models/User";
 import PermissionGroup from "../../models/PermissionGroup";
 import { AVAILABLE_PERMISSIONS, Permission } from "./AvailablePermissions";
 
-interface CustomPermissionsPayload {
-  add?: string[];
-  remove?: string[];
-}
-
-const parseCustomPermissions = (raw: string | null): CustomPermissionsPayload => {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch (err) {
-    return {};
-  }
-};
-
-// admin e super sempre têm acesso total - grupos/overrides só se aplicam a
-// perfis operacionais (vendedor, producao, instalacao, financeiro, user).
+// Profiles com acesso total que ignoram o sistema granular.
 const PROFILES_WITH_FULL_ACCESS = ["admin", "super"];
 
+export interface UserPermissionsResult {
+  permissions: Permission[];
+  /** Permissões herdadas do grupo (antes dos overrides) */
+  groupPermissions: string[];
+  /** Permissões individuais que sobrescrevem o grupo */
+  overrides: { allow: string[]; deny: string[] };
+}
+
+/**
+ * Resolve permissões finais com prioridade:
+ * 1. Override individual (allow/deny)
+ * 2. Grupo de permissão
+ * 3. Negado por padrão
+ */
 export const getUserPermissions = async (
   userId: number
 ): Promise<Permission[]> => {
+  const result = await resolveUserPermissions(userId);
+  return result.permissions;
+};
+
+export const resolveUserPermissions = async (
+  userId: number
+): Promise<UserPermissionsResult> => {
   const user = await User.findByPk(userId, {
-    include: [{ model: PermissionGroup, as: "permissionGroup" }]
+    include: [{ model: PermissionGroup, as: "permissionGroup" }],
   });
 
-  if (!user) return [];
-
-  if (PROFILES_WITH_FULL_ACCESS.includes(user.profile)) {
-    return [...AVAILABLE_PERMISSIONS];
+  if (!user) {
+    return { permissions: [], groupPermissions: [], overrides: { allow: [], deny: [] } };
   }
 
-  const basePermissions = user.permissionGroup
-    ? (JSON.parse(user.permissionGroup.permissions || "[]") as string[])
+  if (PROFILES_WITH_FULL_ACCESS.includes(user.profile)) {
+    const all = [...AVAILABLE_PERMISSIONS] as Permission[];
+    return { permissions: all, groupPermissions: [], overrides: { allow: [], deny: [] } };
+  }
+
+  // Base: permissões do grupo
+  const groupPermissions: string[] = user.permissionGroup
+    ? parseJsonArray(user.permissionGroup.permissions)
     : [];
 
-  const { add = [], remove = [] } = parseCustomPermissions(
-    user.customPermissions
-  );
+  // Overrides individuais
+  const { add: allowOverrides = [], remove: denyOverrides = [] } =
+    parseCustomPermissions(user.customPermissions);
 
-  const finalSet = new Set(basePermissions);
-  add.forEach(p => finalSet.add(p));
-  remove.forEach(p => finalSet.delete(p));
+  // Aplica lógica: grupo + allow overrides - deny overrides
+  const finalSet = new Set(groupPermissions);
+  allowOverrides.forEach(p => finalSet.add(p));
+  denyOverrides.forEach(p => finalSet.delete(p));
 
-  return Array.from(finalSet).filter(p =>
+  const permissions = Array.from(finalSet).filter(p =>
     (AVAILABLE_PERMISSIONS as readonly string[]).includes(p)
   ) as Permission[];
+
+  return {
+    permissions,
+    groupPermissions,
+    overrides: { allow: allowOverrides, deny: denyOverrides },
+  };
 };
 
 export const userHasPermission = async (
@@ -57,3 +74,24 @@ export const userHasPermission = async (
   const permissions = await getUserPermissions(userId);
   return permissions.includes(permission);
 };
+
+// ── helpers privados ────────────────────────────────────────────────────────
+
+function parseJsonArray(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseCustomPermissions(raw: string | null): { add?: string[]; remove?: string[] } {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}

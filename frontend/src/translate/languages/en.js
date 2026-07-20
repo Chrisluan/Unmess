@@ -205,6 +205,8 @@ const messages = {
           name: "Name",
           color: "Color",
           greetingMessage: "Greeting Message",
+          isDefault: "Default queue",
+          isDefaultHelp: "Conversations without a queue automatically fall into this one. Only one default queue is allowed at a time.",
         },
         buttons: {
           okAdd: "Add",
@@ -321,14 +323,20 @@ const messages = {
         fieldQueuePlaceholder: "Please select a queue",
         fieldConnectionPlaceholder: "Please select a connection",
         noOptions: "No user found with this name",
+        removeQueueHelp: "If you remove the queue and none is left, the ticket automatically falls into the default queue.",
         buttons: {
           ok: "Transfer",
           cancel: "Cancel",
+          removeUser: "Remove agent",
+          removeQueue: "Remove queue",
         },
       },
       ticketsList: {
         pendingHeader: "Queue",
         assignedHeader: "Working on",
+        myTicketsHeader: "Mine",
+        attendingHeader: "Attending",
+        waitingHeader: "Waiting",
         noTicketsTitle: "Nothing here!",
         noTicketsMessage: "No chats found with this status or search term.",
         connectionTitle: "Connection that is currently being used.",
@@ -376,6 +384,7 @@ const messages = {
           name: "Name",
           color: "Color",
           greeting: "Greeting message",
+          isDefault: "Default",
           actions: "Actions",
         },
         buttons: {

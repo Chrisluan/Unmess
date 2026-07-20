@@ -208,6 +208,8 @@ const messages = {
           name: "Nombre",
           color: "Color",
           greetingMessage: "Mensaje de saludo",
+          isDefault: "Sector predeterminado",
+          isDefaultHelp: "Las conversaciones sin sector definido caen automáticamente en este. Solo puede haber un sector predeterminado a la vez.",
         },
         buttons: {
           okAdd: "Añadir",
@@ -324,14 +326,20 @@ const messages = {
         fieldQueuePlaceholder: "Seleccione una cola",
         fieldConnectionPlaceholder: "Seleccione una conexión",
         noOptions: "No se encontraron usuarios con ese nombre",
+        removeQueueHelp: "Si elimina la cola y no queda ninguna, el ticket cae automáticamente en el sector predeterminado.",
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
+          removeUser: "Quitar agente",
+          removeQueue: "Quitar cola",
         },
       },
       ticketsList: {
         pendingHeader: "Cola",
         assignedHeader: "Trabajando en",
+        myTicketsHeader: "Míos",
+        attendingHeader: "En atención",
+        waitingHeader: "Esperando atención",
         noTicketsTitle: "¡Nada acá!",
         connectionTitle: "Conexión que se está utilizando actualmente.",
         noTicketsMessage:
@@ -380,6 +388,7 @@ const messages = {
           name: "Nombre",
           color: "Color",
           greeting: "Mensaje de saludo",
+          isDefault: "Predeterminado",
           actions: "Comportamiento",
         },
         buttons: {

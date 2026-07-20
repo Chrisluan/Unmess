@@ -16,15 +16,15 @@ import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
 import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
 import BusinessOutlinedIcon from "@material-ui/icons/BusinessOutlined";
+import SecurityIcon from "@material-ui/icons/Security";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
 import { Can } from "../components/Can";
+import usePermissions from "../hooks/usePermissions";
 
-function ListItemLink(props) {
-  const { icon, primary, to, className } = props;
-
+function ListItemLink({ icon, primary, to, className }) {
   const renderLink = React.useMemo(
     () =>
       React.forwardRef((itemProps, ref) => (
@@ -43,66 +43,78 @@ function ListItemLink(props) {
   );
 }
 
-const MainListItems = (props) => {
-  const { drawerClose } = props;
+const MainListItems = ({ drawerClose }) => {
   const { whatsApps } = useContext(WhatsAppsContext);
   const { user } = useContext(AuthContext);
+  const { can, isAdmin } = usePermissions();
   const [connectionWarning, setConnectionWarning] = useState(false);
 
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (whatsApps.length > 0) {
-        const offlineWhats = whatsApps.filter((whats) => {
-          return (
-            whats.status === "qrcode" ||
-            whats.status === "PAIRING" ||
-            whats.status === "DISCONNECTED" ||
-            whats.status === "TIMEOUT" ||
-            whats.status === "OPENING"
-          );
-        });
-        if (offlineWhats.length > 0) {
-          setConnectionWarning(true);
-        } else {
-          setConnectionWarning(false);
-        }
+        const offline = whatsApps.filter((w) =>
+          ["qrcode", "PAIRING", "DISCONNECTED", "TIMEOUT", "OPENING"].includes(w.status)
+        );
+        setConnectionWarning(offline.length > 0);
       }
     }, 2000);
-    return () => clearTimeout(delayDebounceFn);
+    return () => clearTimeout(timer);
   }, [whatsApps]);
+
+  // Helper para renderizar item condicionalmente (admin sempre vê, demais verificam permissão)
+  const PermissionedItem = ({ permission, children }) => {
+    if (!permission || isAdmin || can(permission)) return children;
+    return null;
+  };
 
   return (
     <div onClick={drawerClose}>
-      <ListItemLink
-        to="/"
-        primary="Dashboard"
-        icon={<DashboardOutlinedIcon />}
-      />
-      <ListItemLink
-        to="/connections"
-        primary={i18n.t("mainDrawer.listItems.connections")}
-        icon={
-          <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
-            <SyncAltIcon />
-          </Badge>
-        }
-      />
-      <ListItemLink
-        to="/tickets"
-        primary={i18n.t("mainDrawer.listItems.tickets")}
-        icon={<WhatsAppIcon />}
-      />
+      {/* Dashboard */}
+      <PermissionedItem permission="dashboard:access">
+        <ListItemLink to="/" primary="Dashboard" icon={<DashboardOutlinedIcon />} />
+      </PermissionedItem>
 
-      <ListItemLink
-        to="/contacts"
-        primary={i18n.t("mainDrawer.listItems.contacts")}
-        icon={<ContactPhoneOutlinedIcon />}
-      />
-      <ListItemLink
-        to="/quickAnswers"
-        primary={i18n.t("mainDrawer.listItems.quickAnswers")}
-        icon={<QuestionAnswerOutlinedIcon />}
-      />
+      {/* Conexões */}
+      <PermissionedItem permission="connections:access">
+        <ListItemLink
+          to="/connections"
+          primary={i18n.t("mainDrawer.listItems.connections")}
+          icon={
+            <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
+              <SyncAltIcon />
+            </Badge>
+          }
+        />
+      </PermissionedItem>
+
+      {/* Conversas */}
+      <PermissionedItem permission="tickets:access">
+        <ListItemLink
+          to="/tickets"
+          primary={i18n.t("mainDrawer.listItems.tickets")}
+          icon={<WhatsAppIcon />}
+        />
+      </PermissionedItem>
+
+      {/* Contatos */}
+      <PermissionedItem permission="contacts:access">
+        <ListItemLink
+          to="/contacts"
+          primary={i18n.t("mainDrawer.listItems.contacts")}
+          icon={<ContactPhoneOutlinedIcon />}
+        />
+      </PermissionedItem>
+
+      {/* Respostas Rápidas */}
+      <PermissionedItem permission="quickAnswers:access">
+        <ListItemLink
+          to="/quickAnswers"
+          primary={i18n.t("mainDrawer.listItems.quickAnswers")}
+          icon={<QuestionAnswerOutlinedIcon />}
+        />
+      </PermissionedItem>
+
+      {/* Seção de administração — admin/super OU permissões específicas */}
       <Can
         role={user.profile}
         perform="drawer-admin-items:view"
@@ -120,21 +132,23 @@ const MainListItems = (props) => {
             <ListItemLink
               to="/permission-groups"
               primary={i18n.t("mainDrawer.listItems.permissionGroups")}
-              icon={<PeopleAltOutlinedIcon />}
+              icon={<SecurityIcon />}
             />
             <ListItemLink
-              to="/queues"
+              to="/Queues"
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}
             />
             <ListItemLink
-              to="/settings"
+              to="/Settings"
               primary={i18n.t("mainDrawer.listItems.settings")}
               icon={<SettingsOutlinedIcon />}
             />
           </>
         )}
       />
+
+      {/* Super admin */}
       <Can
         role={user.profile}
         perform="drawer-super-items:view"

@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "./ShowTicketService";
+import GetDefaultQueue from "../../helpers/GetDefaultQueue";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -64,13 +65,19 @@ const FindOrCreateTicketService = async (
   }
 
   if (!ticket) {
+    const companyId = groupContact ? groupContact.companyId : contact.companyId;
+    // Nova conversa: já cai direto no setor padrão da empresa, se houver
+    // um configurado, em vez de nascer órfã de setor.
+    const defaultQueue = await GetDefaultQueue(companyId);
+
     ticket = await Ticket.create({
       contactId: groupContact ? groupContact.id : contact.id,
       status: "pending",
       isGroup: !!groupContact,
       unreadMessages,
       whatsappId,
-      companyId: groupContact ? groupContact.companyId : contact.companyId
+      queueId: defaultQueue ? defaultQueue.id : null,
+      companyId
     });
   }
 

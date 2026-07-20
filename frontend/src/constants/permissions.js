@@ -1,11 +1,12 @@
-// Catálogo central de permissões do sistema.
-// Organizado por módulo:ação para clareza e escalabilidade.
-// Para adicionar novas permissões: basta inserir aqui — sem alterar arquitetura.
-
+/**
+ * Catálogo central de permissões do frontend.
+ * Espelha o PERMISSION_MODULES do backend.
+ * Adicionar novas permissões: inserir aqui — sem alterar arquitetura.
+ */
 export const PERMISSION_MODULES = {
-  // ── Conversas ─────────────────────────────────────────────────────────────
   tickets: {
     label: "Conversas",
+    icon: "Chat",
     permissions: {
       "tickets:access":   "Acesso ao módulo",
       "tickets:view":     "Visualizar",
@@ -17,9 +18,9 @@ export const PERMISSION_MODULES = {
       "tickets:viewAll":  "Ver todas as conversas",
     },
   },
-  // ── Contatos ──────────────────────────────────────────────────────────────
   contacts: {
     label: "Contatos",
+    icon: "Contacts",
     permissions: {
       "contacts:access": "Acesso ao módulo",
       "contacts:view":   "Visualizar",
@@ -29,9 +30,9 @@ export const PERMISSION_MODULES = {
       "contacts:import": "Importar contatos",
     },
   },
-  // ── Campanhas ─────────────────────────────────────────────────────────────
   campaigns: {
     label: "Campanhas",
+    icon: "Campaign",
     permissions: {
       "campaigns:access": "Acesso ao módulo",
       "campaigns:view":   "Visualizar",
@@ -41,9 +42,9 @@ export const PERMISSION_MODULES = {
       "campaigns:cancel": "Cancelar",
     },
   },
-  // ── Respostas Rápidas ─────────────────────────────────────────────────────
   quickAnswers: {
     label: "Respostas Rápidas",
+    icon: "QuickreplyOutlined",
     permissions: {
       "quickAnswers:access": "Acesso ao módulo",
       "quickAnswers:view":   "Visualizar",
@@ -52,9 +53,9 @@ export const PERMISSION_MODULES = {
       "quickAnswers:delete": "Excluir",
     },
   },
-  // ── Filas ─────────────────────────────────────────────────────────────────
   queues: {
     label: "Filas",
+    icon: "AccountTree",
     permissions: {
       "queues:access": "Acesso ao módulo",
       "queues:view":   "Visualizar",
@@ -63,9 +64,9 @@ export const PERMISSION_MODULES = {
       "queues:delete": "Excluir",
     },
   },
-  // ── Usuários ──────────────────────────────────────────────────────────────
   users: {
     label: "Usuários",
+    icon: "People",
     permissions: {
       "users:access": "Acesso ao módulo",
       "users:view":   "Visualizar",
@@ -74,9 +75,9 @@ export const PERMISSION_MODULES = {
       "users:delete": "Excluir",
     },
   },
-  // ── Conexões (WhatsApp) ───────────────────────────────────────────────────
   connections: {
     label: "Conexões",
+    icon: "DevicesOther",
     permissions: {
       "connections:access": "Acesso ao módulo",
       "connections:view":   "Visualizar",
@@ -85,26 +86,26 @@ export const PERMISSION_MODULES = {
       "connections:delete": "Excluir",
     },
   },
-  // ── Dashboard ─────────────────────────────────────────────────────────────
   dashboard: {
     label: "Dashboard",
+    icon: "Dashboard",
     permissions: {
       "dashboard:access": "Acesso ao módulo",
       "dashboard:view":   "Visualizar métricas",
     },
   },
-  // ── Configurações ─────────────────────────────────────────────────────────
   settings: {
     label: "Configurações",
+    icon: "Settings",
     permissions: {
       "settings:access": "Acesso ao módulo",
       "settings:view":   "Visualizar",
       "settings:edit":   "Editar",
     },
   },
-  // ── Grupos de Permissão ───────────────────────────────────────────────────
   permissionGroups: {
     label: "Grupos de Permissão",
+    icon: "Security",
     permissions: {
       "permissionGroups:access": "Acesso ao módulo",
       "permissionGroups:view":   "Visualizar",
@@ -113,14 +114,25 @@ export const PERMISSION_MODULES = {
       "permissionGroups:delete": "Excluir",
     },
   },
-} as const;
+};
 
-// Flat list de todas as permissões disponíveis (derivado dos módulos acima)
-// Usa reduce em vez de flatMap para compatibilidade com target ES6
-export const AVAILABLE_PERMISSIONS: readonly string[] = Object.values(PERMISSION_MODULES).reduce(
-  (acc: string[], mod: { label: string; permissions: Record<string, string> }) =>
-    acc.concat(Object.keys(mod.permissions)),
-  []
+// Flat list de todas as permissões
+export const ALL_PERMISSIONS = Object.values(PERMISSION_MODULES).flatMap(
+  (module) => Object.keys(module.permissions)
 );
 
-export type Permission = string;
+// Helper: dado um ID de permissão, retorna o label legível
+export const getPermissionLabel = (permissionId) => {
+  for (const module of Object.values(PERMISSION_MODULES)) {
+    if (module.permissions[permissionId]) {
+      return module.permissions[permissionId];
+    }
+  }
+  return permissionId;
+};
+
+// Helper: dado um ID de permissão, retorna o label do módulo
+export const getModuleLabel = (permissionId) => {
+  const [moduleKey] = permissionId.split(":");
+  return PERMISSION_MODULES[moduleKey]?.label ?? moduleKey;
+};

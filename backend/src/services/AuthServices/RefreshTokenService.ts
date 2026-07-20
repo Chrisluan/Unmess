@@ -21,9 +21,15 @@ interface Response {
   refreshToken: string;
 }
 
+interface CompanyOverride {
+  companyId?: number | null;
+  companyName?: string | null;
+}
+
 export const RefreshTokenService = async (
   res: Res,
-  token: string
+  token: string,
+  companyOverride?: CompanyOverride
 ): Promise<Response> => {
   try {
     const decoded = verify(token, authConfig.refreshSecret);
@@ -36,10 +42,19 @@ export const RefreshTokenService = async (
       throw new AppError("ERR_SESSION_EXPIRED", 401);
     }
 
-    const newToken = createAccessToken(user);
+    const userForToken =
+      user.profile === "super" && companyOverride?.companyId
+        ? ({
+            ...user.get(),
+            companyId: companyOverride.companyId,
+            companyName: companyOverride.companyName,
+          } as any)
+        : user;
+
+    const newToken = createAccessToken(userForToken);
     const refreshToken = createRefreshToken(user);
 
-    return { user, newToken, refreshToken };
+    return { user: userForToken, newToken, refreshToken };
   } catch (err) {
     res.clearCookie("jrt");
     throw new AppError("ERR_SESSION_EXPIRED", 401);

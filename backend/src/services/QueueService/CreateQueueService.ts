@@ -7,6 +7,7 @@ interface QueueData {
   color: string;
   greetingMessage?: string;
   companyId: number;
+  isDefault?: boolean;
 }
 
 const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
@@ -45,6 +46,11 @@ const CreateQueueService = async (queueData: QueueData): Promise<Queue> => {
     await queueSchema.validate({ color, name });
   } catch (err) {
     throw new AppError(err.message);
+  }
+
+  // Só pode existir um setor padrão por empresa.
+  if (queueData.isDefault === true) {
+    await Queue.update({ isDefault: false }, { where: { companyId } });
   }
 
   const queue = await Queue.create(queueData);

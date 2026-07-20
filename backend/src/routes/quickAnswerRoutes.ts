@@ -1,30 +1,14 @@
-import express from "express";
+import { Router } from "express";
 import isAuth from "../middleware/isAuth";
-
+import requiresCompany from "../middleware/requiresCompany";
+import hasPermission from "../middleware/hasPermission";
 import * as QuickAnswerController from "../controllers/QuickAnswerController";
 
-const quickAnswerRoutes = express.Router();
+const quickAnswerRoutes = Router();
 
-quickAnswerRoutes.get("/quickAnswers", isAuth, QuickAnswerController.index);
-
-quickAnswerRoutes.get(
-  "/quickAnswers/:quickAnswerId",
-  isAuth,
-  QuickAnswerController.show
-);
-
-quickAnswerRoutes.post("/quickAnswers", isAuth, QuickAnswerController.store);
-
-quickAnswerRoutes.put(
-  "/quickAnswers/:quickAnswerId",
-  isAuth,
-  QuickAnswerController.update
-);
-
-quickAnswerRoutes.delete(
-  "/quickAnswers/:quickAnswerId",
-  isAuth,
-  QuickAnswerController.remove
-);
+quickAnswerRoutes.get("/quick-answers",                    isAuth, requiresCompany, hasPermission("quickAnswers:view"),   QuickAnswerController.index);
+quickAnswerRoutes.post("/quick-answers",                   isAuth, requiresCompany, hasPermission("quickAnswers:create"), QuickAnswerController.store);
+quickAnswerRoutes.put("/quick-answers/:quickAnswerId",     isAuth, requiresCompany, hasPermission("quickAnswers:edit"),   QuickAnswerController.update);
+quickAnswerRoutes.delete("/quick-answers/:quickAnswerId",  isAuth, requiresCompany, hasPermission("quickAnswers:delete"), QuickAnswerController.remove);
 
 export default quickAnswerRoutes;

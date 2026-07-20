@@ -1,5 +1,6 @@
 import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
+import GetDefaultQueue from "../../helpers/GetDefaultQueue";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
 import Setting from "../../models/Setting";
@@ -11,10 +12,14 @@ import { logger } from "../../utils/logger";
 
 interface TicketData {
   status?: string;
-  userId?: number;
-  queueId?: number;
+  userId?: number | null;
+  queueId?: number | null;
   whatsappId?: number;
   closingStatusId?: number;
+  // Flags explícitas de remoção, usadas pelo modal de transferência para
+  // diferenciar "não mexer nesse campo" (undefined) de "remover" (null).
+  removeUser?: boolean;
+  removeQueue?: boolean;
 }
 
 interface Request {
@@ -36,7 +41,22 @@ const UpdateTicketService = async ({
   companyId,
   isTransfer = false
 }: Request): Promise<Response> => {
-  const { status, userId, queueId, whatsappId, closingStatusId } = ticketData;
+  const {
+    status,
+    whatsappId,
+    closingStatusId,
+    removeUser,
+    removeQueue
+  } = ticketData;
+
+  // userId/queueId: undefined = não mexe; null ou removeX = true = limpa de
+  // verdade. O Sequelize ignora chaves `undefined` num update(), então sem
+  // essa normalização explícita nunca é possível remover o atendente/setor
+  // de um ticket (era a causa da transferência ficar "presa" ao atendente
+  // anterior).
+  let { userId, queueId } = ticketData;
+  if (removeUser) userId = null;
+  if (removeQueue) queueId = null;
 
   const ticket = await ShowTicketService(ticketId, companyId);
   await SetTicketMessagesAsRead(ticket);
@@ -53,23 +73,45 @@ const UpdateTicketService = async ({
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
   }
 
+  // Nunca deixa o ticket órfão de setor: se a transferência removeu a fila
+  // (ou tirou o atendente sem indicar outra fila) e não sobrou nenhum
+  // setor, cai automaticamente no setor marcado como padrão.
+  const resultingQueueId = queueId !== undefined ? queueId : oldQueueId;
+  if (!resultingQueueId && companyId) {
+    const defaultQueue = await GetDefaultQueue(companyId);
+    if (defaultQueue) {
+      queueId = defaultQueue.id;
+    }
+  }
+
   // Métricas: registra o instante em que o atendimento passa a ter um
   // atendente humano de fato (primeira resposta) e o instante de fechamento.
   const metricsUpdate: { firstResponseAt?: Date; closedAt?: Date } = {};
   if (userId && !ticket.firstResponseAt) {
     metricsUpdate.firstResponseAt = new Date();
   }
-  if (status === "closed" && oldStatus !== "closed") {
-    metricsUpdate.closedAt = new Date();
-  }
 
-  await ticket.update({
+  const updatePayload: Record<string, unknown> = {
     status,
-    queueId,
-    userId,
     closingStatusId,
     ...metricsUpdate
-  });
+  };
+  if (userId !== undefined) updatePayload.userId = userId;
+  if (queueId !== undefined) updatePayload.queueId = queueId;
+
+  // Ao finalizar o atendimento: some das filas ativas (Meus / Em
+  // Atendimento / Aguardando), mas SEM apagar nada — mensagens, contato e o
+  // próprio ticket continuam intactos no banco para consulta de histórico
+  // e dashboard. Também libera o atendente/setor para que o próximo
+  // atendimento desse contato comece "do zero" no roteamento.
+  if (status === "closed" && oldStatus !== "closed") {
+    metricsUpdate.closedAt = new Date();
+    updatePayload.closedAt = metricsUpdate.closedAt;
+    updatePayload.userId = null;
+    updatePayload.queueId = null;
+  }
+
+  await ticket.update(updatePayload);
 
   if (whatsappId) {
     await ticket.update({
@@ -84,7 +126,8 @@ const UpdateTicketService = async ({
   // do bot, e apenas se o admin habilitou essa automação nas configurações.
   const wasTransferred =
     isTransfer &&
-    ((userId && userId !== oldUserId) || (queueId && queueId !== oldQueueId));
+    ((updatePayload.userId !== undefined && updatePayload.userId !== oldUserId) ||
+      (updatePayload.queueId !== undefined && updatePayload.queueId !== oldQueueId));
 
   if (wasTransferred && ticket.companyId) {
     try {

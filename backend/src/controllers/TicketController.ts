@@ -14,6 +14,7 @@ type IndexQuery = {
   searchParam: string;
   pageNumber: string;
   status: string;
+  tab: string;
   date: string;
   showAll: string;
   withUnreadMessages: string;
@@ -25,12 +26,15 @@ interface TicketData {
   status: string;
   queueId: number;
   userId: number;
+  removeUser?: boolean;
+  removeQueue?: boolean;
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const {
     pageNumber,
     status,
+    tab,
     date,
     searchParam,
     showAll,
@@ -51,6 +55,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     searchParam,
     pageNumber,
     status,
+    tab,
     date,
     showAll,
     userId,

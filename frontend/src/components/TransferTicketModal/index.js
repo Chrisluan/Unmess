@@ -17,6 +17,9 @@ import Autocomplete, {
 	createFilterOptions,
 } from "@material-ui/lab/Autocomplete";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import ClearIcon from "@material-ui/icons/Clear";
+import IconButton from "@material-ui/core/IconButton";
+import Typography from "@material-ui/core/Typography";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -31,13 +34,22 @@ const useStyles = makeStyles((theme) => ({
   maxWidth: {
     width: "100%",
   },
+  fieldRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 20,
+  },
+  currentInfo: {
+    marginBottom: 4,
+  },
 }));
 
 const filterOptions = createFilterOptions({
 	trim: true,
 });
 
-const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId }) => {
+const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, currentQueueId, currentUserId }) => {
 	const history = useHistory();
 	const [options, setOptions] = useState([]);
 	const [queues, setQueues] = useState([]);
@@ -45,7 +57,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 	const [loading, setLoading] = useState(false);
 	const [searchParam, setSearchParam] = useState("");
 	const [selectedUser, setSelectedUser] = useState(null);
-	const [selectedQueue, setSelectedQueue] = useState('');
+	const [selectedQueue, setSelectedQueue] = useState(currentQueueId || '');
 	const [selectedWhatsapp, setSelectedWhatsapp] = useState(ticketWhatsappId);
 	const classes = useStyles();
 	const { findAll: findAllQueues } = useQueues();
@@ -62,6 +74,11 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 		loadQueues();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
+
+	useEffect(() => {
+		setSelectedQueue(currentQueueId || '');
+		setSelectedUser(null);
+	}, [currentQueueId, modalOpen]);
 
 	useEffect(() => {
 		if (!modalOpen || searchParam.length < 3) {
@@ -94,23 +111,70 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 		setSelectedUser(null);
 	};
 
+	// Remove só o atendente: o ticket volta a ficar sem dono, mas mantém o
+	// setor (ou cai no setor padrão se não tiver nenhum), status "pending".
+	const handleRemoveUser = async () => {
+		if (!ticketid) return;
+		setLoading(true);
+		try {
+			await api.put(`/tickets/${ticketid}`, {
+				removeUser: true,
+				status: 'pending',
+				isTransfer: true,
+			});
+			setLoading(false);
+			history.push(`/tickets`);
+		} catch (err) {
+			setLoading(false);
+			toastError(err);
+		}
+	};
+
+	// Remove só o setor: se não sobrar setor nenhum, o backend aplica o
+	// setor padrão automaticamente (nunca fica órfão).
+	const handleRemoveQueue = async () => {
+		if (!ticketid) return;
+		setLoading(true);
+		try {
+			await api.put(`/tickets/${ticketid}`, {
+				removeQueue: true,
+				isTransfer: true,
+			});
+			setLoading(false);
+			history.push(`/tickets`);
+		} catch (err) {
+			setLoading(false);
+			toastError(err);
+		}
+	};
+
 	const handleSaveTicket = async e => {
 		e.preventDefault();
 		if (!ticketid) return;
 		setLoading(true);
 		try {
-			let data = {};
+			let data = { isTransfer: true };
 
 			if (selectedUser) {
-				data.userId = selectedUser.id
+				data.userId = selectedUser.id;
+				data.status = 'open';
 			}
 
-			if (selectedQueue && selectedQueue !== null) {
-				data.queueId = selectedQueue
+			if (selectedQueue) {
+				data.queueId = selectedQueue;
 
 				if (!selectedUser) {
 					data.status = 'pending';
-					data.userId = null;
+					data.removeUser = true;
+				}
+			} else if (currentQueueId) {
+				// Select foi esvaziado explicitamente: remove a fila de
+				// verdade (o backend aplica o setor padrão se não sobrar
+				// nenhuma).
+				data.removeQueue = true;
+				if (!selectedUser) {
+					data.status = 'pending';
+					data.removeUser = true;
 				}
 			}
 
@@ -135,59 +199,85 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 					{i18n.t("transferTicketModal.title")}
 				</DialogTitle>
 				<DialogContent dividers>
-					<Autocomplete
-						style={{ width: 300, marginBottom: 20 }}
-						getOptionLabel={option => `${option.name}`}
-						onChange={(e, newValue) => {
-							setSelectedUser(newValue);
-							if (newValue != null && Array.isArray(newValue.queues)) {
-								setQueues(newValue.queues);
-							} else {
-								setQueues(allQueues);
-								setSelectedQueue('');
-							}
-						}}
-						options={options}
-						filterOptions={filterOptions}
-						freeSolo
-						autoHighlight
-						noOptionsText={i18n.t("transferTicketModal.noOptions")}
-						loading={loading}
-						renderInput={params => (
-							<TextField
-								{...params}
-								label={i18n.t("transferTicketModal.fieldLabel")}
-								variant="outlined"
-								required
-								autoFocus
-								onChange={e => setSearchParam(e.target.value)}
-								InputProps={{
-									...params.InputProps,
-									endAdornment: (
-										<React.Fragment>
-											{loading ? (
-												<CircularProgress color="inherit" size={20} />
-											) : null}
-											{params.InputProps.endAdornment}
-										</React.Fragment>
-									),
-								}}
-							/>
+					<div className={classes.fieldRow}>
+						<Autocomplete
+							style={{ width: 300 }}
+							getOptionLabel={option => `${option.name}`}
+							value={selectedUser}
+							onChange={(e, newValue) => {
+								setSelectedUser(newValue);
+								if (newValue != null && Array.isArray(newValue.queues)) {
+									setQueues(newValue.queues);
+								} else {
+									setQueues(allQueues);
+								}
+							}}
+							options={options}
+							filterOptions={filterOptions}
+							freeSolo
+							autoHighlight
+							noOptionsText={i18n.t("transferTicketModal.noOptions")}
+							loading={loading}
+							renderInput={params => (
+								<TextField
+									{...params}
+									label={i18n.t("transferTicketModal.fieldLabel")}
+									variant="outlined"
+									autoFocus
+									onChange={e => setSearchParam(e.target.value)}
+									InputProps={{
+										...params.InputProps,
+										endAdornment: (
+											<React.Fragment>
+												{loading ? (
+													<CircularProgress color="inherit" size={20} />
+												) : null}
+												{params.InputProps.endAdornment}
+											</React.Fragment>
+										),
+									}}
+								/>
+							)}
+						/>
+						{currentUserId && (
+							<IconButton
+								size="small"
+								title={i18n.t("transferTicketModal.buttons.removeUser")}
+								onClick={handleRemoveUser}
+								disabled={loading}
+							>
+								<ClearIcon fontSize="small" />
+							</IconButton>
 						)}
-					/>
-					<FormControl variant="outlined" className={classes.maxWidth}>
-						<InputLabel>{i18n.t("transferTicketModal.fieldQueueLabel")}</InputLabel>
-						<Select
-							value={selectedQueue}
-							onChange={(e) => setSelectedQueue(e.target.value)}
-							label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
-						>
-							<MenuItem value={''}>&nbsp;</MenuItem>
-							{queues.map((queue) => (
-								<MenuItem key={queue.id} value={queue.id}>{queue.name}</MenuItem>
-							))}
-						</Select>
-					</FormControl>
+					</div>
+					<div className={classes.fieldRow}>
+						<FormControl variant="outlined" className={classes.maxWidth}>
+							<InputLabel>{i18n.t("transferTicketModal.fieldQueueLabel")}</InputLabel>
+							<Select
+								value={selectedQueue}
+								onChange={(e) => setSelectedQueue(e.target.value)}
+								label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
+							>
+								<MenuItem value={''}>&nbsp;</MenuItem>
+								{queues.map((queue) => (
+									<MenuItem key={queue.id} value={queue.id}>{queue.name}</MenuItem>
+								))}
+							</Select>
+						</FormControl>
+						{currentQueueId && (
+							<IconButton
+								size="small"
+								title={i18n.t("transferTicketModal.buttons.removeQueue")}
+								onClick={handleRemoveQueue}
+								disabled={loading}
+							>
+								<ClearIcon fontSize="small" />
+							</IconButton>
+						)}
+					</div>
+					<Typography variant="caption" color="textSecondary" className={classes.currentInfo}>
+						{i18n.t("transferTicketModal.removeQueueHelp")}
+					</Typography>
 					<Can
 						role={loggedInUser.profile}
 						perform="ticket-options:transferWhatsapp"
@@ -221,6 +311,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId })
 						type="submit"
 						color="primary"
 						loading={loading}
+						disabled={!selectedUser && !selectedQueue && !currentQueueId}
 					>
 						{i18n.t("transferTicketModal.buttons.ok")}
 					</ButtonWithSpinner>
