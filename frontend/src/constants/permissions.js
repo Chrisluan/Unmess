@@ -30,6 +30,17 @@ export const PERMISSION_MODULES = {
       "contacts:import": "Importar contatos",
     },
   },
+  clients: {
+    label: "Clientes",
+    icon: "Business",
+    permissions: {
+      "clients:access": "Acesso ao módulo",
+      "clients:view":   "Visualizar",
+      "clients:create": "Criar",
+      "clients:edit":   "Editar",
+      "clients:delete": "Excluir",
+    },
+  },
   campaigns: {
     label: "Campanhas",
     icon: "Campaign",

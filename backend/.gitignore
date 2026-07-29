@@ -4,6 +4,8 @@ dist
 !public/.gitkeep
 .env
 .env.test
+.env.localhost
+.env.network
 
 package-lock.json
 yarn.lock

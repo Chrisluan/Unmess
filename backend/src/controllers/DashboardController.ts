@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 
+import getCompanyId from "../helpers/GetCompanyId";
 import GetDashboardMetricsService from "../services/DashboardServices/GetDashboardMetricsService";
 
 type IndexQuery = {
@@ -11,7 +12,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { startDate, endDate } = req.query as IndexQuery;
 
   const metrics = await GetDashboardMetricsService({
-    companyId: req.user.companyId,
+    companyId: getCompanyId(req),
     startDate,
     endDate
   });

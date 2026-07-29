@@ -9,6 +9,7 @@ import DeletePermissionGroupService from "../services/PermissionGroupServices/De
 import { AVAILABLE_PERMISSIONS, PERMISSION_MODULES } from "../helpers/permissions/AvailablePermissions";
 import { resolveUserPermissions } from "../helpers/permissions/GetUserPermissions";
 import AppError from "../errors/AppError";
+import getCompanyId from "../helpers/GetCompanyId";
 
 /** Lista flat de todas as permissões disponíveis */
 export const available = async (
@@ -47,7 +48,7 @@ export const userPermissions = async (
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const groups = await ListPermissionGroupsService(req.user.companyId);
+  const groups = await ListPermissionGroupsService(getCompanyId(req));
   return res.status(200).json(groups);
 };
 
@@ -57,7 +58,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const group = await CreatePermissionGroupService({
     name,
     permissions,
-    companyId: req.user.companyId,
+    companyId: getCompanyId(req),
   });
 
   const io = getIO();
@@ -71,7 +72,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { permissionGroupId } = req.params;
-  const group = await ShowPermissionGroupService(permissionGroupId, req.user.companyId);
+  const group = await ShowPermissionGroupService(permissionGroupId, getCompanyId(req));
   return res.status(200).json(group);
 };
 
@@ -83,7 +84,7 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
     id: permissionGroupId,
     name,
     permissions,
-    companyId: req.user.companyId,
+    companyId: getCompanyId(req),
   });
 
   const io = getIO();
@@ -98,7 +99,7 @@ export const update = async (req: Request, res: Response): Promise<Response> => 
 export const remove = async (req: Request, res: Response): Promise<Response> => {
   const { permissionGroupId } = req.params;
 
-  await DeletePermissionGroupService(permissionGroupId, req.user.companyId);
+  await DeletePermissionGroupService(permissionGroupId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("permissionGroup", {

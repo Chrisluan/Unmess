@@ -13,6 +13,7 @@ import CheckIsValidContact from "../services/WbotServices/CheckIsValidContact";
 import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
 import AppError from "../errors/AppError";
 import GetContactService from "../services/ContactServices/GetContactService";
+import getCompanyId from "../helpers/GetCompanyId";
 
 type IndexQuery = {
   searchParam: string;
@@ -37,7 +38,7 @@ interface ContactData {
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
-  const { companyId } = req.user;
+  const companyId = getCompanyId(req);
 
   const { contacts, count, hasMore } = await ListContactsService({
     searchParam,
@@ -57,7 +58,7 @@ export const getContact = async (
   const contact = await GetContactService({
     name,
     number,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   return res.status(200).json(contact);
@@ -80,13 +81,13 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(newContact.number, req.user.companyId);
+  await CheckIsValidContact(newContact.number, getCompanyId(req));
   const validNumber: any = await CheckContactNumber(
     newContact.number,
-    req.user.companyId
+    getCompanyId(req)
   );
 
-  const profilePicUrl = await GetProfilePicUrl(validNumber, req.user.companyId);
+  const profilePicUrl = await GetProfilePicUrl(validNumber, getCompanyId(req));
 
   let name = newContact.name;
   let number = validNumber;
@@ -99,7 +100,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     email,
     extraInfo,
     profilePicUrl,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -114,7 +115,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { contactId } = req.params;
 
-  const contact = await ShowContactService(contactId, req.user.companyId);
+  const contact = await ShowContactService(contactId, getCompanyId(req));
 
   return res.status(200).json(contact);
 };
@@ -139,14 +140,14 @@ export const update = async (
     throw new AppError(err.message);
   }
 
-  await CheckIsValidContact(contactData.number, req.user.companyId);
+  await CheckIsValidContact(contactData.number, getCompanyId(req));
 
   const { contactId } = req.params;
 
   const contact = await UpdateContactService({
     contactData,
     contactId,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -164,7 +165,7 @@ export const remove = async (
 ): Promise<Response> => {
   const { contactId } = req.params;
 
-  await DeleteContactService(contactId, req.user.companyId);
+  await DeleteContactService(contactId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("contact", {

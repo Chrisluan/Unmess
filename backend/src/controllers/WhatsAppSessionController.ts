@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 import { whatsappProvider } from "../providers/WhatsApp";
+import getCompanyId from "../helpers/GetCompanyId";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import { StartWhatsAppSession } from "../services/WbotServices/StartWhatsAppSession";
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 
 const store = async (req: Request, res: Response): Promise<Response> => {
   const { whatsappId } = req.params;
-  const whatsapp = await ShowWhatsAppService(whatsappId, req.user.companyId);
+  const whatsapp = await ShowWhatsAppService(whatsappId, getCompanyId(req));
 
   StartWhatsAppSession(whatsapp);
 
@@ -19,7 +20,7 @@ const update = async (req: Request, res: Response): Promise<Response> => {
   const { whatsapp } = await UpdateWhatsAppService({
     whatsappId,
     whatsappData: { session: "" },
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   StartWhatsAppSession(whatsapp);
@@ -29,7 +30,7 @@ const update = async (req: Request, res: Response): Promise<Response> => {
 
 const remove = async (req: Request, res: Response): Promise<Response> => {
   const { whatsappId } = req.params;
-  const whatsapp = await ShowWhatsAppService(whatsappId, req.user.companyId);
+  const whatsapp = await ShowWhatsAppService(whatsappId, getCompanyId(req));
 
   await whatsappProvider.logout(whatsapp.id);
 

@@ -29,6 +29,17 @@ export const PERMISSION_MODULES = {
       "contacts:import": "Importar contatos",
     },
   },
+  // ── Clientes (CRM) ───────────────────────────────────────────────────────
+  clients: {
+    label: "Clientes",
+    permissions: {
+      "clients:access": "Acesso ao módulo",
+      "clients:view":   "Visualizar",
+      "clients:create": "Criar",
+      "clients:edit":   "Editar",
+      "clients:delete": "Excluir",
+    },
+  },
   // ── Campanhas ─────────────────────────────────────────────────────────────
   campaigns: {
     label: "Campanhas",

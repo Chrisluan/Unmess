@@ -30,7 +30,10 @@
     "yup": "^0.32.8"
   },
   "scripts": {
+    "select-env": "node ../scripts/select-env.js frontend",
+    "predev": "npm run select-env",
     "dev": "vite",
+    "prestart": "npm run select-env",
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview"

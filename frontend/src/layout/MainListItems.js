@@ -17,6 +17,7 @@ import AccountTreeOutlinedIcon from "@material-ui/icons/AccountTreeOutlined";
 import QuestionAnswerOutlinedIcon from "@material-ui/icons/QuestionAnswerOutlined";
 import BusinessOutlinedIcon from "@material-ui/icons/BusinessOutlined";
 import SecurityIcon from "@material-ui/icons/Security";
+import GroupWorkOutlinedIcon from "@material-ui/icons/GroupWorkOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -102,6 +103,15 @@ const MainListItems = ({ drawerClose }) => {
           to="/contacts"
           primary={i18n.t("mainDrawer.listItems.contacts")}
           icon={<ContactPhoneOutlinedIcon />}
+        />
+      </PermissionedItem>
+
+      {/* Clientes (CRM) */}
+      <PermissionedItem permission="clients:access">
+        <ListItemLink
+          to="/customers"
+          primary={i18n.t("mainDrawer.listItems.customers")}
+          icon={<GroupWorkOutlinedIcon />}
         />
       </PermissionedItem>
 

@@ -6,7 +6,10 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "select-env": "node ../scripts/select-env.js backend",
+    "prestart": "npm run select-env",
     "start": "nodemon dist/server.js",
+    "predev": "npm run select-env",
     "dev": "ts-node-dev --respawn --transpile-only --ignore node_modules src/server.ts",
     "pretest": "NODE_ENV=test sequelize db:migrate && NODE_ENV=test sequelize db:seed:all",
     "test": "NODE_ENV=test jest",

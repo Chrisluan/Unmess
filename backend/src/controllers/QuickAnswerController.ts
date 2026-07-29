@@ -9,6 +9,7 @@ import UpdateQuickAnswerService from "../services/QuickAnswerService/UpdateQuick
 import DeleteQuickAnswerService from "../services/QuickAnswerService/DeleteQuickAnswerService";
 
 import AppError from "../errors/AppError";
+import getCompanyId from "../helpers/GetCompanyId";
 
 type IndexQuery = {
   searchParam: string;
@@ -26,7 +27,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { quickAnswers, count, hasMore } = await ListQuickAnswerService({
     searchParam,
     pageNumber,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   return res.json({ quickAnswers, count, hasMore });
@@ -48,7 +49,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 
   const quickAnswer = await CreateQuickAnswerService({
     ...newQuickAnswer,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -65,7 +66,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
 
   const quickAnswer = await ShowQuickAnswerService(
     quickAnswerId,
-    req.user.companyId
+    getCompanyId(req)
   );
 
   return res.status(200).json(quickAnswer);
@@ -93,7 +94,7 @@ export const update = async (
   const quickAnswer = await UpdateQuickAnswerService({
     quickAnswerData,
     quickAnswerId,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -111,7 +112,7 @@ export const remove = async (
 ): Promise<Response> => {
   const { quickAnswerId } = req.params;
 
-  await DeleteQuickAnswerService(quickAnswerId, req.user.companyId);
+  await DeleteQuickAnswerService(quickAnswerId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("quickAnswer", {

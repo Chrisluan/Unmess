@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
+import getCompanyId from "../helpers/GetCompanyId";
 
 import ListTicketStatusesService from "../services/TicketStatusServices/ListTicketStatusesService";
 import CreateTicketStatusService from "../services/TicketStatusServices/CreateTicketStatusService";
@@ -7,7 +8,7 @@ import UpdateTicketStatusService from "../services/TicketStatusServices/UpdateTi
 import DeleteTicketStatusService from "../services/TicketStatusServices/DeleteTicketStatusService";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const statuses = await ListTicketStatusesService(req.user.companyId);
+  const statuses = await ListTicketStatusesService(getCompanyId(req));
 
   return res.status(200).json(statuses);
 };
@@ -20,7 +21,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     color,
     type,
     isDefault,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -45,7 +46,7 @@ export const update = async (
     color,
     type,
     isDefault,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -63,7 +64,7 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketStatusId } = req.params;
 
-  await DeleteTicketStatusService(ticketStatusId, req.user.companyId);
+  await DeleteTicketStatusService(ticketStatusId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("ticketStatus", {

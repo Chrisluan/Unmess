@@ -16,6 +16,7 @@ import permissionGroupRoutes from "./permissionGroupRoutes";
 import ticketStatusRoutes from "./ticketStatusRoutes";
 import businessHourRoutes from "./businessHourRoutes";
 import dashboardRoutes from "./dashboardRoutes";
+import customerRoutes from "./customerRoutes";
 
 const routes = Router();
 
@@ -35,5 +36,6 @@ routes.use(permissionGroupRoutes);
 routes.use(ticketStatusRoutes);
 routes.use(businessHourRoutes);
 routes.use(dashboardRoutes);
+routes.use(customerRoutes);
 
 export default routes;

@@ -9,6 +9,7 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
+import getCompanyId from "../helpers/GetCompanyId";
 
 type IndexQuery = {
   searchParam: string;
@@ -43,7 +44,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   } = req.query as IndexQuery;
 
   const userId = req.user.id;
-  const { companyId } = req.user;
+  const companyId = getCompanyId(req);
 
   let queueIds: number[] = [];
 
@@ -74,7 +75,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     contactId,
     status,
     userId,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -91,7 +92,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const contact = await ShowTicketService(ticketId, req.user.companyId);
+  const contact = await ShowTicketService(ticketId, getCompanyId(req));
 
   return res.status(200).json(contact);
 };
@@ -107,7 +108,7 @@ export const update = async (
   const { ticket } = await UpdateTicketService({
     ticketData,
     ticketId,
-    companyId: req.user.companyId,
+    companyId: getCompanyId(req),
     isTransfer
   });
 
@@ -133,7 +134,7 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
 
-  const ticket = await DeleteTicketService(ticketId, req.user.companyId);
+  const ticket = await DeleteTicketService(ticketId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`)

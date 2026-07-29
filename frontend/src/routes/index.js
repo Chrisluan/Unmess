@@ -10,6 +10,7 @@ import Connections from "../pages/Connections/";
 import Settings from "../pages/Settings/";
 import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
+import Customers from "../pages/Customers/";
 import QuickAnswers from "../pages/QuickAnswers/";
 import Queues from "../pages/Queues/";
 import Companies from "../pages/Companies/";
@@ -36,6 +37,7 @@ const Routes = () => {
                 <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:access" />
                 <Route exact path="/connections"        component={Connections}      isPrivate permission="connections:access" />
                 <Route exact path="/contacts"           component={Contacts}         isPrivate permission="contacts:access" />
+                <Route exact path="/customers"          component={Customers}        isPrivate permission="clients:access" />
                 <Route exact path="/users"              component={Users}            isPrivate />
                 <Route exact path="/quickAnswers"       component={QuickAnswers}     isPrivate permission="quickAnswers:access" />
                 <Route exact path="/Settings"           component={Settings}         isPrivate permission="settings:access" />

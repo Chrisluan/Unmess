@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 
 import AppError from "../errors/AppError";
+import getCompanyId from "../helpers/GetCompanyId";
 
 import CreateUserService from "../services/UserServices/CreateUserService";
 import ListUsersService from "../services/UserServices/ListUsersService";
@@ -16,7 +17,7 @@ type IndexQuery = {
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;
-  const { companyId } = req.user;
+  const companyId = getCompanyId(req);
 
   const { users, count, hasMore } = await ListUsersService({
     searchParam,
@@ -42,7 +43,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     whatsappId,
     permissionGroupId,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -83,7 +84,7 @@ export const update = async (
   const user = await UpdateUserService({
     userData,
     userId,
-    companyId: req.user.companyId
+    companyId: getCompanyId(req)
   });
 
   const io = getIO();
@@ -105,7 +106,7 @@ export const remove = async (
     throw new AppError("ERR_NO_PERMISSION", 403);
   }
 
-  await DeleteUserService(userId, req.user.companyId);
+  await DeleteUserService(userId, getCompanyId(req));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("user", {

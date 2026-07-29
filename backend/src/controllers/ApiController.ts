@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import * as Yup from "yup";
 import AppError from "../errors/AppError";
+import getCompanyId from "../helpers/GetCompanyId";
 import GetDefaultWhatsApp from "../helpers/GetDefaultWhatsApp";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import Message from "../models/Message";
@@ -96,7 +97,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const contactAndTicket = await createContact(
     whatsappId,
     newContact.number,
-    req.user.companyId
+    getCompanyId(req)
   );
 
   if (medias) {
