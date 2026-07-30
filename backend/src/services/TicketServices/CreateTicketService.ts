@@ -4,6 +4,7 @@ import GetDefaultWhatsApp from "../../helpers/GetDefaultWhatsApp";
 import Ticket from "../../models/Ticket";
 import User from "../../models/User";
 import ShowContactService from "../ContactServices/ShowContactService";
+import { ensureProtocol } from "../../helpers/BuildTicketProtocol";
 
 interface Request {
   contactId: number;
@@ -50,6 +51,8 @@ const CreateTicketService = async ({
   if (!ticket) {
     throw new AppError("ERR_CREATING_TICKET");
   }
+
+  await ensureProtocol(ticket);
 
   return ticket;
 };

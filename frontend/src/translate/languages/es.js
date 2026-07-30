@@ -386,6 +386,7 @@ const messages = {
         tabs: {
           open: { title: "Bandeja" },
           closed: { title: "Resueltos" },
+          groups: { title: "Grupos" },
           search: { title: "Buscar" },
         },
         search: {
@@ -453,6 +454,18 @@ const messages = {
           tag: "Etiqueta",
           actions: "Acciones",
         },
+      },
+      ticketInfo: {
+        protocolTooltip: "Protocolo de la atención (clic para copiar)",
+        protocolCopied: "Protocolo copiado.",
+      },
+      forwardMessageModal: {
+        title: "Reenviar mensaje",
+        helper: "Elige el contacto que recibirá este mensaje.",
+        fieldLabel: "Escribe para buscar un contacto",
+        noOptions: "Ningún contacto encontrado",
+        success: "Mensaje reenviado.",
+        buttons: { confirm: "Reenviar", cancel: "Cancelar" },
       },
       closeTicketModal: {
         title: "Cerrar chat",
@@ -695,6 +708,24 @@ const messages = {
             helper: "Use este token para autenticar integraciones externas con la API de mensajes de esta empresa.",
           },
         },
+        holidays: {
+          title: "Feriados y excepciones",
+          description:
+            "En las fechas de abajo la empresa se considera cerrada, aunque el día de la semana esté marcado como hábil.",
+          saved: "Feriado registrado.",
+          deleted: "Feriado eliminado.",
+          confirmDelete: "Eliminar feriado",
+          confirmDeleteMessage: "La fecha vuelve a seguir el horario normal de atención.",
+          empty: "Ningún feriado registrado.",
+          everyYear: "todos los años",
+          form: {
+            name: "Descripción",
+            date: "Fecha",
+            recurring: "Se repite todos los años",
+            add: "Agregar",
+          },
+          table: { name: "Descripción", date: "Fecha", actions: "Acciones" },
+        },
         businessHours: {
           description: "Defina los días y horarios en que su empresa atiende. Fuera de ese período, el mensaje automático configurado en la pestaña 'Mensajes Automáticos' puede enviarse al cliente.",
           table: {
@@ -837,6 +868,7 @@ const messages = {
       messageOptionsMenu: {
         delete: "Borrar",
         reply: "Responder",
+        forward: "Reenviar",
         confirmationModal: {
           title: "¿Borrar mensaje?",
           message: "Esta acción no puede ser revertida.",

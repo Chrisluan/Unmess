@@ -161,6 +161,7 @@ const reducer = (state, action) => {
 			selectedQueueIds,
 			selectedWhatsappIds = [],
 			selectedTagIds = [],
+			groups,
 			updateCount,
 			style,
 		} = props;
@@ -177,7 +178,7 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds, whatsappIdsKey, tagIdsKey]);
+	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -188,6 +189,7 @@ const reducer = (state, action) => {
 		queueIds: JSON.stringify(selectedQueueIds),
 		whatsappIds: whatsappIdsKey,
 		tagIds: tagIdsKey,
+		groups,
 	});
 
 	useEffect(() => {
@@ -214,9 +216,16 @@ const reducer = (state, action) => {
 			return selectedTagIds.some(id => ticketTagIds.includes(id));
 		};
 
+		const belongsToGroupFilter = ticket => {
+			if (groups === "only") return !!ticket.isGroup;
+			if (groups === "exclude") return !ticket.isGroup;
+			return true;
+		};
+
 		const belongsToTab = ticket => {
 			if (!belongsToSelectedWhatsapp(ticket)) return false;
 			if (!belongsToSelectedTags(ticket)) return false;
+			if (!belongsToGroupFilter(ticket)) return false;
 
 			if (tab === "myTickets") {
 				return ticket.status === "open" && ticket.userId === user?.id;
@@ -232,6 +241,11 @@ const reducer = (state, action) => {
 			}
 			if (tab === "waiting") {
 				return ticket.status === "pending" && !ticket.userId && !ticket.queueId;
+			}
+			if (tab === "groups") {
+				return (
+					!!ticket.isGroup && ["open", "pending"].includes(ticket.status)
+				);
 			}
 			// Fallback (aba "closed"/"search" ou uso antigo baseado só em status)
 			return (
@@ -299,7 +313,7 @@ const reducer = (state, action) => {
 			socket.disconnect();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey]);
+	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

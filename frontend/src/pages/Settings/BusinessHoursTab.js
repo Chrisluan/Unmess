@@ -18,6 +18,7 @@ import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n.js";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import HolidaysSection from "./HolidaysSection";
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -85,6 +86,7 @@ const BusinessHoursTab = () => {
 	};
 
 	return (
+		<>
 		<Paper className={classes.paper} variant="outlined">
 			<Typography variant="body1" gutterBottom>
 				{i18n.t("settings.businessHours.description")}
@@ -155,6 +157,8 @@ const BusinessHoursTab = () => {
 				{i18n.t("settings.buttons.save")}
 			</Button>
 		</Paper>
+		<HolidaysSection />
+		</>
 	);
 };
 

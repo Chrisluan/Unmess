@@ -34,6 +34,7 @@ const VARIABLES = [
 	"{{cliente.numero}}",
 	"{{setor}}",
 	"{{atendente}}",
+	"{{protocolo}}",
 ];
 
 const VariablesHelper = () => {

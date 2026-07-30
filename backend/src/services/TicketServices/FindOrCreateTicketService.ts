@@ -6,6 +6,7 @@ import ShowTicketService from "./ShowTicketService";
 import GetDefaultQueue from "../../helpers/GetDefaultQueue";
 import AutoAssignTicketService from "./AutoAssignTicketService";
 import { GetSettingNumber } from "../../helpers/GetSetting";
+import { ensureProtocol } from "../../helpers/BuildTicketProtocol";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -89,6 +90,8 @@ const FindOrCreateTicketService = async (
       queueId: defaultQueue ? defaultQueue.id : null,
       companyId
     });
+
+    await ensureProtocol(ticket);
 
     // Distribuição automática: se habilitada, já entrega o chat a um
     // atendente online em vez de deixá-lo na pilha de pendentes.

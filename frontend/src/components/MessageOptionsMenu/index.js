@@ -8,10 +8,12 @@ import ConfirmationModal from "../ConfirmationModal";
 import { Menu } from "@material-ui/core";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
+import ForwardMessageModal from "../ForwardMessageModal";
 
 const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
   const { setReplyingMessage } = useContext(ReplyMessageContext);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [forwardOpen, setForwardOpen] = useState(false);
 
   const handleDeleteMessage = async () => {
     try {
@@ -31,8 +33,18 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
     handleClose();
   };
 
+  const handleOpenForward = () => {
+    setForwardOpen(true);
+    handleClose();
+  };
+
   return (
     <>
+      <ForwardMessageModal
+        open={forwardOpen}
+        onClose={() => setForwardOpen(false)}
+        message={message}
+      />
       <ConfirmationModal
         title={i18n.t("messageOptionsMenu.confirmationModal.title")}
         open={confirmationOpen}
@@ -63,6 +75,12 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
         <MenuItem onClick={hanldeReplyMessage}>
           {i18n.t("messageOptionsMenu.reply")}
         </MenuItem>
+        {/* Nota interna não sai do sistema — não faz sentido encaminhar. */}
+        {!message.isInternal && !message.isDeleted && (
+          <MenuItem onClick={handleOpenForward}>
+            {i18n.t("messageOptionsMenu.forward")}
+          </MenuItem>
+        )}
       </Menu>
     </>
   );

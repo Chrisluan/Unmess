@@ -8,6 +8,7 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import GroupIcon from "@material-ui/icons/Group";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import NewTicketModal from "../NewTicketModal";
@@ -99,6 +100,7 @@ const TicketsManager = () => {
   const [myTicketsCount, setMyTicketsCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
+  const [groupsCount, setGroupsCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   // Vazio = todas as conexões. Persistido para o atendente não precisar
@@ -192,6 +194,20 @@ const TicketsManager = () => {
             value={"closed"}
             icon={<CheckBoxIcon />}
             label={i18n.t("tickets.tabs.closed.title")}
+            classes={{ root: classes.tab }}
+          />
+          <Tab
+            value={"groups"}
+            icon={
+              <Badge
+                className={classes.badge}
+                badgeContent={groupsCount}
+                color="primary"
+              >
+                <GroupIcon />
+              </Badge>
+            }
+            label={i18n.t("tickets.tabs.groups.title")}
             classes={{ root: classes.tab }}
           />
           <Tab
@@ -332,6 +348,7 @@ const TicketsManager = () => {
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
             tab="myTickets"
+            groups="exclude"
             showAll={false}
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
@@ -341,6 +358,7 @@ const TicketsManager = () => {
           />
           <TicketsList
             tab="attending"
+            groups="exclude"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
@@ -350,6 +368,7 @@ const TicketsManager = () => {
           />
           <TicketsList
             tab="waiting"
+            groups="exclude"
             showAll={true}
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
@@ -358,6 +377,16 @@ const TicketsManager = () => {
             style={applyPanelStyle("waiting")}
           />
         </Paper>
+      </TabPanel>
+      <TabPanel value={tab} name="groups" className={classes.ticketsWrapper}>
+        <TicketsList
+          tab="groups"
+          showAll={true}
+          selectedQueueIds={selectedQueueIds}
+          selectedWhatsappIds={selectedWhatsappIds}
+          selectedTagIds={selectedTagIds}
+          updateCount={(val) => setGroupsCount(val)}
+        />
       </TabPanel>
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList

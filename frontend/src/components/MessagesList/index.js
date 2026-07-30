@@ -523,23 +523,31 @@ const MessagesList = ({ ticketId, isGroup }) => {
       }
       return <VcardPreview contact={contact} numbers={obj[0]?.number} />
     }
-    /*else if (message.mediaType === "multi_vcard") {
-      console.log("multi_vcard")
-      console.log(message)
-    	
-      if(message.body !== null && message.body !== "") {
-        let newBody = JSON.parse(message.body)
+    else if (message.mediaType === "multi_vcard") {
+      // Reativado: antes ficava comentado e a mensagem caía no branch de
+      // download, virando um botão quebrado. Se o corpo não for um JSON
+      // válido, mostra o texto cru em vez de derrubar a lista inteira.
+      if (!message.body) return null;
+
+      try {
+        const contacts = JSON.parse(message.body);
+        if (!Array.isArray(contacts)) return <>{message.body}</>;
+
         return (
           <>
-            {
-            newBody.map(v => (
-              <VcardPreview contact={v.name} numbers={v.number} />
-            ))
-            }
+            {contacts.map((v, i) => (
+              <VcardPreview
+                key={`${v.number ?? i}`}
+                contact={v.name}
+                numbers={v.number}
+              />
+            ))}
           </>
-        )
-      } else return (<></>)
-    }*/
+        );
+      } catch {
+        return <>{message.body}</>;
+      }
+    }
     else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
@@ -711,9 +719,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     {message.contact?.name}
                   </span>
                 )}
-                {(message.mediaUrl || message.mediaType === "location" || message.mediaType === "vcard"
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
+                {(message.mediaUrl ||
+                  message.mediaType === "location" ||
+                  message.mediaType === "vcard" ||
+                  message.mediaType === "multi_vcard") &&
+                  checkMessageMedia(message)}
                 <div className={classes.textContentItem}>
                   {message.quotedMsg && renderQuotedMessage(message)}
                   <MarkdownWrapper>{message.body}</MarkdownWrapper>
@@ -740,9 +750,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 >
                   <ExpandMore />
                 </IconButton>
-                {(message.mediaUrl || message.mediaType === "location" || message.mediaType === "vcard"
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
+                {(message.mediaUrl ||
+                  message.mediaType === "location" ||
+                  message.mediaType === "vcard" ||
+                  message.mediaType === "multi_vcard") &&
+                  checkMessageMedia(message)}
                 <div
                   className={clsx(classes.textContentItem, {
                     [classes.textContentItemDeleted]: message.isDeleted,

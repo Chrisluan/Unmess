@@ -5,6 +5,7 @@ import User from "../../models/User";
 import Queue from "../../models/Queue";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
+import { ensureProtocol } from "../../helpers/BuildTicketProtocol";
 
 const ShowTicketService = async (
   id: string | number,
@@ -49,6 +50,9 @@ const ShowTicketService = async (
   if (companyId !== undefined && ticket.companyId !== companyId) {
     throw new AppError("ERR_NO_TICKET_FOUND", 404);
   }
+
+  // Tickets criados antes da migration podem não ter protocolo.
+  await ensureProtocol(ticket);
 
   return ticket;
 };

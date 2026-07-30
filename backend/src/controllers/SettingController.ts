@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 
 import { getIO } from "../libs/socket";
-import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
 
 import UpdateSettingService from "../services/SettingServices/UpdateSettingService";
@@ -22,10 +21,8 @@ const ATTENDANCE_SETTINGS: Record<string, string> = {
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  if (req.user.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
-
+  // Autorização fica na rota (hasPermission("settings:view")). Checar
+  // profile aqui anularia o sistema de grupos de permissão.
   const settings = await ListSettingsService(getCompanyId(req));
 
   return res.status(200).json(settings);
@@ -62,9 +59,6 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  if (req.user.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
   const { settingKey: key } = req.params;
   const { value } = req.body;
 

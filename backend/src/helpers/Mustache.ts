@@ -22,7 +22,8 @@ export default (body: string, contactOrTicket: Contact | Ticket): string => {
       numero: contact ? contact.number : ""
     },
     setor: ticket?.queue ? ticket.queue.name : "",
-    atendente: ticket?.user ? ticket.user.name : ""
+    atendente: ticket?.user ? ticket.user.name : "",
+    protocolo: ticket?.protocol ?? ""
   };
 
   return Mustache.render(body, view);

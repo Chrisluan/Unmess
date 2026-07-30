@@ -384,6 +384,7 @@ const messages = {
         tabs: {
           open: { title: "Inbox" },
           closed: { title: "Resolvidos" },
+          groups: { title: "Grupos" },
           search: { title: "Busca" },
         },
         search: {
@@ -451,6 +452,18 @@ const messages = {
           tag: "Etiqueta",
           actions: "Ações",
         },
+      },
+      ticketInfo: {
+        protocolTooltip: "Protocolo do atendimento (clique para copiar)",
+        protocolCopied: "Protocolo copiado.",
+      },
+      forwardMessageModal: {
+        title: "Encaminhar mensagem",
+        helper: "Escolha o contato que vai receber esta mensagem.",
+        fieldLabel: "Digite para pesquisar o contato",
+        noOptions: "Nenhum contato encontrado",
+        success: "Mensagem encaminhada.",
+        buttons: { confirm: "Encaminhar", cancel: "Cancelar" },
       },
       closeTicketModal: {
         title: "Encerrar chat",
@@ -695,6 +708,24 @@ const messages = {
             helper: "Use este token para autenticar integrações externas com a API de mensagens desta empresa.",
           },
         },
+        holidays: {
+          title: "Feriados e exceções",
+          description:
+            "Nas datas abaixo a empresa é considerada fechada, mesmo que o dia da semana esteja marcado como útil.",
+          saved: "Feriado cadastrado.",
+          deleted: "Feriado removido.",
+          confirmDelete: "Remover feriado",
+          confirmDeleteMessage: "A data volta a seguir o horário normal de atendimento.",
+          empty: "Nenhum feriado cadastrado.",
+          everyYear: "todo ano",
+          form: {
+            name: "Descrição",
+            date: "Data",
+            recurring: "Repete todo ano",
+            add: "Adicionar",
+          },
+          table: { name: "Descrição", date: "Data", actions: "Ações" },
+        },
         businessHours: {
           description: "Defina os dias e horários em que sua empresa realiza atendimento. Fora desse período, a mensagem automática configurada na aba 'Mensagens Automáticas' pode ser enviada ao cliente.",
           table: {
@@ -837,6 +868,7 @@ const messages = {
       messageOptionsMenu: {
         delete: "Deletar",
         reply: "Responder",
+        forward: "Encaminhar",
         confirmationModal: {
           title: "Apagar mensagem?",
           message: "Esta ação não pode ser revertida.",

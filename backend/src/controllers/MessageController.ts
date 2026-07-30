@@ -7,6 +7,7 @@ import Message from "../models/Message";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
 import CreateInternalNoteService from "../services/MessageServices/CreateInternalNoteService";
+import ForwardMessageService from "../services/MessageServices/ForwardMessageService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
@@ -84,6 +85,27 @@ export const storeInternalNote = async (
   });
 
   return res.status(200).json(message);
+};
+
+/**
+ * Encaminha uma mensagem para outro chat ou contato.
+ */
+export const forward = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { messageId } = req.params;
+  const { toTicketId, toContactId } = req.body;
+
+  const ticket = await ForwardMessageService({
+    messageId,
+    toTicketId,
+    toContactId,
+    userId: Number(req.user.id),
+    companyId: getCompanyId(req)
+  });
+
+  return res.status(200).json({ ticketId: ticket.id });
 };
 
 export const remove = async (

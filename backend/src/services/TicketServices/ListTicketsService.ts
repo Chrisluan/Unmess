@@ -13,7 +13,7 @@ interface Request {
   searchParam?: string;
   pageNumber?: string;
   status?: string;
-  tab?: string; // "myTickets" | "attending" | "waiting" | undefined (usa status normal, ex: closed)
+  tab?: string; // "myTickets" | "attending" | "waiting" | "groups" | undefined (usa status normal, ex: closed)
   date?: string;
   showAll?: string;
   userId: string;
@@ -23,6 +23,8 @@ interface Request {
   whatsappIds?: number[];
   /** Filtro por etiqueta. Vazio = todas. */
   tagIds?: number[];
+  /** "only" = só grupos, "exclude" = só individuais, undefined = tudo. */
+  groups?: string;
   companyId: number;
 }
 
@@ -44,6 +46,7 @@ const ListTicketsService = async ({
   withUnreadMessages,
   whatsappIds,
   tagIds,
+  groups,
   companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
@@ -109,6 +112,14 @@ const ListTicketsService = async ({
       status: "pending",
       userId: null,
       queueId: null
+    };
+  } else if (tab === "groups") {
+    // Grupos: todos os ativos da empresa, com ou sem atendente. Atribuir
+    // grupo a um atendente específico raramente faz sentido no dia a dia.
+    whereCondition = {
+      companyId,
+      status: { [Op.in]: ["open", "pending"] },
+      isGroup: true
     };
   }
 
@@ -208,6 +219,14 @@ const ListTicketsService = async ({
         required: true
       };
     });
+  }
+
+  // Grupos: por padrão o painel mistura tudo; as abas do frontend usam este
+  // filtro para separar conversas de grupo das individuais.
+  if (groups === "only") {
+    whereCondition = { ...whereCondition, isGroup: true };
+  } else if (groups === "exclude") {
+    whereCondition = { ...whereCondition, isGroup: false };
   }
 
   const limit = 40;

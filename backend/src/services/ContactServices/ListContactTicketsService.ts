@@ -17,6 +17,7 @@ const ListContactTicketsService = async (
     where: { contactId, companyId },
     attributes: [
       "id",
+      "protocol",
       "status",
       "createdAt",
       "closedAt",

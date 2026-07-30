@@ -94,6 +94,10 @@ class Ticket extends Model<Ticket> {
   @BelongsTo(() => TicketStatus)
   closingStatus: TicketStatus;
 
+  // Protocolo citável pelo cliente: AAAAMMDD + id com 6 dígitos.
+  @Column
+  protocol: string;
+
   @Column
   firstResponseAt: Date;
 

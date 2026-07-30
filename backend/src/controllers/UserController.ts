@@ -40,10 +40,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     maxSimultaneousTickets
   } = req.body;
 
-  if (req.user.profile !== "admin" && req.user.profile !== "super") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
-
+  // Autorização fica na rota (hasPermission("users:create")).
   const user = await CreateUserService({
     email,
     password,
@@ -84,10 +81,6 @@ export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
-  if (req.user.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
-
   const { userId } = req.params;
   const userData = req.body;
 
@@ -111,10 +104,6 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { userId } = req.params;
-
-  if (req.user.profile !== "admin") {
-    throw new AppError("ERR_NO_PERMISSION", 403);
-  }
 
   await DeleteUserService(userId, getCompanyId(req));
 

@@ -13,6 +13,7 @@ const useTickets = ({
     queueIds,
     whatsappIds,
     tagIds,
+    groups,
     withUnreadMessages,
 }) => {
     const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ const useTickets = ({
                             queueIds,
                             whatsappIds,
                             tagIds,
+                            groups,
                             withUnreadMessages,
                         },
                     })
@@ -68,6 +70,7 @@ const useTickets = ({
         queueIds,
         whatsappIds,
         tagIds,
+        groups,
         withUnreadMessages,
     ])
 

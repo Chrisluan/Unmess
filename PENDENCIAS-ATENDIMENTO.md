@@ -7,7 +7,7 @@ Base: WhaTicket (fork) — a partir do commit `6c2f5e2`.
 
 ## ⚠️ Antes de rodar
 
-Cinco migrations novas. É obrigatório rodar:
+Seis migrations novas. É obrigatório rodar:
 
 ```bash
 cd backend
@@ -23,6 +23,8 @@ Migrations adicionadas:
 | `20260729100001-create-tags` | Tabela `Tags` (nome único por empresa) |
 | `20260729100002-create-ticket-tags` | Tabela pivô `TicketTags` |
 | `20260729100003-add-internal-note-to-messages` | `isInternal` e `userId` em Messages |
+| `20260729100004-add-protocol-to-tickets` | `protocol` em Tickets — já preenche o histórico existente |
+| `20260729100005-create-holidays` | Tabela `Holidays` |
 
 ---
 
@@ -107,14 +109,44 @@ Novos endpoints: `GET /customers/by-contact/:contactId` e `GET /contacts/:contac
 
 **Busca de CEP (ViaCEP)** no cadastro de cliente: preenche rua, bairro, cidade e UF. Falha em silêncio se o CEP não existir.
 
+## 9. Autorização unificada nos controllers
+
+`SettingController` e `UserController` ainda checavam `profile === "admin"` na mão, o que anulava o sistema de grupos de permissão recém-aplicado nas rotas: um usuário com `settings:edit` passava o middleware e tomava 403 no controller. As checagens redundantes saíram; a autorização mora só na rota.
+
+Mantida a checagem de `PermissionGroupController`, que é sobre visibilidade entre empresas, não sobre papel.
+
+## 10. Encaminhar mensagem
+
+Opção no menu da mensagem, com busca de contato de destino. Se o contato já tem chat aberto ou pendente, ele é reaproveitado; senão abre um novo. Depois de encaminhar, navega para a conversa de destino.
+
+Reenvia o conteúdo em vez de usar o forward nativo do WhatsApp — wwebjs e Baileys expõem isso de formas diferentes e nem sempre com a mídia baixada. Mídia é lida do disco; se o arquivo já foi removido, encaminha só o texto e registra aviso no log. Nota interna não pode ser encaminhada.
+
+## 11. Protocolo de atendimento
+
+Formato `AAAAMMDD` + id com 6 dígitos (ex: `20260729000482`). Derivado do id, então é único sem precisar de contador nem lock.
+
+- Chip clicável no cabeçalho da conversa — copia para a área de transferência.
+- Aparece no histórico de atendimentos do painel lateral.
+- Variável `{{protocolo}}` disponível nas mensagens automáticas.
+- A migration preenche o histórico existente; `ShowTicketService` também gera sob demanda, como rede de segurança.
+
+## 12. Aba de grupos
+
+Quarta aba no painel, com contador. Grupos saíram das abas de conversas individuais (Meus / Em Atendimento / Aguardando) e agora aparecem só na própria aba — todos os grupos ativos da empresa, com ou sem atendente.
+
+## 13. multi_vcard e feriados
+
+- **multi_vcard reativado**. Estava comentado desde o fork: a mensagem caía no branch de download e virava um botão quebrado. Agora renderiza os contatos; se o corpo não for JSON válido, mostra o texto cru em vez de derrubar a lista inteira.
+- **Feriados e exceções** no horário de atendimento (tabela `Holidays`, seção nova na aba). Suporta data única ou recorrente todo ano. Feriado tem precedência sobre a grade semanal.
+
 ---
 
 ## Verificação
 
 - `tsc --noEmit` no backend: **0 erros**
-- 105 arquivos do frontend parseados: **0 erros de sintaxe**
+- 107 arquivos do frontend parseados: **0 erros de sintaxe**
 - **0 imports relativos quebrados**
-- 424 chaves i18n usadas, todas presentes em pt/en/es (incluindo as 30 chaves dinâmicas conferidas uma a uma)
+- 450 chaves i18n usadas, todas presentes em pt/en/es (as 9 restantes no relatório são template literals — os valores possíveis foram conferidos um a um)
 
 O build do Vite não roda aqui — o `node_modules` do frontend foi instalado no Windows e o esbuild é binário nativo. Rode `npm run build` na sua máquina para confirmar.
 
@@ -122,17 +154,14 @@ O build do Vite não roda aqui — o `node_modules` do frontend foi instalado no
 
 ## Não implementado (ficou fora)
 
-Da análise original, seguem pendentes — todos de menor peso que o que foi feito:
-
-- Encaminhar / editar / reagir a mensagem
+- Editar / reagir a mensagem enviada
 - Agendar mensagem
-- Protocolo de atendimento
 - Indicador de "digitando"
 - Transcrição de áudio e sugestão de resposta com IA
 - Chatbot / fluxo de atendimento
 - Kanban / funil
 - Refatoração de `MessagesList` e `MessageInput` (ambos ainda monolíticos)
-- `multi_vcard` continua comentado
-- Feriados no horário de atendimento
 - Importação de clientes via CSV
-- Aba separada de grupos
+- Galeria de mídias do contato
+- Separador visual de "não lidas" no histórico
+- Drag-and-drop de arquivo na conversa

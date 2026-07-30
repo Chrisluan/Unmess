@@ -217,7 +217,7 @@ const CustomerPanel = ({ contact }) => {
 					>
 						<div className={classes.row}>
 							<span className={classes.value} style={{ textAlign: "left" }}>
-								#{ticket.id}
+								{ticket.protocol || `#${ticket.id}`}
 								{ticket.queue?.name ? ` · ${ticket.queue.name}` : ""}
 							</span>
 							<span className={classes.label}>

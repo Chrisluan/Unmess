@@ -37,6 +37,15 @@ messageRoutes.post(
   MessageController.storeInternalNote
 );
 
+// Encaminhar mensagem para outro chat/contato.
+messageRoutes.post(
+  "/messages/:messageId/forward",
+  isAuth,
+  requiresCompany,
+  hasPermission("tickets:edit"),
+  MessageController.forward
+);
+
 messageRoutes.delete(
   "/messages/:messageId",
   isAuth,

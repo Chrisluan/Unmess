@@ -383,6 +383,7 @@ const messages = {
         tabs: {
           open: { title: "Inbox" },
           closed: { title: "Resolved" },
+          groups: { title: "Groups" },
           search: { title: "Search" },
         },
         search: {
@@ -449,6 +450,18 @@ const messages = {
           tag: "Tag",
           actions: "Actions",
         },
+      },
+      ticketInfo: {
+        protocolTooltip: "Chat protocol (click to copy)",
+        protocolCopied: "Protocol copied.",
+      },
+      forwardMessageModal: {
+        title: "Forward message",
+        helper: "Pick the contact that will receive this message.",
+        fieldLabel: "Type to search for a contact",
+        noOptions: "No contact found",
+        success: "Message forwarded.",
+        buttons: { confirm: "Forward", cancel: "Cancel" },
       },
       closeTicketModal: {
         title: "Close chat",
@@ -690,6 +703,24 @@ const messages = {
             helper: "Use this token to authenticate external integrations with this company's messages API.",
           },
         },
+        holidays: {
+          title: "Holidays and exceptions",
+          description:
+            "On the dates below the company counts as closed, even if the weekday is marked as a business day.",
+          saved: "Holiday added.",
+          deleted: "Holiday removed.",
+          confirmDelete: "Remove holiday",
+          confirmDeleteMessage: "The date goes back to the normal business hours.",
+          empty: "No holidays registered.",
+          everyYear: "every year",
+          form: {
+            name: "Description",
+            date: "Date",
+            recurring: "Repeats every year",
+            add: "Add",
+          },
+          table: { name: "Description", date: "Date", actions: "Actions" },
+        },
         businessHours: {
           description: "Set the days and hours your company provides service. Outside this period, the automatic message configured in the 'Automatic Messages' tab can be sent to the customer.",
           table: {
@@ -830,6 +861,7 @@ const messages = {
       messageOptionsMenu: {
         delete: "Delete",
         reply: "Reply",
+        forward: "Forward",
         confirmationModal: {
           title: "Delete message?",
           message: "This action cannot be reverted.",

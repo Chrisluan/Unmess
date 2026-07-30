@@ -18,6 +18,7 @@ import PermissionGroup from "../models/PermissionGroup";
 import Customer from "../models/Customer";
 import Tag from "../models/Tag";
 import TicketTag from "../models/TicketTag";
+import Holiday from "../models/Holiday";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -44,7 +45,8 @@ const models = [
   PermissionGroup,
   Customer,
   Tag,
-  TicketTag
+  TicketTag,
+  Holiday
 ];
 
 sequelize.addModels(models);
