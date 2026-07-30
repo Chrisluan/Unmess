@@ -6,3 +6,22 @@ ssl/
 .idea
 frontend.zip
 backend.zip
+node_modules
+public/*
+dist
+!public/.gitkeep
+.env
+.env.test
+.env.localhost
+.env.network
+.cmd
+package-lock.json
+yarn.lock
+yarn-error.log
+
+/src/config/sentry.js
+
+# Ignore test-related files
+/coverage.data
+/coverage/
+.wwebjs_auth/
