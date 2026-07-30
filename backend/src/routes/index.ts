@@ -17,6 +17,7 @@ import ticketStatusRoutes from "./ticketStatusRoutes";
 import businessHourRoutes from "./businessHourRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import customerRoutes from "./customerRoutes";
+import tagRoutes from "./tagRoutes";
 
 const routes = Router();
 
@@ -37,5 +38,6 @@ routes.use(ticketStatusRoutes);
 routes.use(businessHourRoutes);
 routes.use(dashboardRoutes);
 routes.use(customerRoutes);
+routes.use(tagRoutes);
 
 export default routes;

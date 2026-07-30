@@ -7,6 +7,7 @@ import CreateCustomerService from "../services/CustomerServices/CreateCustomerSe
 import ShowCustomerService from "../services/CustomerServices/ShowCustomerService";
 import UpdateCustomerService from "../services/CustomerServices/UpdateCustomerService";
 import DeleteCustomerService from "../services/CustomerServices/DeleteCustomerService";
+import ShowCustomerByContactService from "../services/CustomerServices/ShowCustomerByContactService";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
 
@@ -88,6 +89,24 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const { customerId } = req.params;
 
   const customer = await ShowCustomerService(customerId, getCompanyId(req));
+
+  return res.status(200).json(customer);
+};
+
+/**
+ * Cliente vinculado a um contato — usado pelo painel lateral do chat.
+ * Devolve null quando ainda não há cadastro, sem tratar isso como erro.
+ */
+export const showByContact = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+
+  const customer = await ShowCustomerByContactService(
+    Number(contactId),
+    getCompanyId(req)
+  );
 
   return res.status(200).json(customer);
 };

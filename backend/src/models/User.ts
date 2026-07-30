@@ -76,6 +76,19 @@ class User extends Model<User> {
   @Column(DataType.TEXT)
   customPermissions: string;
 
+  // Teto de chats abertos simultâneos. 0 = sem limite.
+  @Default(0)
+  @Column
+  maxSimultaneousTickets: number;
+
+  // Presença do atendente, mantida pelo socket (conectar/desconectar).
+  @Default(false)
+  @Column
+  online: boolean;
+
+  @Column
+  lastSeenAt: Date;
+
   @CreatedAt
   createdAt: Date;
 

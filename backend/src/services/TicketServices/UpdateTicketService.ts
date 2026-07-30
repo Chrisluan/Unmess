@@ -9,6 +9,8 @@ import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
 import ShowTicketService from "./ShowTicketService";
 import { logger } from "../../utils/logger";
+import { GetSettingBoolean } from "../../helpers/GetSetting";
+import AppError from "../../errors/AppError";
 
 interface TicketData {
   status?: string;
@@ -71,6 +73,23 @@ const UpdateTicketService = async ({
 
   if (oldStatus === "closed") {
     await CheckContactOpenTickets(ticket.contact.id, ticket.whatsappId);
+  }
+
+  // Exigir motivo de encerramento, se a empresa configurou assim. Sem isso o
+  // relatório de status de encerramento fica cheio de buracos.
+  if (status === "closed" && oldStatus !== "closed" && ticket.companyId) {
+    const requireClosingStatus = await GetSettingBoolean(
+      "requireClosingStatus",
+      ticket.companyId,
+      false
+    );
+
+    const resultingClosingStatusId =
+      closingStatusId !== undefined ? closingStatusId : ticket.closingStatusId;
+
+    if (requireClosingStatus && !resultingClosingStatusId) {
+      throw new AppError("ERR_CLOSING_STATUS_REQUIRED", 400);
+    }
   }
 
   // Nunca deixa o ticket órfão de setor: se a transferência removeu a fila

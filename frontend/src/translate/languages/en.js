@@ -121,6 +121,7 @@ const messages = {
           edit: "Edit WhatsApp",
         },
         form: {
+          farewellMessage: "Farewell message",
           name: "Name",
           default: "Default",
         },
@@ -227,6 +228,7 @@ const messages = {
           phone: "Phone",
           whatsapp: "WhatsApp",
           zipCode: "Zip code",
+          zipCodeHelper: "Fills the address automatically",
           street: "Street",
           addressNumber: "Number",
           complement: "Complement",
@@ -291,6 +293,9 @@ const messages = {
           profile: "Profile",
           whatsapp: "Default Connection",
           permissionGroup: "Permission group",
+          maxSimultaneousTickets: "Simultaneous chat limit",
+          maxSimultaneousTicketsHelper:
+            "0 = unlimited. Used by automatic chat distribution.",
         },
         profiles: {
           vendedor: "Salesperson",
@@ -361,6 +366,13 @@ const messages = {
       ticketsQueueSelect: {
         placeholder: "Queues",
       },
+      ticketsWhatsappSelect: {
+        placeholder: "Connections",
+        allConnections: "All numbers",
+        multiple: "{{count}} numbers",
+        tooltip: "Filter chats by WhatsApp number",
+        disconnected: "Disconnected",
+      },
       tickets: {
         toasts: {
           deleted: "The chat you were on has been deleted.",
@@ -409,10 +421,55 @@ const messages = {
           accept: "Accept",
         },
       },
+      ticketsTagSelect: {
+        all: "Tags",
+        multiple: "{{count}} tags",
+        tooltip: "Filter chats by tag",
+      },
+      ticketTags: {
+        placeholder: "Add tag...",
+      },
+      tags: {
+        description:
+          "Tags help classify and filter conversations in the attendance panel.",
+        saved: "Tag saved successfully.",
+        deleted: "Tag deleted successfully.",
+        confirmDelete: "Delete tag",
+        confirmDeleteMessage:
+          "The tag will be removed from every conversation it is applied to.",
+        empty: "No tags registered yet.",
+        form: {
+          name: "Tag name",
+          color: "Color",
+          add: "Add",
+          save: "Save",
+          cancel: "Cancel",
+        },
+        table: {
+          tag: "Tag",
+          actions: "Actions",
+        },
+      },
+      closeTicketModal: {
+        title: "Close chat",
+        status: "Closing reason",
+        none: "No reason",
+        requiredHelper: "Select a closing reason to finish this chat.",
+        optionalHelper: "You may record a closing reason. It is optional.",
+        noStatuses:
+          "No closing status registered. Configure it in Settings › Closing Statuses.",
+        buttons: {
+          confirm: "Close",
+          cancel: "Cancel",
+        },
+      },
       newTicketModal: {
         title: "Create Chat",
         fieldLabel: "Type to search for a contact",
         add: "Add",
+        connection: "Send from number",
+        connectionHelper: "The contact will receive the message from this number.",
+        noConnection: "No active connection. Connect a number in Settings › Connections.",
         buttons: {
           ok: "Save",
           cancel: "Cancel",
@@ -549,6 +606,10 @@ const messages = {
           email: "Email",
           profile: "Profile",
           whatsapp: "Default Connection",
+          status: "Status",
+          online: "Online",
+          offline: "Offline",
+          maxSimultaneousTickets: "Limit",
           actions: "Actions",
         },
         buttons: {
@@ -568,9 +629,49 @@ const messages = {
         title: "Settings",
         tabs: {
           general: "General",
+          connections: "Connections",
           businessHours: "Business Hours",
           ticketStatuses: "Closing Statuses",
+          tags: "Tags",
           autoMessages: "Automatic Messages",
+        },
+        general: {
+          sections: {
+            attendance: "Attendance rules",
+            experience: "Agent experience",
+          },
+          autoAssignTickets: {
+            label: "Automatic chat distribution",
+            helper:
+              "New chats are handed to the online agent in the queue with the fewest open conversations. Respects each agent's individual limit.",
+          },
+          requireClosingStatus: {
+            label: "Require status on close",
+            helper:
+              "The agent must pick a closing reason before finishing the chat.",
+          },
+          allowAgentSeeAllTickets: {
+            label: "Agents can see chats from other queues",
+            helper:
+              "When off, each agent only sees chats from the queues they belong to.",
+          },
+          autoCloseInactiveHours: {
+            label: "Close idle chats after (hours)",
+            helper: "0 disables auto-close. Checked every 5 minutes by the server.",
+          },
+          reopenTicketWindowHours: {
+            label: "Reopen window (hours)",
+            helper:
+              "A new message within this period reopens the contact's last chat instead of creating another.",
+          },
+          signMessages: {
+            label: "Sign messages with the agent's name",
+            helper: "Sets the default for new agents. Each one can toggle it in the chat screen.",
+          },
+          notificationSound: {
+            label: "Notification sound",
+            helper: "Plays an audible alert when a message arrives in a chat that is not open.",
+          },
         },
         buttons: {
           save: "Save",
@@ -660,6 +761,9 @@ const messages = {
         },
       },
       messagesList: {
+        internalNote: "Internal note",
+        searchPlaceholder: "Search in this conversation",
+        searchResults: "{{count}} result(s)",
         header: {
           assignedTo: "Assigned to:",
           buttons: {
@@ -674,9 +778,31 @@ const messages = {
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this chat to send a message.",
         signMessage: "Sign",
+        internalNoteTooltip: "Internal note (team only)",
+        placeholderInternalNote:
+          "Internal note — will not be sent to the customer",
       },
       contactDrawer: {
         header: "Contact details",
+        customer: {
+          title: "Customer",
+          status: "Status",
+          statuses: { lead: "Lead", active: "Active", inactive: "Inactive" },
+          name: "Legal name",
+          document: "Tax ID",
+          segment: "Segment",
+          responsible: "Owner",
+          city: "City",
+          notes: "Notes",
+          notLinked: "This contact has no customer record yet.",
+          create: "Create customer",
+          edit: "Edit customer",
+        },
+        history: {
+          title: "Previous chats",
+          empty: "No previous chats.",
+          noAgent: "Unassigned",
+        },
         buttons: {
           edit: "Edit contact",
         },

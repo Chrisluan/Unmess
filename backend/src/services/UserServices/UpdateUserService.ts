@@ -12,6 +12,7 @@ interface UserData {
   queueIds?: number[];
   whatsappId?: number;
   permissionGroupId?: number;
+  maxSimultaneousTickets?: number;
   customPermissions?: { add?: string[]; remove?: string[] };
 }
 
@@ -54,6 +55,7 @@ const UpdateUserService = async ({
     queueIds = [],
     whatsappId,
     permissionGroupId,
+    maxSimultaneousTickets,
     customPermissions
   } = userData;
 
@@ -71,6 +73,10 @@ const UpdateUserService = async ({
     whatsappId: whatsappId ? whatsappId : null,
     permissionGroupId:
       permissionGroupId !== undefined ? permissionGroupId : user.permissionGroupId,
+    maxSimultaneousTickets:
+      maxSimultaneousTickets !== undefined
+        ? Number(maxSimultaneousTickets) || 0
+        : user.maxSimultaneousTickets,
     customPermissions: customPermissions
       ? JSON.stringify(customPermissions)
       : user.customPermissions

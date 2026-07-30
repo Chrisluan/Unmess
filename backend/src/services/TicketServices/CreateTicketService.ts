@@ -11,6 +11,8 @@ interface Request {
   userId: number;
   companyId: number;
   queueId?: number;
+  /** Conexão escolhida pelo atendente. Se omitido, resolve pela ordem padrão. */
+  whatsappId?: number;
 }
 
 const CreateTicketService = async ({
@@ -18,11 +20,12 @@ const CreateTicketService = async ({
   status,
   userId,
   companyId,
-  queueId
+  queueId,
+  whatsappId
 }: Request): Promise<Ticket> => {
-  const defaultWhatsapp = await GetDefaultWhatsApp(companyId, userId);
+  const whatsapp = await GetDefaultWhatsApp(companyId, userId, whatsappId);
 
-  await CheckContactOpenTickets(contactId, defaultWhatsapp.id);
+  await CheckContactOpenTickets(contactId, whatsapp.id);
 
   const { isGroup } = await ShowContactService(contactId, companyId);
 
@@ -31,7 +34,7 @@ const CreateTicketService = async ({
     queueId = user?.queues.length === 1 ? user.queues[0].id : undefined;
   }
 
-  const { id }: Ticket = await defaultWhatsapp.$create("ticket", {
+  const { id }: Ticket = await whatsapp.$create("ticket", {
     contactId,
     status,
     isGroup,
@@ -40,7 +43,9 @@ const CreateTicketService = async ({
     companyId
   });
 
-  const ticket = await Ticket.findByPk(id, { include: ["contact"] });
+  const ticket = await Ticket.findByPk(id, {
+    include: ["contact", "whatsapp"]
+  });
 
   if (!ticket) {
     throw new AppError("ERR_CREATING_TICKET");

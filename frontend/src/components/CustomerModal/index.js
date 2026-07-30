@@ -75,7 +75,15 @@ const initialState = {
   notes: "",
 };
 
-const CustomerModal = ({ open, onClose, customerId, onSave }) => {
+const CustomerModal = ({
+  open,
+  onClose,
+  customerId,
+  onSave,
+  // Pré-preenchimento ao criar um cliente a partir do chat: já chega com
+  // nome/whatsapp do contato e o vínculo contactId pronto.
+  initialValues,
+}) => {
   const classes = useStyles();
   const isMounted = useRef(true);
 
@@ -90,7 +98,7 @@ const CustomerModal = ({ open, onClose, customerId, onSave }) => {
   useEffect(() => {
     const fetchCustomer = async () => {
       if (!customerId) {
-        setCustomer(initialState);
+        setCustomer({ ...initialState, ...(initialValues || {}) });
         return;
       }
 
@@ -105,17 +113,41 @@ const CustomerModal = ({ open, onClose, customerId, onSave }) => {
     };
 
     fetchCustomer();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId, open]);
 
   const handleClose = () => {
     onClose();
-    setCustomer(initialState);
+    setCustomer({ ...initialState, ...(initialValues || {}) });
+  };
+
+  // Busca de endereço pelo CEP (ViaCEP). Falha silenciosa: se o CEP não
+  // existir ou a API estiver fora, o atendente digita à mão como antes.
+  const handleZipCodeBlur = async (zipCode, setFieldValue) => {
+    const digits = (zipCode || "").replace(/\D/g, "");
+    if (digits.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await response.json();
+      if (data.erro) return;
+
+      setFieldValue("street", data.logradouro || "");
+      setFieldValue("neighborhood", data.bairro || "");
+      setFieldValue("city", data.localidade || "");
+      setFieldValue("state", data.uf || "");
+    } catch {
+      // silencioso de propósito
+    }
   };
 
   const handleSaveCustomer = async (values) => {
     try {
       if (customerId) {
-        await api.put(`/customers/${customerId}`, values);
+        const { data } = await api.put(`/customers/${customerId}`, values);
+        if (onSave) {
+          onSave(data);
+        }
         handleClose();
       } else {
         const { data } = await api.post("/customers", values);
@@ -149,7 +181,7 @@ const CustomerModal = ({ open, onClose, customerId, onSave }) => {
             }, 400);
           }}
         >
-          {({ touched, errors, isSubmitting }) => (
+          {({ touched, errors, isSubmitting, values, setFieldValue }) => (
             <Form>
               <DialogContent dividers>
                 <Typography variant="subtitle1" gutterBottom>
@@ -256,6 +288,10 @@ const CustomerModal = ({ open, onClose, customerId, onSave }) => {
                     variant="outlined"
                     margin="dense"
                     className={classes.textField}
+                    onBlur={() =>
+                      handleZipCodeBlur(values.zipCode, setFieldValue)
+                    }
+                    helperText={i18n.t("customerModal.form.zipCodeHelper")}
                   />
                   <Field
                     as={TextField}

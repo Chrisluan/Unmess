@@ -10,6 +10,10 @@ interface SerializedUser {
   companyId: number;
   permissionGroupId: number | null;
   customPermissions: string | null;
+  maxSimultaneousTickets: number;
+  online: boolean;
+  lastSeenAt: Date | null;
+  whatsappId: number | null;
   queues: Queue[];
   whatsapp: Whatsapp;
 }
@@ -23,6 +27,10 @@ export const SerializeUser = (user: User): SerializedUser => {
     companyId: user.companyId,
     permissionGroupId: user.permissionGroupId,
     customPermissions: user.customPermissions,
+    maxSimultaneousTickets: user.maxSimultaneousTickets,
+    online: user.online,
+    lastSeenAt: user.lastSeenAt,
+    whatsappId: user.whatsappId,
     queues: user.queues,
     whatsapp: user.whatsapp,
   };

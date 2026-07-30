@@ -6,6 +6,7 @@ import { getIO } from "../libs/socket";
 import Message from "../models/Message";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
+import CreateInternalNoteService from "../services/MessageServices/CreateInternalNoteService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
@@ -13,6 +14,7 @@ import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 
 type IndexQuery = {
   pageNumber: string;
+  searchParam?: string;
 };
 
 type MessageData = {
@@ -24,15 +26,20 @@ type MessageData = {
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { pageNumber } = req.query as IndexQuery;
+  const { pageNumber, searchParam } = req.query as IndexQuery;
 
   const { count, messages, ticket, hasMore } = await ListMessagesService({
     pageNumber,
     ticketId,
+    searchParam,
     companyId: getCompanyId(req)
   });
 
-  SetTicketMessagesAsRead(ticket);
+  // Busca dentro da conversa não deve marcar tudo como lido: o atendente está
+  // consultando o histórico, não necessariamente atendendo.
+  if (!searchParam) {
+    SetTicketMessagesAsRead(ticket);
+  }
 
   return res.json({ count, messages, ticket, hasMore });
 };
@@ -57,6 +64,26 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   }
 
   return res.send();
+};
+
+/**
+ * Nota interna — não sai para o WhatsApp.
+ */
+export const storeInternalNote = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+  const { body } = req.body;
+
+  const message = await CreateInternalNoteService({
+    ticketId,
+    body,
+    userId: Number(req.user.id),
+    companyId: getCompanyId(req)
+  });
+
+  return res.status(200).json(message);
 };
 
 export const remove = async (

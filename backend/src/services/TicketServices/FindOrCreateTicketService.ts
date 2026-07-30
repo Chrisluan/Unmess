@@ -4,6 +4,8 @@ import Contact from "../../models/Contact";
 import Ticket from "../../models/Ticket";
 import ShowTicketService from "./ShowTicketService";
 import GetDefaultQueue from "../../helpers/GetDefaultQueue";
+import AutoAssignTicketService from "./AutoAssignTicketService";
+import { GetSettingNumber } from "../../helpers/GetSetting";
 
 const FindOrCreateTicketService = async (
   contact: Contact,
@@ -44,10 +46,18 @@ const FindOrCreateTicketService = async (
   }
 
   if (!ticket && !groupContact) {
+    // Janela de reabertura configurável: dentro dela, a mensagem reabre o
+    // último chat em vez de criar um novo. Antes era fixo em 2h no código.
+    const reopenWindowHours = await GetSettingNumber(
+      "reopenTicketWindowHours",
+      contact.companyId,
+      2
+    );
+
     ticket = await Ticket.findOne({
       where: {
         updatedAt: {
-          [Op.between]: [+subHours(new Date(), 2), +new Date()]
+          [Op.between]: [+subHours(new Date(), reopenWindowHours), +new Date()]
         },
         contactId: contact.id,
         whatsappId: whatsappId
@@ -79,6 +89,10 @@ const FindOrCreateTicketService = async (
       queueId: defaultQueue ? defaultQueue.id : null,
       companyId
     });
+
+    // Distribuição automática: se habilitada, já entrega o chat a um
+    // atendente online em vez de deixá-lo na pilha de pendentes.
+    ticket = await AutoAssignTicketService(ticket);
   }
 
   ticket = await ShowTicketService(ticket.id);

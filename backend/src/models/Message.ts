@@ -12,6 +12,7 @@ import {
 } from "sequelize-typescript";
 import Contact from "./Contact";
 import Ticket from "./Ticket";
+import User from "./User";
 
 @Table
 class Message extends Model<Message> {
@@ -50,6 +51,20 @@ class Message extends Model<Message> {
   @Default(false)
   @Column
   isDeleted: boolean;
+
+  // Nota interna: aparece na conversa para a equipe, mas nunca é enviada
+  // ao contato pelo WhatsApp.
+  @Default(false)
+  @Column
+  isInternal: boolean;
+
+  // Autor da nota interna (ou do envio, quando registrado).
+  @ForeignKey(() => User)
+  @Column
+  userId: number;
+
+  @BelongsTo(() => User, "userId")
+  user: User;
 
   @CreatedAt
   @Column(DataType.DATE(6))

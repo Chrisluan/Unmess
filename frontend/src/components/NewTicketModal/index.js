@@ -12,6 +12,11 @@ import Autocomplete, {
 	createFilterOptions,
 } from "@material-ui/lab/Autocomplete";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormHelperText from "@material-ui/core/FormHelperText";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -19,6 +24,7 @@ import ButtonWithSpinner from "../ButtonWithSpinner";
 import ContactModal from "../ContactModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
 const filter = createFilterOptions({
 	trim: true,
@@ -34,6 +40,27 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 	const [newContact, setNewContact] = useState({});
 	const [contactModalOpen, setContactModalOpen] = useState(false);
 	const { user } = useContext(AuthContext);
+	const { whatsApps } = useContext(WhatsAppsContext);
+	const [selectedWhatsappId, setSelectedWhatsappId] = useState("");
+
+	// Só faz sentido enviar por conexão ativa.
+	const connectedWhatsapps = (whatsApps || []).filter(
+		w => w.status === "CONNECTED"
+	);
+
+	// Pré-seleciona: conexão preferencial do usuário → padrão da empresa →
+	// primeira conectada. O atendente ainda pode trocar antes de abrir o chat.
+	useEffect(() => {
+		if (!modalOpen || connectedWhatsapps.length === 0) return;
+
+		const preferred =
+			connectedWhatsapps.find(w => w.id === user?.whatsappId) ||
+			connectedWhatsapps.find(w => w.isDefault) ||
+			connectedWhatsapps[0];
+
+		setSelectedWhatsappId(prev => prev || preferred.id);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [modalOpen, whatsApps]);
 
 	useEffect(() => {
 		if (!modalOpen || searchParam.length < 3) {
@@ -74,6 +101,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 				contactId: contactId,
 				userId: user.id,
 				status: "open",
+				whatsappId: selectedWhatsappId || undefined,
 			});
 			history.push(`/tickets/${ticket.id}`);
 		} catch (err) {
@@ -180,6 +208,32 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 							/>
 						)}
 					/>
+					<FormControl
+						variant="outlined"
+						margin="dense"
+						style={{ width: 300, marginTop: 16 }}
+					>
+						<InputLabel id="new-ticket-whatsapp-label">
+							{i18n.t("newTicketModal.connection")}
+						</InputLabel>
+						<Select
+							labelId="new-ticket-whatsapp-label"
+							label={i18n.t("newTicketModal.connection")}
+							value={selectedWhatsappId}
+							onChange={e => setSelectedWhatsappId(e.target.value)}
+						>
+							{connectedWhatsapps.map(whatsApp => (
+								<MenuItem key={whatsApp.id} value={whatsApp.id}>
+									{whatsApp.name}
+								</MenuItem>
+							))}
+						</Select>
+						<FormHelperText>
+							{connectedWhatsapps.length === 0
+								? i18n.t("newTicketModal.noConnection")
+								: i18n.t("newTicketModal.connectionHelper")}
+						</FormHelperText>
+					</FormControl>
 				</DialogContent>
 				<DialogActions>
 					<Button
@@ -193,7 +247,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 					<ButtonWithSpinner
 						variant="contained"
 						type="button"
-						disabled={!selectedContact}
+						disabled={!selectedContact || !selectedWhatsappId}
 						onClick={() => handleSaveTicket(selectedContact.id)}
 						color="primary"
 						loading={loading}

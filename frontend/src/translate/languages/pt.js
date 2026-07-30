@@ -229,6 +229,7 @@ const messages = {
           phone: "Telefone",
           whatsapp: "WhatsApp",
           zipCode: "CEP",
+          zipCodeHelper: "Preenche o endereço automaticamente",
           street: "Endereço",
           addressNumber: "Número",
           complement: "Complemento",
@@ -293,6 +294,9 @@ const messages = {
           profile: "Perfil",
           whatsapp: "Conexão Padrão",
           permissionGroup: "Grupo de permissão",
+          maxSimultaneousTickets: "Limite de chats simultâneos",
+          maxSimultaneousTicketsHelper:
+            "0 = sem limite. Usado pela distribuição automática de chats.",
         },
         profiles: {
           vendedor: "Vendedor",
@@ -363,6 +367,13 @@ const messages = {
       ticketsQueueSelect: {
         placeholder: "Filas",
       },
+      ticketsWhatsappSelect: {
+        placeholder: "Conexões",
+        allConnections: "Todos os números",
+        multiple: "{{count}} números",
+        tooltip: "Filtrar chats por número de WhatsApp",
+        disconnected: "Desconectado",
+      },
       tickets: {
         toasts: {
           deleted: "O chat que você estava foi deletado.",
@@ -412,10 +423,57 @@ const messages = {
           accept: "Aceitar",
         },
       },
+      ticketsTagSelect: {
+        all: "Etiquetas",
+        multiple: "{{count}} etiquetas",
+        tooltip: "Filtrar chats por etiqueta",
+      },
+      ticketTags: {
+        placeholder: "Adicionar etiqueta...",
+      },
+      tags: {
+        description:
+          "Etiquetas ajudam a classificar e filtrar conversas no painel de atendimento.",
+        saved: "Etiqueta salva com sucesso.",
+        deleted: "Etiqueta excluída com sucesso.",
+        confirmDelete: "Excluir etiqueta",
+        confirmDeleteMessage:
+          "A etiqueta será removida de todas as conversas em que estiver aplicada.",
+        empty: "Nenhuma etiqueta cadastrada ainda.",
+        form: {
+          name: "Nome da etiqueta",
+          color: "Cor",
+          add: "Adicionar",
+          save: "Salvar",
+          cancel: "Cancelar",
+        },
+        table: {
+          tag: "Etiqueta",
+          actions: "Ações",
+        },
+      },
+      closeTicketModal: {
+        title: "Encerrar chat",
+        status: "Motivo do encerramento",
+        none: "Sem motivo",
+        requiredHelper:
+          "Selecione o motivo do encerramento para finalizar este chat.",
+        optionalHelper:
+          "Você pode registrar o motivo do encerramento. É opcional.",
+        noStatuses:
+          "Nenhum status de finalização cadastrado. Configure em Configurações › Status de Finalização.",
+        buttons: {
+          confirm: "Encerrar",
+          cancel: "Cancelar",
+        },
+      },
       newTicketModal: {
         title: "Criar Chat",
         fieldLabel: "Digite para pesquisar o contato",
         add: "Adicionar",
+        connection: "Enviar pelo número",
+        connectionHelper: "O contato receberá a mensagem por este número.",
+        noConnection: "Nenhuma conexão ativa. Conecte um número em Configurações › Conexões.",
         buttons: {
           ok: "Salvar",
           cancel: "Cancelar",
@@ -553,6 +611,10 @@ const messages = {
           email: "Email",
           profile: "Perfil",
           whatsapp: "Conexão Padrão",
+          status: "Status",
+          online: "Online",
+          offline: "Offline",
+          maxSimultaneousTickets: "Limite",
           actions: "Ações",
         },
         buttons: {
@@ -572,9 +634,49 @@ const messages = {
         title: "Configurações",
         tabs: {
           general: "Geral",
+          connections: "Conexões",
           businessHours: "Horário de Atendimento",
           ticketStatuses: "Status de Finalização",
+          tags: "Etiquetas",
           autoMessages: "Mensagens Automáticas",
+        },
+        general: {
+          sections: {
+            attendance: "Regras de atendimento",
+            experience: "Experiência do atendente",
+          },
+          autoAssignTickets: {
+            label: "Distribuição automática de chats",
+            helper:
+              "Novos chats são entregues automaticamente ao atendente online da fila com menos conversas abertas. Respeita o limite individual de cada atendente.",
+          },
+          requireClosingStatus: {
+            label: "Exigir status ao encerrar",
+            helper:
+              "O atendente precisa escolher um motivo de encerramento antes de finalizar o chat.",
+          },
+          allowAgentSeeAllTickets: {
+            label: "Atendente pode ver chats de outras filas",
+            helper:
+              "Quando desligado, cada atendente vê apenas os chats das filas às quais pertence.",
+          },
+          autoCloseInactiveHours: {
+            label: "Encerrar chats parados após (horas)",
+            helper: "0 desliga o encerramento automático. Verificado a cada 5 minutos pelo servidor.",
+          },
+          reopenTicketWindowHours: {
+            label: "Janela de reabertura (horas)",
+            helper:
+              "Nova mensagem dentro desse período reabre o último chat do contato em vez de criar outro.",
+          },
+          signMessages: {
+            label: "Assinar mensagens com o nome do atendente",
+            helper: "Define o padrão para novos atendentes. Cada um pode alternar na tela de chat.",
+          },
+          notificationSound: {
+            label: "Som de notificação",
+            helper: "Toca um alerta sonoro quando chega mensagem em um chat não aberto.",
+          },
         },
         buttons: {
           save: "Salvar",
@@ -664,6 +766,9 @@ const messages = {
         },
       },
       messagesList: {
+        internalNote: "Nota interna",
+        searchPlaceholder: "Buscar nesta conversa",
+        searchResults: "{{count}} resultado(s)",
         header: {
           assignedTo: "Atribuído à:",
           buttons: {
@@ -679,9 +784,31 @@ const messages = {
         placeholderClosed:
           "Reabra ou aceite esse chat para enviar uma mensagem.",
         signMessage: "Assinar",
+        internalNoteTooltip: "Nota interna (só a equipe vê)",
+        placeholderInternalNote:
+          "Nota interna — não será enviada ao cliente",
       },
       contactDrawer: {
         header: "Dados do contato",
+        customer: {
+          title: "Cliente",
+          status: "Situação",
+          statuses: { lead: "Lead", active: "Ativo", inactive: "Inativo" },
+          name: "Razão social / Nome",
+          document: "CPF/CNPJ",
+          segment: "Segmento",
+          responsible: "Responsável",
+          city: "Cidade",
+          notes: "Observações",
+          notLinked: "Este contato ainda não tem cadastro de cliente.",
+          create: "Cadastrar cliente",
+          edit: "Editar cliente",
+        },
+        history: {
+          title: "Atendimentos anteriores",
+          empty: "Nenhum atendimento anterior.",
+          noAgent: "Sem atendente",
+        },
         buttons: {
           edit: "Editar contato",
         },
@@ -692,6 +819,7 @@ const messages = {
         transfer: "Transferir",
         confirmationModal: {
           title: "Deletar o chat do contato",
+          titleFrom: "do contato ",
           message:
             "Atenção! Todas as mensagens relacionadas ao chat serão perdidas.",
         },

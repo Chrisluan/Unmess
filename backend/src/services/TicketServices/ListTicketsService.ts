@@ -7,6 +7,7 @@ import Message from "../../models/Message";
 import Queue from "../../models/Queue";
 import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
+import Tag from "../../models/Tag";
 
 interface Request {
   searchParam?: string;
@@ -18,6 +19,10 @@ interface Request {
   userId: string;
   withUnreadMessages?: string;
   queueIds: number[];
+  /** Filtro por conexão (número de WhatsApp). Vazio = todas. */
+  whatsappIds?: number[];
+  /** Filtro por etiqueta. Vazio = todas. */
+  tagIds?: number[];
   companyId: number;
 }
 
@@ -37,6 +42,8 @@ const ListTicketsService = async ({
   showAll,
   userId,
   withUnreadMessages,
+  whatsappIds,
+  tagIds,
   companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
@@ -60,7 +67,14 @@ const ListTicketsService = async ({
     {
       model: Whatsapp,
       as: "whatsapp",
-      attributes: ["name"]
+      attributes: ["id", "name"]
+    },
+    {
+      model: Tag,
+      as: "tags",
+      attributes: ["id", "name", "color"],
+      through: { attributes: [] },
+      required: false
     }
   ];
 
@@ -168,6 +182,32 @@ const ListTicketsService = async ({
       queueId: { [Op.or]: [userQueueIds, null] },
       unreadMessages: { [Op.gt]: 0 }
     };
+  }
+
+  // Filtro por conexão. Aplicado por último, depois de todas as reatribuições
+  // de whereCondition acima, para nunca ser sobrescrito por aba/data/não-lidas.
+  if (whatsappIds && whatsappIds.length > 0) {
+    whereCondition = {
+      ...whereCondition,
+      whatsappId: { [Op.in]: whatsappIds }
+    };
+  }
+
+  // Filtro por etiqueta: força o join a ser obrigatório e restrito às tags
+  // escolhidas. Aplicado depois do include base para não perder as demais.
+  if (tagIds && tagIds.length > 0) {
+    includeCondition = includeCondition.map(include => {
+      const asName = (include as { as?: string }).as;
+      if (asName !== "tags") return include;
+      return {
+        model: Tag,
+        as: "tags",
+        attributes: ["id", "name", "color"],
+        through: { attributes: [] },
+        where: { id: { [Op.in]: tagIds } },
+        required: true
+      };
+    });
   }
 
   const limit = 40;

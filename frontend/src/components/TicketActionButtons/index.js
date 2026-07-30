@@ -11,6 +11,7 @@ import TicketOptionsMenu from "../TicketOptionsMenu";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import CloseTicketModal from "../CloseTicketModal";
 
 const useStyles = makeStyles(theme => ({
 	actionButtons: {
@@ -31,6 +32,7 @@ const TicketActionButtons = ({ ticket }) => {
 	const [loading, setLoading] = useState(false);
 	const ticketOptionsMenuOpen = Boolean(anchorEl);
 	const { user } = useContext(AuthContext);
+	const [closeModalOpen, setCloseModalOpen] = useState(false);
 
 	const handleOpenTicketOptionsMenu = e => {
 		setAnchorEl(e.currentTarget);
@@ -40,15 +42,17 @@ const TicketActionButtons = ({ ticket }) => {
 		setAnchorEl(null);
 	};
 
-	const handleUpdateTicketStatus = async (e, status, userId) => {
+	const handleUpdateTicketStatus = async (e, status, userId, closingStatusId) => {
 		setLoading(true);
 		try {
 			await api.put(`/tickets/${ticket.id}`, {
 				status: status,
 				userId: userId || null,
+				...(closingStatusId ? { closingStatusId } : {}),
 			});
 
 			setLoading(false);
+			setCloseModalOpen(false);
 			if (status === "open") {
 				history.push(`/tickets/${ticket.id}`);
 			} else {
@@ -62,6 +66,14 @@ const TicketActionButtons = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
+			<CloseTicketModal
+				open={closeModalOpen}
+				loading={loading}
+				onClose={() => setCloseModalOpen(false)}
+				onConfirm={closingStatusId =>
+					handleUpdateTicketStatus(null, "closed", user?.id, closingStatusId)
+				}
+			/>
 			{ticket.status === "closed" && (
 				<ButtonWithSpinner
 					loading={loading}
@@ -87,7 +99,7 @@ const TicketActionButtons = ({ ticket }) => {
 						size="small"
 						variant="contained"
 						color="primary"
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+						onClick={() => setCloseModalOpen(true)}
 					>
 						{i18n.t("messagesList.header.buttons.resolve")}
 					</ButtonWithSpinner>

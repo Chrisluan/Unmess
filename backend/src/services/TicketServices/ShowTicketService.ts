@@ -4,6 +4,7 @@ import Contact from "../../models/Contact";
 import User from "../../models/User";
 import Queue from "../../models/Queue";
 import Whatsapp from "../../models/Whatsapp";
+import Tag from "../../models/Tag";
 
 const ShowTicketService = async (
   id: string | number,
@@ -30,7 +31,13 @@ const ShowTicketService = async (
       {
         model: Whatsapp,
         as: "whatsapp",
-        attributes: ["name"]
+        attributes: ["id", "name"]
+      },
+      {
+        model: Tag,
+        as: "tags",
+        attributes: ["id", "name", "color"],
+        through: { attributes: [] }
       }
     ]
   });

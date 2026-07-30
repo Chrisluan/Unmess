@@ -14,6 +14,7 @@ import GetProfilePicUrl from "../services/WbotServices/GetProfilePicUrl";
 import AppError from "../errors/AppError";
 import GetContactService from "../services/ContactServices/GetContactService";
 import getCompanyId from "../helpers/GetCompanyId";
+import ListContactTicketsService from "../services/ContactServices/ListContactTicketsService";
 
 type IndexQuery = {
   searchParam: string;
@@ -174,4 +175,21 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Contact deleted" });
+};
+
+/**
+ * Histórico de atendimentos do contato, exibido no painel lateral do chat.
+ */
+export const tickets = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+
+  const contactTickets = await ListContactTicketsService(
+    Number(contactId),
+    getCompanyId(req)
+  );
+
+  return res.status(200).json(contactTickets);
 };

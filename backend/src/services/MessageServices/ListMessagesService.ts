@@ -1,11 +1,16 @@
+import { Op, WhereOptions } from "sequelize";
+
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
+import User from "../../models/User";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 
 interface Request {
   ticketId: string;
   pageNumber?: string;
+  /** Busca dentro do histórico desta conversa. */
+  searchParam?: string;
   companyId: number;
 }
 
@@ -19,6 +24,7 @@ interface Response {
 const ListMessagesService = async ({
   pageNumber = "1",
   ticketId,
+  searchParam,
   companyId
 }: Request): Promise<Response> => {
   const ticket = await ShowTicketService(ticketId, companyId);
@@ -31,11 +37,18 @@ const ListMessagesService = async ({
   const limit = 20;
   const offset = limit * (+pageNumber - 1);
 
+  let where: WhereOptions = { ticketId };
+
+  if (searchParam && searchParam.trim()) {
+    where = { ticketId, body: { [Op.like]: `%${searchParam.trim()}%` } };
+  }
+
   const { count, rows: messages } = await Message.findAndCountAll({
-    where: { ticketId },
+    where,
     limit,
     include: [
       "contact",
+      { model: User, as: "user", attributes: ["id", "name"] },
       {
         model: Message,
         as: "quotedMsg",

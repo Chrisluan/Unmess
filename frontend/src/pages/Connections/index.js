@@ -92,7 +92,11 @@ const CustomToolTip = ({ title, content, children }) => {
 	);
 };
 
-const Connections = () => {
+/**
+ * Conexões. Renderizada como aba dentro de Configurações (embedded) — o modo
+ * página inteira é mantido para não quebrar links antigos.
+ */
+const Connections = ({ embedded = false }) => {
 	const classes = useStyles();
 
 	const { whatsApps, loading } = useContext(WhatsAppsContext);
@@ -289,8 +293,10 @@ const Connections = () => {
 		);
 	};
 
+	const Wrapper = embedded ? React.Fragment : MainContainer;
+
 	return (
-		<MainContainer>
+		<Wrapper>
 			<ConfirmationModal
 				title={confirmModalInfo.title}
 				open={confirmModalOpen}
@@ -309,9 +315,18 @@ const Connections = () => {
 				onClose={handleCloseWhatsAppModal}
 				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
 			/>
-			<MainHeader>
-				<Title>{i18n.t("connections.title")}</Title>
-				<MainHeaderButtonsWrapper>
+			{embedded ? (
+				<div
+					style={{
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginBottom: 16,
+					}}
+				>
+					<Typography variant="h6">
+						{i18n.t("connections.title")}
+					</Typography>
 					<Button
 						variant="contained"
 						color="primary"
@@ -319,8 +334,21 @@ const Connections = () => {
 					>
 						{i18n.t("connections.buttons.add")}
 					</Button>
-				</MainHeaderButtonsWrapper>
-			</MainHeader>
+				</div>
+			) : (
+				<MainHeader>
+					<Title>{i18n.t("connections.title")}</Title>
+					<MainHeaderButtonsWrapper>
+						<Button
+							variant="contained"
+							color="primary"
+							onClick={handleOpenWhatsAppModal}
+						>
+							{i18n.t("connections.buttons.add")}
+						</Button>
+					</MainHeaderButtonsWrapper>
+				</MainHeader>
+			)}
 			<Paper className={classes.mainPaper} variant="outlined">
 				<Table size="small">
 					<TableHead>
@@ -394,7 +422,7 @@ const Connections = () => {
 					</TableBody>
 				</Table>
 			</Paper>
-		</MainContainer>
+		</Wrapper>
 	);
 };
 

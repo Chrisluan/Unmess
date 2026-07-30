@@ -123,6 +123,7 @@ const messages = {
           edit: "Edita WhatsApp",
         },
         form: {
+          farewellMessage: "Mensaje de despedida",
           name: "Nombre",
           default: "Por Defecto",
         },
@@ -230,6 +231,7 @@ const messages = {
           phone: "Teléfono",
           whatsapp: "WhatsApp",
           zipCode: "Código Postal",
+          zipCodeHelper: "Completa la dirección automáticamente",
           street: "Dirección",
           addressNumber: "Número",
           complement: "Complemento",
@@ -294,6 +296,9 @@ const messages = {
           profile: "Perfil",
           whatsapp: "Conexión estándar",
           permissionGroup: "Grupo de permisos",
+          maxSimultaneousTickets: "Límite de chats simultáneos",
+          maxSimultaneousTicketsHelper:
+            "0 = sin límite. Usado por la distribución automática de chats.",
         },
         profiles: {
           vendedor: "Vendedor",
@@ -364,6 +369,13 @@ const messages = {
       ticketsQueueSelect: {
         placeholder: "Linhas",
       },
+      ticketsWhatsappSelect: {
+        placeholder: "Conexiones",
+        allConnections: "Todos los números",
+        multiple: "{{count}} números",
+        tooltip: "Filtrar chats por número de WhatsApp",
+        disconnected: "Desconectado",
+      },
       tickets: {
         toasts: {
           deleted: "El chat en el que estabas ha sido borrado.",
@@ -413,10 +425,55 @@ const messages = {
           accept: "Acceptar",
         },
       },
+      ticketsTagSelect: {
+        all: "Etiquetas",
+        multiple: "{{count}} etiquetas",
+        tooltip: "Filtrar chats por etiqueta",
+      },
+      ticketTags: {
+        placeholder: "Agregar etiqueta...",
+      },
+      tags: {
+        description:
+          "Las etiquetas ayudan a clasificar y filtrar conversaciones en el panel de atención.",
+        saved: "Etiqueta guardada con éxito.",
+        deleted: "Etiqueta eliminada con éxito.",
+        confirmDelete: "Eliminar etiqueta",
+        confirmDeleteMessage:
+          "La etiqueta será removida de todas las conversaciones donde esté aplicada.",
+        empty: "Ninguna etiqueta registrada aún.",
+        form: {
+          name: "Nombre de la etiqueta",
+          color: "Color",
+          add: "Agregar",
+          save: "Guardar",
+          cancel: "Cancelar",
+        },
+        table: {
+          tag: "Etiqueta",
+          actions: "Acciones",
+        },
+      },
+      closeTicketModal: {
+        title: "Cerrar chat",
+        status: "Motivo del cierre",
+        none: "Sin motivo",
+        requiredHelper: "Selecciona el motivo del cierre para finalizar este chat.",
+        optionalHelper: "Puedes registrar el motivo del cierre. Es opcional.",
+        noStatuses:
+          "Ningún estado de cierre registrado. Configúralo en Configuración › Estados de Cierre.",
+        buttons: {
+          confirm: "Cerrar",
+          cancel: "Cancelar",
+        },
+      },
       newTicketModal: {
         title: "Crear Chat",
         fieldLabel: "Escribe para buscar un contacto",
         add: "Añadir",
+        connection: "Enviar desde el número",
+        connectionHelper: "El contacto recibirá el mensaje desde este número.",
+        noConnection: "Sin conexión activa. Conecta un número en Configuración › Conexiones.",
         buttons: {
           ok: "Guardar",
           cancel: "Cancelar",
@@ -554,6 +611,10 @@ const messages = {
           email: "Correo Electrónico",
           profile: "Perfil",
           whatsapp: "Conexión estándar",
+          status: "Estado",
+          online: "En línea",
+          offline: "Desconectado",
+          maxSimultaneousTickets: "Límite",
           actions: "Acciones",
         },
         buttons: {
@@ -573,9 +634,49 @@ const messages = {
         title: "Configuración",
         tabs: {
           general: "General",
+          connections: "Conexiones",
           businessHours: "Horario de Atención",
           ticketStatuses: "Estados de Finalización",
+          tags: "Etiquetas",
           autoMessages: "Mensajes Automáticos",
+        },
+        general: {
+          sections: {
+            attendance: "Reglas de atención",
+            experience: "Experiencia del agente",
+          },
+          autoAssignTickets: {
+            label: "Distribución automática de chats",
+            helper:
+              "Los chats nuevos se entregan al agente en línea de la cola con menos conversaciones abiertas. Respeta el límite individual de cada agente.",
+          },
+          requireClosingStatus: {
+            label: "Exigir estado al cerrar",
+            helper:
+              "El agente debe elegir un motivo de cierre antes de finalizar el chat.",
+          },
+          allowAgentSeeAllTickets: {
+            label: "El agente puede ver chats de otras colas",
+            helper:
+              "Cuando está apagado, cada agente solo ve los chats de las colas a las que pertenece.",
+          },
+          autoCloseInactiveHours: {
+            label: "Cerrar chats inactivos después de (horas)",
+            helper: "0 desactiva el cierre automático. Verificado cada 5 minutos por el servidor.",
+          },
+          reopenTicketWindowHours: {
+            label: "Ventana de reapertura (horas)",
+            helper:
+              "Un mensaje nuevo dentro de ese período reabre el último chat del contacto en lugar de crear otro.",
+          },
+          signMessages: {
+            label: "Firmar mensajes con el nombre del agente",
+            helper: "Define el valor por defecto para nuevos agentes. Cada uno puede alternarlo en la pantalla de chat.",
+          },
+          notificationSound: {
+            label: "Sonido de notificación",
+            helper: "Reproduce una alerta sonora cuando llega un mensaje en un chat que no está abierto.",
+          },
         },
         buttons: {
           save: "Guardar",
@@ -665,6 +766,9 @@ const messages = {
         },
       },
       messagesList: {
+        internalNote: "Nota interna",
+        searchPlaceholder: "Buscar en esta conversación",
+        searchResults: "{{count}} resultado(s)",
         header: {
           assignedTo: "Asignado a:",
           buttons: {
@@ -680,9 +784,31 @@ const messages = {
         placeholderClosed:
           "Vuelva a abrir o acepte este chat para enviar un mensaje.",
         signMessage: "Firmar",
+        internalNoteTooltip: "Nota interna (solo el equipo la ve)",
+        placeholderInternalNote:
+          "Nota interna — no se enviará al cliente",
       },
       contactDrawer: {
         header: "Detalles del contacto",
+        customer: {
+          title: "Cliente",
+          status: "Situación",
+          statuses: { lead: "Lead", active: "Activo", inactive: "Inactivo" },
+          name: "Razón social / Nombre",
+          document: "Documento",
+          segment: "Segmento",
+          responsible: "Responsable",
+          city: "Ciudad",
+          notes: "Observaciones",
+          notLinked: "Este contacto aún no tiene registro de cliente.",
+          create: "Registrar cliente",
+          edit: "Editar cliente",
+        },
+        history: {
+          title: "Atenciones anteriores",
+          empty: "Ninguna atención anterior.",
+          noAgent: "Sin agente",
+        },
         buttons: {
           edit: "Editar contacto",
         },

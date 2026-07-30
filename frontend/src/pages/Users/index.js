@@ -17,6 +17,8 @@ import InputAdornment from "@material-ui/core/InputAdornment";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import FiberManualRecordIcon from "@material-ui/icons/FiberManualRecord";
+import Tooltip from "@material-ui/core/Tooltip";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -57,6 +59,17 @@ const reducer = (state, action) => {
     } else {
       return [user, ...state];
     }
+  }
+
+  if (action.type === "UPDATE_PRESENCE") {
+    const { userId, online } = action.payload;
+    const userIndex = state.findIndex((u) => u.id === userId);
+
+    if (userIndex !== -1) {
+      state[userIndex] = { ...state[userIndex], online };
+      return [...state];
+    }
+    return state;
   }
 
   if (action.type === "DELETE_USER") {
@@ -132,6 +145,12 @@ const Users = () => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_USER", payload: +data.userId });
       }
+    });
+
+    // Presença em tempo real: o backend emite quando o atendente conecta
+    // ou desconecta o último socket.
+    socket.on("userPresence", (data) => {
+      dispatch({ type: "UPDATE_PRESENCE", payload: data });
     });
 
     return () => {
@@ -236,6 +255,9 @@ const Users = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell align="center">
+                {i18n.t("users.table.status")}
+              </TableCell>
               <TableCell align="center">{i18n.t("users.table.name")}</TableCell>
               <TableCell align="center">
                 {i18n.t("users.table.email")}
@@ -245,7 +267,11 @@ const Users = () => {
               </TableCell>
               <TableCell align="center">
                 {i18n.t("users.table.whatsapp")}
-              </TableCell>              
+              </TableCell>
+              <TableCell align="center">
+                {i18n.t("users.table.maxSimultaneousTickets")}
+              </TableCell>
+              
               <TableCell align="center">
                 {i18n.t("users.table.actions")}
               </TableCell>
@@ -255,10 +281,32 @@ const Users = () => {
             <>
               {users.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell align="center">
+                    <Tooltip
+                      title={
+                        user.online
+                          ? i18n.t("users.table.online")
+                          : i18n.t("users.table.offline")
+                      }
+                    >
+                      <FiberManualRecordIcon
+                        fontSize="small"
+                        style={{
+                          color: user.online ? "#2ecc71" : "#bdc3c7",
+                          verticalAlign: "middle",
+                        }}
+                      />
+                    </Tooltip>
+                  </TableCell>
                   <TableCell align="center">{user.name}</TableCell>
                   <TableCell align="center">{user.email}</TableCell>
                   <TableCell align="center">{user.profile}</TableCell>
                   <TableCell align="center">{user.whatsapp?.name}</TableCell>
+                  <TableCell align="center">
+                    {user.maxSimultaneousTickets > 0
+                      ? user.maxSimultaneousTickets
+                      : "∞"}
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"
@@ -279,7 +327,7 @@ const Users = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={6} />}
             </>
           </TableBody>
         </Table>

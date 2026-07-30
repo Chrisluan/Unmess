@@ -153,17 +153,31 @@ const reducer = (state, action) => {
 };
 
 	const TicketsList = (props) => {
-		const { status, tab, searchParam, showAll, selectedQueueIds, updateCount, style } =
-			props;
+		const {
+			status,
+			tab,
+			searchParam,
+			showAll,
+			selectedQueueIds,
+			selectedWhatsappIds = [],
+			selectedTagIds = [],
+			updateCount,
+			style,
+		} = props;
 	const classes = useStyles();
 	const [pageNumber, setPageNumber] = useState(1);
 	const [ticketsList, dispatch] = useReducer(reducer, []);
 	const { user } = useContext(AuthContext);
 
+	// Serializado para poder entrar como dependência de efeito sem recriar
+	// referência a cada render.
+	const whatsappIdsKey = JSON.stringify(selectedWhatsappIds);
+	const tagIdsKey = JSON.stringify(selectedTagIds);
+
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds]);
+	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds, whatsappIdsKey, tagIdsKey]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -172,6 +186,8 @@ const reducer = (state, action) => {
 		tab,
 		showAll,
 		queueIds: JSON.stringify(selectedQueueIds),
+		whatsappIds: whatsappIdsKey,
+		tagIds: tagIdsKey,
 	});
 
 	useEffect(() => {
@@ -185,7 +201,23 @@ const reducer = (state, action) => {
 	useEffect(() => {
 		const socket = openSocket();
 
+		// Respeita o filtro de conexão também no tempo real: sem isso um ticket
+		// de outro número apareceria na lista filtrada ao chegar mensagem.
+		const belongsToSelectedWhatsapp = ticket => {
+			if (!selectedWhatsappIds || selectedWhatsappIds.length === 0) return true;
+			return selectedWhatsappIds.indexOf(ticket.whatsappId) > -1;
+		};
+
+		const belongsToSelectedTags = ticket => {
+			if (!selectedTagIds || selectedTagIds.length === 0) return true;
+			const ticketTagIds = (ticket.tags ?? []).map(t => t.id);
+			return selectedTagIds.some(id => ticketTagIds.includes(id));
+		};
+
 		const belongsToTab = ticket => {
+			if (!belongsToSelectedWhatsapp(ticket)) return false;
+			if (!belongsToSelectedTags(ticket)) return false;
+
 			if (tab === "myTickets") {
 				return ticket.status === "open" && ticket.userId === user?.id;
 			}
@@ -266,7 +298,8 @@ const reducer = (state, action) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, tab, searchParam, showAll, user, selectedQueueIds]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

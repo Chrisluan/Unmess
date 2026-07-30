@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { getHoursCloseTicketsAuto } from "../../config";
 import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
@@ -12,6 +11,8 @@ const useTickets = ({
     date,
     showAll,
     queueIds,
+    whatsappIds,
+    tagIds,
     withUnreadMessages,
 }) => {
     const [loading, setLoading] = useState(true);
@@ -33,27 +34,17 @@ const useTickets = ({
                             date,
                             showAll,
                             queueIds,
+                            whatsappIds,
+                            tagIds,
                             withUnreadMessages,
                         },
                     })
                     setTickets(data.tickets)
 
-                    let horasFecharAutomaticamente = getHoursCloseTicketsAuto(); 
-
-                    if (status === "open" && horasFecharAutomaticamente && horasFecharAutomaticamente !== "" &&
-                        horasFecharAutomaticamente !== "0" && Number(horasFecharAutomaticamente) > 0) {
-
-                        let dataLimite = new Date()
-                        dataLimite.setHours(dataLimite.getHours() - Number(horasFecharAutomaticamente))
-
-                        data.tickets.forEach(ticket => {
-                            if (ticket.status !== "closed") {
-                                let dataUltimaInteracaoChamado = new Date(ticket.updatedAt)
-                                if (dataUltimaInteracaoChamado < dataLimite)
-                                    closeTicket(ticket)
-                            }
-                        })
-                    }
+                    // O encerramento automático por inatividade agora roda no
+                    // backend (jobs/CloseInactiveTicketsJob). Antes dependia de
+                    // alguém estar com a tela aberta e disparava um PUT por
+                    // ticket a cada carregamento da lista.
 
                     setHasMore(data.hasMore)
                     setCount(data.count)
@@ -62,13 +53,6 @@ const useTickets = ({
                     setLoading(false)
                     toastError(err)
                 }
-            }
-
-            const closeTicket = async(ticket) => {
-                await api.put(`/tickets/${ticket.id}`, {
-                    status: "closed",
-                    userId: ticket.userId || null,
-                })
             }
 
             fetchTickets()
@@ -82,6 +66,8 @@ const useTickets = ({
         date,
         showAll,
         queueIds,
+        whatsappIds,
+        tagIds,
         withUnreadMessages,
     ])
 

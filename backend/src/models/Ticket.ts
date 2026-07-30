@@ -7,6 +7,7 @@ import {
   PrimaryKey,
   ForeignKey,
   BelongsTo,
+  BelongsToMany,
   HasMany,
   AutoIncrement,
   Default
@@ -19,6 +20,8 @@ import User from "./User";
 import Whatsapp from "./Whatsapp";
 import Company from "./Company";
 import TicketStatus from "./TicketStatus";
+import Tag from "./Tag";
+import TicketTag from "./TicketTag";
 
 @Table
 class Ticket extends Model<Ticket> {
@@ -96,6 +99,9 @@ class Ticket extends Model<Ticket> {
 
   @Column
   closedAt: Date;
+
+  @BelongsToMany(() => Tag, () => TicketTag)
+  tags: Tag[];
 }
 
 export default Ticket;

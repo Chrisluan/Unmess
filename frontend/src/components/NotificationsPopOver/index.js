@@ -18,6 +18,7 @@ import { i18n } from "../../translate/i18n";
 import useTickets from "../../hooks/useTickets";
 import alertSound from "../../assets/sound.mp3";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 
 const useStyles = makeStyles(theme => ({
 	tabContainer: {
@@ -44,6 +45,7 @@ const useStyles = makeStyles(theme => ({
 
 const NotificationsPopOver = () => {
 	const classes = useStyles();
+	const { isEnabled } = useContext(AttendanceSettingsContext);
 
 	const history = useHistory();
 	const { user } = useContext(AuthContext);
@@ -173,7 +175,10 @@ const NotificationsPopOver = () => {
 			return [notification, ...prevState];
 		});
 
-		soundAlertRef.current();
+		// Som de notificação é configurável por empresa (Configurações › Geral).
+		if (isEnabled("notificationSound")) {
+			soundAlertRef.current();
+		}
 	};
 
 	const handleClick = () => {

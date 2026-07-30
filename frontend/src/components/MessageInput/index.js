@@ -9,7 +9,9 @@ import Paper from "@material-ui/core/Paper";
 import InputBase from "@material-ui/core/InputBase";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { green } from "@material-ui/core/colors";
+import Tooltip from "@material-ui/core/Tooltip";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
+import NoteIcon from "@material-ui/icons/Assignment";
 import IconButton from "@material-ui/core/IconButton";
 import MoreVert from "@material-ui/icons/MoreVert";
 import MoodIcon from "@material-ui/icons/Mood";
@@ -33,6 +35,7 @@ import api from "../../services/api";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
@@ -229,8 +232,23 @@ const MessageInput = ({ ticketStatus }) => {
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
+  const { isEnabled, loading: settingsLoading } = useContext(
+    AttendanceSettingsContext
+  );
 
-  const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
+  // A preferência local ganha do padrão da empresa, mas na primeira vez que o
+  // atendente usa o sistema o padrão vem de Configurações › Geral.
+  const [signMessage, setSignMessage] = useLocalStorage("signOption", null);
+  // Modo nota interna: o que for digitado fica só para a equipe.
+  const [internalNote, setInternalNote] = useState(false);
+
+  useEffect(() => {
+    if (settingsLoading) return;
+    if (signMessage === null || signMessage === undefined) {
+      setSignMessage(isEnabled("signMessages"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoading]);
 
   useEffect(() => {
     inputRef.current.focus();
@@ -299,6 +317,24 @@ const MessageInput = ({ ticketStatus }) => {
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
+
+    // Nota interna não passa pelo WhatsApp: endpoint próprio.
+    if (internalNote) {
+      setLoading(true);
+      try {
+        await api.post(`/messages/${ticketId}/notes`, {
+          body: inputMessage.trim(),
+        });
+        setInputMessage("");
+        setShowEmoji(false);
+        setReplyingMessage(null);
+      } catch (err) {
+        toastError(err);
+      }
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     const message = {
@@ -513,6 +549,20 @@ const MessageInput = ({ ticketStatus }) => {
                 <AttachFileIcon className={classes.sendMessageIcons} />
               </IconButton>
             </label>
+            <Tooltip title={i18n.t("messagesInput.internalNoteTooltip")}>
+              <span>
+                <IconButton
+                  aria-label="internal-note"
+                  disabled={loading || recording || ticketStatus !== "open"}
+                  onClick={() => setInternalNote(prev => !prev)}
+                >
+                  <NoteIcon
+                    className={classes.sendMessageIcons}
+                    style={internalNote ? { color: "#d4a017" } : undefined}
+                  />
+                </IconButton>
+              </span>
+            </Tooltip>
             <FormControlLabel
               style={{ marginRight: 7, color: "gray" }}
               label={i18n.t("messagesInput.signMessage")}
@@ -520,7 +570,8 @@ const MessageInput = ({ ticketStatus }) => {
               control={
                 <Switch
                   size="small"
-                  checked={signMessage}
+                  disabled={internalNote}
+                  checked={!!signMessage}
                   onChange={e => {
                     setSignMessage(e.target.checked);
                   }}
@@ -582,7 +633,7 @@ const MessageInput = ({ ticketStatus }) => {
                   control={
                     <Switch
                       size="small"
-                      checked={signMessage}
+                      checked={!!signMessage}
                       onChange={e => {
                         setSignMessage(e.target.checked);
                       }}
@@ -594,7 +645,14 @@ const MessageInput = ({ ticketStatus }) => {
               </MenuItem>
             </Menu>
           </Hidden>
-          <div className={classes.messageInputWrapper}>
+          <div
+            className={classes.messageInputWrapper}
+            style={
+              internalNote
+                ? { backgroundColor: "#fff8c4", border: "1px solid #f0e2a0" }
+                : undefined
+            }
+          >
             <InputBase
               inputRef={input => {
                 input && input.focus();
@@ -602,9 +660,11 @@ const MessageInput = ({ ticketStatus }) => {
               }}
               className={classes.messageInput}
               placeholder={
-                ticketStatus === "open"
-                  ? i18n.t("messagesInput.placeholderOpen")
-                  : i18n.t("messagesInput.placeholderClosed")
+                ticketStatus !== "open"
+                  ? i18n.t("messagesInput.placeholderClosed")
+                  : internalNote
+                  ? i18n.t("messagesInput.placeholderInternalNote")
+                  : i18n.t("messagesInput.placeholderOpen")
               }
               multiline
               maxRows={5}

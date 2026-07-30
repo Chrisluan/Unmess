@@ -15,8 +15,11 @@ import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
+import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
+import TicketsTagSelect from "../TicketsTagSelect";
 import { Button } from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
@@ -92,11 +95,31 @@ const TicketsManager = () => {
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
   const { user } = useContext(AuthContext);
+  const { isEnabled } = useContext(AttendanceSettingsContext);
   const [myTicketsCount, setMyTicketsCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
+  // Vazio = todas as conexões. Persistido para o atendente não precisar
+  // reaplicar o filtro toda vez que abre o painel.
+  const [selectedWhatsappIds, setSelectedWhatsappIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ticketsWhatsappFilter");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "ticketsWhatsappFilter",
+      JSON.stringify(selectedWhatsappIds)
+    );
+  }, [selectedWhatsappIds]);
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
@@ -200,6 +223,8 @@ const TicketsManager = () => {
             >
               {i18n.t("ticketsManager.buttons.newTicket")}
             </Button>
+            {/* O switch "Todos" fica disponível para admin ou, se a empresa
+                liberou, para qualquer atendente. */}
             <Can
               role={user.profile}
               perform="tickets-manager:showall"
@@ -220,9 +245,38 @@ const TicketsManager = () => {
                   }
                 />
               )}
+              no={() =>
+                isEnabled("allowAgentSeeAllTickets") ? (
+                  <FormControlLabel
+                    label={i18n.t("tickets.buttons.showAll")}
+                    labelPlacement="start"
+                    control={
+                      <Switch
+                        size="small"
+                        checked={showAllTickets}
+                        onChange={() =>
+                          setShowAllTickets((prevState) => !prevState)
+                        }
+                        name="showAllTickets"
+                        color="primary"
+                      />
+                    }
+                  />
+                ) : null
+              }
             />
           </>
         )}
+        <TicketsWhatsappSelect
+          style={{ marginLeft: 6 }}
+          selectedWhatsappIds={selectedWhatsappIds}
+          onChange={(values) => setSelectedWhatsappIds(values)}
+        />
+        <TicketsTagSelect
+          style={{ marginLeft: 6 }}
+          selectedTagIds={selectedTagIds}
+          onChange={(values) => setSelectedTagIds(values)}
+        />
         <TicketsQueueSelect
           style={{ marginLeft: 6 }}
           selectedQueueIds={selectedQueueIds}
@@ -280,6 +334,8 @@ const TicketsManager = () => {
             tab="myTickets"
             showAll={false}
             selectedQueueIds={selectedQueueIds}
+            selectedWhatsappIds={selectedWhatsappIds}
+            selectedTagIds={selectedTagIds}
             updateCount={(val) => setMyTicketsCount(val)}
             style={applyPanelStyle("myTickets")}
           />
@@ -287,6 +343,8 @@ const TicketsManager = () => {
             tab="attending"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
+            selectedWhatsappIds={selectedWhatsappIds}
+            selectedTagIds={selectedTagIds}
             updateCount={(val) => setAttendingCount(val)}
             style={applyPanelStyle("attending")}
           />
@@ -294,6 +352,8 @@ const TicketsManager = () => {
             tab="waiting"
             showAll={true}
             selectedQueueIds={selectedQueueIds}
+            selectedWhatsappIds={selectedWhatsappIds}
+            selectedTagIds={selectedTagIds}
             updateCount={(val) => setWaitingCount(val)}
             style={applyPanelStyle("waiting")}
           />
@@ -304,6 +364,8 @@ const TicketsManager = () => {
           status="closed"
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          selectedWhatsappIds={selectedWhatsappIds}
+          selectedTagIds={selectedTagIds}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -311,6 +373,8 @@ const TicketsManager = () => {
           searchParam={searchParam}
           showAll={true}
           selectedQueueIds={selectedQueueIds}
+          selectedWhatsappIds={selectedWhatsappIds}
+          selectedTagIds={selectedTagIds}
         />
       </TabPanel>
     </Paper>

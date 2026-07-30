@@ -15,6 +15,8 @@ import GeneralTab from "./GeneralTab";
 import BusinessHoursTab from "./BusinessHoursTab";
 import TicketStatusesTab from "./TicketStatusesTab";
 import AutoMessagesTab from "./AutoMessagesTab";
+import Connections from "../Connections";
+import TagsTab from "./TagsTab";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -76,7 +78,7 @@ const Settings = () => {
 
 	return (
 		<div className={classes.root}>
-			<Container maxWidth="md">
+			<Container maxWidth="lg">
 				<Tabs
 					value={tab}
 					onChange={(e, value) => setTab(value)}
@@ -86,8 +88,10 @@ const Settings = () => {
 					scrollButtons="auto"
 				>
 					<Tab label={i18n.t("settings.tabs.general")} />
+					<Tab label={i18n.t("settings.tabs.connections")} />
 					<Tab label={i18n.t("settings.tabs.businessHours")} />
 					<Tab label={i18n.t("settings.tabs.ticketStatuses")} />
+					<Tab label={i18n.t("settings.tabs.tags")} />
 					<Tab label={i18n.t("settings.tabs.autoMessages")} />
 				</Tabs>
 
@@ -98,13 +102,21 @@ const Settings = () => {
 						onSettingSaved={fetchSettings}
 					/>
 				</Box>
+				{/* Conexões só monta quando a aba está ativa: a tela abre sockets e
+				    dispara requests de sessão, não faz sentido rodar em background. */}
 				<Box className={classes.tabPanel} hidden={tab !== 1}>
-					<BusinessHoursTab />
+					{tab === 1 && <Connections embedded />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 2}>
-					<TicketStatusesTab />
+					<BusinessHoursTab />
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 3}>
+					<TicketStatusesTab />
+				</Box>
+				<Box className={classes.tabPanel} hidden={tab !== 4}>
+					<TagsTab />
+				</Box>
+				<Box className={classes.tabPanel} hidden={tab !== 5}>
 					<AutoMessagesTab
 						settings={settings}
 						getSettingValue={getSettingValue}

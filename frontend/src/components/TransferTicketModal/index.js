@@ -214,6 +214,33 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 							}}
 							options={options}
 							filterOptions={filterOptions}
+							renderOption={option => (
+								<span
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: 8,
+									}}
+								>
+									<span
+										style={{
+											width: 8,
+											height: 8,
+											borderRadius: "50%",
+											display: "inline-block",
+											backgroundColor: option.online
+												? "#2ecc71"
+												: "#bdc3c7",
+										}}
+									/>
+									{option.name}
+									{!option.online && (
+										<em style={{ fontSize: "0.75rem", color: "#7f8c8d" }}>
+											{i18n.t("users.table.offline")}
+										</em>
+									)}
+								</span>
+							)}
 							freeSolo
 							autoHighlight
 							noOptionsText={i18n.t("transferTicketModal.noOptions")}

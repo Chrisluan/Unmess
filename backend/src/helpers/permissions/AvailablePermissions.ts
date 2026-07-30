@@ -40,16 +40,16 @@ export const PERMISSION_MODULES = {
       "clients:delete": "Excluir",
     },
   },
-  // ── Campanhas ─────────────────────────────────────────────────────────────
-  campaigns: {
-    label: "Campanhas",
+  // ── Etiquetas ─────────────────────────────────────────────────────────────
+  tags: {
+    label: "Etiquetas",
     permissions: {
-      "campaigns:access": "Acesso ao módulo",
-      "campaigns:view":   "Visualizar",
-      "campaigns:create": "Criar",
-      "campaigns:edit":   "Editar",
-      "campaigns:send":   "Enviar",
-      "campaigns:cancel": "Cancelar",
+      "tags:access": "Acesso ao módulo",
+      "tags:view":   "Visualizar",
+      "tags:create": "Criar",
+      "tags:edit":   "Editar",
+      "tags:delete": "Excluir",
+      "tags:assign": "Aplicar etiqueta em conversas",
     },
   },
   // ── Respostas Rápidas ─────────────────────────────────────────────────────

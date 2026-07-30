@@ -13,6 +13,7 @@ import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
 import MessagesList from "../MessagesList";
+import TicketTagsSelect from "../TicketTagsSelect";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
@@ -164,6 +165,12 @@ const Ticket = () => {
             <TicketActionButtons ticket={ticket} />
           </div>
         </TicketHeader>
+        {!loading && ticket?.id && (
+          <TicketTagsSelect
+            ticket={ticket}
+            disabled={ticket.status === "closed"}
+          />
+        )}
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}

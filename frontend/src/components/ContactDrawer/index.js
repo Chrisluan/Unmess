@@ -16,6 +16,7 @@ import { i18n } from "../../translate/i18n";
 import ContactModal from "../ContactModal";
 import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
+import CustomerPanel from "./CustomerPanel";
 
 const drawerWidth = 320;
 
@@ -156,6 +157,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 							</Paper>
 						))}
 					</Paper>
+					{contact?.id && <CustomerPanel contact={contact} />}
 				</div>
 			)}
 		</Drawer>

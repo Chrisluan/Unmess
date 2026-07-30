@@ -1,6 +1,15 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-import { Paper, Typography, TextField, Button, makeStyles } from "@material-ui/core";
+import {
+	Paper,
+	Typography,
+	TextField,
+	Button,
+	Switch,
+	FormControlLabel,
+	Divider,
+	makeStyles,
+} from "@material-ui/core";
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n.js";
@@ -15,6 +24,26 @@ const useStyles = makeStyles(theme => ({
 		marginBottom: 12,
 		gap: theme.spacing(2),
 	},
+	section: {
+		padding: theme.spacing(2),
+		marginBottom: theme.spacing(2),
+	},
+	sectionTitle: {
+		marginBottom: theme.spacing(1),
+	},
+	settingRow: {
+		display: "flex",
+		flexDirection: "column",
+		paddingTop: theme.spacing(1),
+		paddingBottom: theme.spacing(1),
+	},
+	numberField: {
+		maxWidth: 240,
+	},
+	helper: {
+		display: "block",
+		marginTop: 2,
+	},
 }));
 
 const generateUuid = () => {
@@ -26,8 +55,61 @@ const generateUuid = () => {
 	});
 };
 
+// Chaves numéricas com seus defaults. Servem tanto para inicializar o estado
+// local quanto para saber o que gravar quando o campo vem vazio.
+const NUMBER_SETTINGS = {
+	autoCloseInactiveHours: "0",
+	reopenTicketWindowHours: "2",
+};
+
+const BOOLEAN_SETTINGS = [
+	"autoAssignTickets",
+	"requireClosingStatus",
+	"signMessages",
+	"allowAgentSeeAllTickets",
+	"notificationSound",
+];
+
 const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	const classes = useStyles();
+	const [numbers, setNumbers] = useState(NUMBER_SETTINGS);
+
+	// Sincroniza os campos numéricos quando as settings chegam do backend.
+	useEffect(() => {
+		const next = { ...NUMBER_SETTINGS };
+		Object.keys(NUMBER_SETTINGS).forEach(key => {
+			const value = getSettingValue(key);
+			if (value !== "" && value !== undefined && value !== null) {
+				next[key] = String(value);
+			}
+		});
+		setNumbers(next);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [settings]);
+
+	const isEnabled = key => getSettingValue(key) === "enabled";
+
+	const saveSetting = async (key, value) => {
+		try {
+			await api.put(`/settings/${key}`, { value });
+			toast.success(i18n.t("settings.success"));
+			onSettingSaved();
+		} catch (err) {
+			toastError(err);
+		}
+	};
+
+	const handleToggle = key => (_, checked) =>
+		saveSetting(key, checked ? "enabled" : "disabled");
+
+	const handleNumberBlur = key => () => {
+		const raw = numbers[key];
+		const parsed = Number(raw);
+		const safe = Number.isFinite(parsed) && parsed >= 0 ? String(parsed) : NUMBER_SETTINGS[key];
+		if (safe !== String(getSettingValue(key))) {
+			saveSetting(key, safe);
+		}
+	};
 
 	const handleGenerateToken = async () => {
 		try {
@@ -40,8 +122,68 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 		}
 	};
 
+	const renderSwitch = key => (
+		<div className={classes.settingRow} key={key}>
+			<FormControlLabel
+				control={
+					<Switch
+						color="primary"
+						checked={isEnabled(key)}
+						onChange={handleToggle(key)}
+					/>
+				}
+				label={i18n.t(`settings.general.${key}.label`)}
+			/>
+			<Typography variant="caption" color="textSecondary" className={classes.helper}>
+				{i18n.t(`settings.general.${key}.helper`)}
+			</Typography>
+		</div>
+	);
+
+	const renderNumber = key => (
+		<div className={classes.settingRow} key={key}>
+			<TextField
+				className={classes.numberField}
+				label={i18n.t(`settings.general.${key}.label`)}
+				type="number"
+				inputProps={{ min: 0 }}
+				variant="outlined"
+				margin="dense"
+				value={numbers[key]}
+				onChange={e =>
+					setNumbers(prev => ({ ...prev, [key]: e.target.value }))
+				}
+				onBlur={handleNumberBlur(key)}
+			/>
+			<Typography variant="caption" color="textSecondary" className={classes.helper}>
+				{i18n.t(`settings.general.${key}.helper`)}
+			</Typography>
+		</div>
+	);
+
 	return (
 		<>
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					{i18n.t("settings.general.sections.attendance")}
+				</Typography>
+				<Divider />
+				{renderSwitch("autoAssignTickets")}
+				{renderSwitch("requireClosingStatus")}
+				{renderSwitch("allowAgentSeeAllTickets")}
+				{renderNumber("autoCloseInactiveHours")}
+				{renderNumber("reopenTicketWindowHours")}
+			</Paper>
+
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					{i18n.t("settings.general.sections.experience")}
+				</Typography>
+				<Divider />
+				{renderSwitch("signMessages")}
+				{renderSwitch("notificationSound")}
+			</Paper>
+
 			<Paper className={classes.paper} variant="outlined">
 				<TextField
 					id="api-token-setting"
@@ -72,4 +214,5 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	);
 };
 
+export { BOOLEAN_SETTINGS, NUMBER_SETTINGS };
 export default GeneralTab;

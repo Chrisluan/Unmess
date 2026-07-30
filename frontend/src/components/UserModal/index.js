@@ -59,7 +59,13 @@ const UserSchema = Yup.object().shape({
 
 const UserModal = ({ open, onClose, userId }) => {
   const classes = useStyles();
-  const initialState = { name: "", email: "", password: "", profile: "user" };
+  const initialState = {
+    name: "",
+    email: "",
+    password: "",
+    profile: "user",
+    maxSimultaneousTickets: 0,
+  };
 
   const { user: loggedInUser } = useContext(AuthContext);
 
@@ -107,6 +113,7 @@ const UserModal = ({ open, onClose, userId }) => {
   const handleSaveUser = async (values) => {
     const userData = {
       ...values,
+      maxSimultaneousTickets: Number(values.maxSimultaneousTickets) || 0,
       whatsappId,
       permissionGroupId: permissionGroupId || null,
       queueIds: selectedQueueIds,
@@ -284,6 +291,25 @@ const UserModal = ({ open, onClose, userId }) => {
                       </FormControl>
                     )
                   }
+                />
+                <Can
+                  role={loggedInUser.profile}
+                  perform="user-modal:editQueues"
+                  yes={() => (
+                    <Field
+                      as={TextField}
+                      label={i18n.t("userModal.form.maxSimultaneousTickets")}
+                      name="maxSimultaneousTickets"
+                      type="number"
+                      inputProps={{ min: 0 }}
+                      helperText={i18n.t(
+                        "userModal.form.maxSimultaneousTicketsHelper"
+                      )}
+                      variant="outlined"
+                      margin="dense"
+                      fullWidth
+                    />
+                  )}
                 />
               </DialogContent>
 

@@ -9,7 +9,6 @@ import Divider from "@material-ui/core/Divider";
 import { Badge } from "@material-ui/core";
 import DashboardOutlinedIcon from "@material-ui/icons/DashboardOutlined";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
-import SyncAltIcon from "@material-ui/icons/SyncAlt";
 import SettingsOutlinedIcon from "@material-ui/icons/SettingsOutlined";
 import PeopleAltOutlinedIcon from "@material-ui/icons/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@material-ui/icons/ContactPhoneOutlined";
@@ -75,19 +74,6 @@ const MainListItems = ({ drawerClose }) => {
         <ListItemLink to="/" primary="Dashboard" icon={<DashboardOutlinedIcon />} />
       </PermissionedItem>
 
-      {/* Conexões */}
-      <PermissionedItem permission="connections:access">
-        <ListItemLink
-          to="/connections"
-          primary={i18n.t("mainDrawer.listItems.connections")}
-          icon={
-            <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
-              <SyncAltIcon />
-            </Badge>
-          }
-        />
-      </PermissionedItem>
-
       {/* Conversas */}
       <PermissionedItem permission="tickets:access">
         <ListItemLink
@@ -149,10 +135,16 @@ const MainListItems = ({ drawerClose }) => {
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}
             />
+            {/* Conexões agora vive dentro de Configurações. O badge de alerta
+                subiu para cá para o admin continuar vendo número caído. */}
             <ListItemLink
               to="/Settings"
               primary={i18n.t("mainDrawer.listItems.settings")}
-              icon={<SettingsOutlinedIcon />}
+              icon={
+                <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
+                  <SettingsOutlinedIcon />
+                </Badge>
+              }
             />
           </>
         )}

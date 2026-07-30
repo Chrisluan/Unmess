@@ -100,6 +100,26 @@ const useStyles = makeStyles(theme => ({
 		left: "0%",
 	},
 
+	tagsWrapper: {
+		display: "inline-flex",
+		gap: 4,
+		flexWrap: "nowrap",
+		overflow: "hidden",
+		marginLeft: 4,
+	},
+
+	tagChip: {
+		color: "#fff",
+		borderRadius: 8,
+		padding: "0 6px",
+		fontSize: "0.68rem",
+		lineHeight: "16px",
+		whiteSpace: "nowrap",
+		maxWidth: 80,
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+	},
+
 	userTag: {
 		position: "absolute",
 		marginRight: 5,
@@ -231,6 +251,26 @@ const TicketListItem = ({ ticket }) => {
 									<br />
 								)}
 							</Typography>
+
+							{ticket.tags?.length > 0 && (
+								<span className={classes.tagsWrapper}>
+									{ticket.tags.slice(0, 3).map(tag => (
+										<span
+											key={tag.id}
+											className={classes.tagChip}
+											style={{ backgroundColor: tag.color }}
+											title={tag.name}
+										>
+											{tag.name}
+										</span>
+									))}
+									{ticket.tags.length > 3 && (
+										<span className={classes.tagChip} style={{ backgroundColor: "#95a5a6" }}>
+											+{ticket.tags.length - 3}
+										</span>
+									)}
+								</span>
+							)}
 
 							<Badge
 								className={classes.newMessagesCount}

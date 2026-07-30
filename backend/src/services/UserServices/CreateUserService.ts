@@ -13,6 +13,7 @@ interface Request {
   whatsappId?: number;
   companyId: number;
   permissionGroupId?: number;
+  maxSimultaneousTickets?: number;
 }
 
 interface Response {
@@ -31,7 +32,8 @@ const CreateUserService = async ({
   profile = "admin",
   whatsappId,
   companyId,
-  permissionGroupId
+  permissionGroupId,
+  maxSimultaneousTickets = 0
 }: Request): Promise<Response> => {
   const schema = Yup.object().shape({
     name: Yup.string().required().min(2),
@@ -66,6 +68,7 @@ const CreateUserService = async ({
       profile,
       companyId,
       permissionGroupId: permissionGroupId || null,
+      maxSimultaneousTickets: Number(maxSimultaneousTickets) || 0,
       whatsappId: whatsappId ? whatsappId : null
     },
     { include: ["queues", "whatsapp"] }

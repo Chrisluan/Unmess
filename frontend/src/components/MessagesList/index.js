@@ -10,17 +10,21 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  InputBase,
   makeStyles,
 } from "@material-ui/core";
 import {
   AccessTime,
   Block,
+  Close as CloseIcon,
   Done,
   DoneAll,
   ExpandMore,
   GetApp,
+  Search as SearchIcon,
 } from "@material-ui/icons";
 
+import { i18n } from "../../translate/i18n";
 import MarkdownWrapper from "../MarkdownWrapper";
 import VcardPreview from "../VcardPreview";
 import LocationPreview from "../LocationPreview";
@@ -233,6 +237,43 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: "0px",
   },
 
+  internalNoteWrapper: {
+    display: "flex",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+
+  internalNote: {
+    backgroundColor: "#fff8c4",
+    border: "1px solid #f0e2a0",
+    color: "#5a4b00",
+    borderRadius: 8,
+    padding: "6px 10px",
+    maxWidth: "70%",
+    fontSize: "0.9em",
+    whiteSpace: "pre-wrap",
+    boxShadow: "0 1px 1px rgba(0,0,0,0.1)",
+  },
+
+  internalNoteLabel: {
+    display: "block",
+    fontWeight: 600,
+    fontSize: "0.72rem",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+
+  searchBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "4px 8px",
+    borderBottom: "1px solid rgba(0,0,0,0.12)",
+    backgroundColor: "#f7f7f7",
+  },
+
   ackIcons: {
     fontSize: 18,
     verticalAlign: "middle",
@@ -310,6 +351,10 @@ const reducer = (state, action) => {
 const MessagesList = ({ ticketId, isGroup }) => {
   const classes = useStyles();
 
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
   const [messagesList, dispatch] = useReducer(reducer, []);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
@@ -320,6 +365,13 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const messageOptionsMenuOpen = Boolean(anchorEl);
   const currentTicketId = useRef(ticketId);
+  // Ref porque o handler do socket é registrado uma vez e não enxergaria
+  // o valor atualizado do state.
+  const searchOpenRef = useRef(false);
+
+  useEffect(() => {
+    searchOpenRef.current = Boolean(debouncedSearch);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -328,13 +380,33 @@ const MessagesList = ({ ticketId, isGroup }) => {
     currentTicketId.current = ticketId;
   }, [ticketId]);
 
+  // Trocar de conversa fecha a busca — o termo anterior não faz sentido aqui.
+  useEffect(() => {
+    setSearchOpen(false);
+    setSearchTerm("");
+    setDebouncedSearch("");
+  }, [ticketId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    dispatch({ type: "RESET" });
+    setPageNumber(1);
+  }, [debouncedSearch]);
+
   useEffect(() => {
     setLoading(true);
     const delayDebounceFn = setTimeout(() => {
       const fetchMessages = async () => {
         try {
           const { data } = await api.get("/messages/" + ticketId, {
-            params: { pageNumber },
+            params: {
+              pageNumber,
+              ...(debouncedSearch ? { searchParam: debouncedSearch } : {}),
+            },
           });
 
           if (currentTicketId.current === ticketId) {
@@ -343,7 +415,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
             setLoading(false);
           }
 
-          if (pageNumber === 1 && data.messages.length > 1) {
+          if (pageNumber === 1 && data.messages.length > 1 && !debouncedSearch) {
             scrollToBottom();
           }
         } catch (err) {
@@ -356,7 +428,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
     return () => {
       clearTimeout(delayDebounceFn);
     };
-  }, [pageNumber, ticketId]);
+  }, [pageNumber, ticketId, debouncedSearch]);
 
   useEffect(() => {
     const socket = openSocket();
@@ -365,6 +437,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
 
     socket.on("appMessage", (data) => {
       if (data.action === "create") {
+        // Durante uma busca a lista mostra um recorte do histórico; empurrar
+        // mensagem nova ali confundiria o resultado.
+        if (searchOpenRef.current) return;
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
       }
@@ -593,6 +668,28 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const renderMessages = () => {
     if (messagesList.length > 0) {
       const viewMessagesList = messagesList.map((message, index) => {
+        // Nota interna: visual distinto (amarelo, sem ack) para o atendente
+        // nunca confundir com algo que o cliente recebeu.
+        if (message.isInternal) {
+          return (
+            <React.Fragment key={message.id}>
+              {renderDailyTimestamps(message, index)}
+              <div className={classes.internalNoteWrapper}>
+                <div className={classes.internalNote}>
+                  <span className={classes.internalNoteLabel}>
+                    {i18n.t("messagesList.internalNote")}
+                    {message.user?.name ? ` · ${message.user.name}` : ""}
+                  </span>
+                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  <span className={classes.timestamp}>
+                    {format(parseISO(message.createdAt), "HH:mm")}
+                  </span>
+                </div>
+              </div>
+            </React.Fragment>
+          );
+        }
+
         if (!message.fromMe) {
           return (
             <React.Fragment key={message.id}>
@@ -678,6 +775,40 @@ const MessagesList = ({ ticketId, isGroup }) => {
 
   return (
     <div className={classes.messagesListWrapper}>
+      <div className={classes.searchBar}>
+        {searchOpen ? (
+          <>
+            <SearchIcon fontSize="small" />
+            <InputBase
+              autoFocus
+              fullWidth
+              placeholder={i18n.t("messagesList.searchPlaceholder")}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <IconButton
+              size="small"
+              onClick={() => {
+                setSearchOpen(false);
+                setSearchTerm("");
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </>
+        ) : (
+          <IconButton size="small" onClick={() => setSearchOpen(true)}>
+            <SearchIcon fontSize="small" />
+          </IconButton>
+        )}
+        {debouncedSearch && (
+          <span style={{ fontSize: "0.78rem", color: "#666", whiteSpace: "nowrap" }}>
+            {i18n.t("messagesList.searchResults", {
+              count: messagesList.length,
+            })}
+          </span>
+        )}
+      </div>
       <MessageOptionsMenu
         message={selectedMessage}
         anchorEl={anchorEl}

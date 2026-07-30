@@ -16,6 +16,8 @@ import TicketStatus from "../models/TicketStatus";
 import BusinessHour from "../models/BusinessHour";
 import PermissionGroup from "../models/PermissionGroup";
 import Customer from "../models/Customer";
+import Tag from "../models/Tag";
+import TicketTag from "../models/TicketTag";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -40,7 +42,9 @@ const models = [
   TicketStatus,
   BusinessHour,
   PermissionGroup,
-  Customer
+  Customer,
+  Tag,
+  TicketTag
 ];
 
 sequelize.addModels(models);

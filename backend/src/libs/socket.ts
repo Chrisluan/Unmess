@@ -4,6 +4,7 @@ import { verify } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
 import authConfig from "../config/auth";
+import User from "../models/User";
 
 let io: SocketIO;
 
@@ -15,6 +16,30 @@ interface TokenPayload {
   iat: number;
   exp: number;
 }
+
+// Um mesmo atendente pode ter várias abas abertas. Só marcamos offline
+// quando o último socket dele cai.
+const socketsByUser = new Map<string, Set<string>>();
+
+const setUserPresence = async (
+  userId: string,
+  companyId: number,
+  online: boolean
+): Promise<void> => {
+  try {
+    await User.update(
+      { online, lastSeenAt: new Date() },
+      { where: { id: userId } }
+    );
+
+    io.to(`company-${companyId}`).emit("userPresence", {
+      userId: Number(userId),
+      online
+    });
+  } catch (error) {
+    logger.error(`Error updating presence for user ${userId}: ${error}`);
+  }
+};
 
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
@@ -45,6 +70,20 @@ export const initIO = (httpServer: Server): SocketIO => {
       socket.join(`company-${tokenData.companyId}`);
     }
 
+    const userId = tokenData?.id;
+    const companyId = tokenData?.companyId;
+
+    if (userId && companyId) {
+      const existing = socketsByUser.get(userId) ?? new Set<string>();
+      const wasOffline = existing.size === 0;
+      existing.add(socket.id);
+      socketsByUser.set(userId, existing);
+
+      if (wasOffline) {
+        setUserPresence(userId, companyId, true);
+      }
+    }
+
     logger.info("Client Connected");
     socket.on("joinChatBox", (ticketId: string) => {
       logger.info("A client joined a ticket channel");
@@ -63,6 +102,17 @@ export const initIO = (httpServer: Server): SocketIO => {
 
     socket.on("disconnect", () => {
       logger.info("Client disconnected");
+
+      if (userId && companyId) {
+        const existing = socketsByUser.get(userId);
+        if (existing) {
+          existing.delete(socket.id);
+          if (existing.size === 0) {
+            socketsByUser.delete(userId);
+            setUserPresence(userId, companyId, false);
+          }
+        }
+      }
     });
 
     return socket;
