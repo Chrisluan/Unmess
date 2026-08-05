@@ -1,7 +1,7 @@
 import { BufferJSON } from "whaileys";
 
 import WppKey from "../../models/WppKey";
-import { setInRedis } from "../../libs/redisStore";
+import { setInRedis, getRedisClient } from "../../libs/redisStore";
 import { logger } from "../../utils/logger";
 
 interface StoreKeyRequest {
@@ -12,6 +12,9 @@ interface StoreKeyRequest {
   value: any;
 }
 
+// Chaves de altíssima rotatividade: quando há Redis, ficam nele para poupar
+// escrita no banco. Sem Redis configurado caem na tabela junto com as demais —
+// mais lento, mas correto. Descartá-las impediria qualquer decriptação.
 const REDIS_KEY_TYPES = ["session", "sender-keys", "sender-key-memory"];
 
 const StoreWppSessionKeys = async ({
@@ -23,7 +26,7 @@ const StoreWppSessionKeys = async ({
 }: StoreKeyRequest): Promise<void> => {
   const valueJson = JSON.stringify(value, BufferJSON.replacer);
 
-  if (REDIS_KEY_TYPES.includes(type)) {
+  if (REDIS_KEY_TYPES.includes(type) && getRedisClient()) {
     const redisKey = `wpp:${connectionId}:${deviceId}:${type}:${id}`;
     await setInRedis(redisKey, valueJson);
 

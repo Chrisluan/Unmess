@@ -8,7 +8,10 @@ function getConfig(name, defaultValue = null) {
 }
 
 export function getBackendUrl() {
-  return getConfig("VITE_BACKEND_URL", "http://localhost:3000");
+  // Sem VITE_BACKEND_URL, deriva do host que serviu a página: um localhost fixo
+  // aqui quebraria todo acesso vindo de outro computador da rede.
+  const { protocol, hostname } = window.location;
+  return getConfig("VITE_BACKEND_URL", `${protocol}//${hostname}:8080`);
 }
 
 export function getHoursCloseTicketsAuto() {

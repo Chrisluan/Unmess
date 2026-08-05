@@ -90,9 +90,10 @@ const ListTicketsService = async ({
   //   independente de qual setor estejam.
   // - attending: tickets abertos, COM atendente, em algum dos setores que
   //   tenho acesso, mas atribuídos a OUTRO atendente (não duplica "myTickets").
-  // - waiting: tickets sem atendente E sem setor (órfãos) — ainda não
-  //   caíram em fila nenhuma. Isso normalmente só acontece antes do setor
-  //   padrão assumir, ou em falhas de roteamento.
+  // - waiting: tickets pendentes sem atendente, nos setores a que tenho
+  //   acesso, mais os órfãos (sem setor). Exigir setor nulo aqui esvaziava a
+  //   aba por completo assim que a empresa configurava um setor padrão, já que
+  //   FindOrCreateTicketService passa a preencher queueId em todo ticket novo.
   if (tab === "myTickets") {
     whereCondition = {
       companyId,
@@ -111,7 +112,7 @@ const ListTicketsService = async ({
       companyId,
       status: "pending",
       userId: null,
-      queueId: null
+      queueId: { [Op.or]: [queueIds, null] }
     };
   } else if (tab === "groups") {
     // Grupos: todos os ativos da empresa, com ou sem atendente. Atribuir

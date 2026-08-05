@@ -1,7 +1,7 @@
 import { BufferJSON } from "whaileys";
 
 import WppKey from "../../models/WppKey";
-import { getFromRedis } from "../../libs/redisStore";
+import { getFromRedis, getRedisClient } from "../../libs/redisStore";
 import { logger } from "../../utils/logger";
 
 interface GetKeysRequest {
@@ -11,6 +11,8 @@ interface GetKeysRequest {
   ids: string[];
 }
 
+// Precisa espelhar a lista de StoreWppSessionKeys: ler de um lugar diferente
+// de onde foi gravado devolveria vazio e quebraria a decriptação.
 const REDIS_KEY_TYPES = ["session", "sender-keys", "sender-key-memory"];
 
 const GetWppSessionKeys = async ({
@@ -21,7 +23,7 @@ const GetWppSessionKeys = async ({
 }: GetKeysRequest): Promise<any> => {
   const data: any = {};
 
-  if (REDIS_KEY_TYPES.includes(type)) {
+  if (REDIS_KEY_TYPES.includes(type) && getRedisClient()) {
     await Promise.all(
       ids.map(async id => {
         const key = `wpp:${connectionId}:${deviceId}:${type}:${id}`;

@@ -11,6 +11,7 @@ import uploadConfig from "./config/upload";
 import AppError from "./errors/AppError";
 import routes from "./routes";
 import { logger } from "./utils/logger";
+import { isAllowedOrigin } from "./helpers/IsAllowedOrigin";
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
@@ -19,7 +20,12 @@ const app = express();
 app.use(
   cors({
     credentials: true,
-    origin: process.env.FRONTEND_URL
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    }
   })
 );
 app.use(cookieParser());

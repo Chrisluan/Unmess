@@ -3,6 +3,7 @@ import { Server } from "http";
 import { verify } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
+import { isAllowedOrigin } from "../helpers/IsAllowedOrigin";
 import authConfig from "../config/auth";
 import User from "../models/User";
 
@@ -44,10 +45,13 @@ const setUserPresence = async (
 export const initIO = (httpServer: Server): SocketIO => {
   io = new SocketIO(httpServer, {
     cors: {
-      origin: [
-      "http://localhost:3001",
-      "http://192.168.1.11:3001"
-    ],
+      credentials: true,
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          return callback(null, true);
+        }
+        return callback(new Error("Not allowed by CORS"), false);
+      }
     }
   });
 

@@ -7,7 +7,16 @@ let redisClient: Redis | null = null;
 const REDIS_SESSION_TTL = 604800; // 7 days
 
 export const initRedis = async () => {
-  if (!process.env.REDIS_URL || redisClient) return;
+  if (redisClient) return;
+
+  if (!process.env.REDIS_URL) {
+    // Opcional: sem Redis, as chaves Signal de alta rotatividade passam a ser
+    // gravadas no MySQL (ver WppKeyServices). Funciona, só escreve mais no banco.
+    logger.info(
+      "REDIS_URL não definida: chaves de sessão do WhatsApp serão persistidas no banco."
+    );
+    return;
+  }
 
   try {
     redisClient = new Redis(process.env.REDIS_URL, {

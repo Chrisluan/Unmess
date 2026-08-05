@@ -436,6 +436,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
     socket.on("connect", () => socket.emit("joinChatBox", ticketId));
 
     socket.on("appMessage", (data) => {
+      // O backend emite appMessage para a sala da empresa inteira, então
+      // chegam aqui mensagens de todas as conversas. Sem esse filtro, o chat
+      // aberto ia recebendo mensagens que pertencem a outros tickets.
+      // ticketId vem da rota como string; message.ticketId é inteiro.
+      if (data.message?.ticketId !== Number(ticketId)) return;
+
       if (data.action === "create") {
         // Durante uma busca a lista mostra um recorte do histórico; empurrar
         // mensagem nova ali confundiria o resultado.

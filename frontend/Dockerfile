@@ -1,27 +1,41 @@
-FROM node:14-alpine as build-deps
-WORKDIR /usr/src/app
+﻿FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Variáveis de build
+ARG REACT_APP_BACKEND_URL
+
+ENV REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL}
+
+# Copiar package.json
 COPY package*.json ./
+
+# Instalar dependências
 RUN npm install
-COPY .env* ./
-COPY src/ ./src/
-COPY public/ ./public/
-COPY index.html ./
-COPY vite.config.js ./
+
+# Copiar código
+COPY . .
+
+# Build
 RUN npm run build
 
-FROM nginx:alpine
-RUN apk add --no-cache jq openssl
+# Estágio final
+FROM node:18-alpine
 
-ENV DOCKERIZE_VERSION v0.6.1
-RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
-    && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+WORKDIR /app
 
-ENV PUBLIC_HTML=/var/www/public/
+# Instalar servidor simples
+RUN npm install -g serve
 
-COPY .docker/nginx /etc/nginx/
-COPY --from=build-deps /usr/src/app/build ${PUBLIC_HTML}
-EXPOSE 80
+# Copiar build do estágio anterior
+COPY --from=build /app/build ./build
 
-COPY .docker/add-env-vars.sh /docker-entrypoint.d/01-add-env-vars.sh
-RUN chmod +x /docker-entrypoint.d/01-add-env-vars.sh
+# Expor porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1
+
+# Iniciar servidor
+CMD ["serve", "-s", "build", "-l", "3000", "-p", "3000"]

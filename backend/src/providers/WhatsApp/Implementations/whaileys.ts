@@ -39,6 +39,7 @@ import { logger } from "../../../utils/logger";
 import AppError from "../../../errors/AppError";
 import StoreWppSessionKeys from "../../../services/WppKeyServices/StoreWppSessionKeys";
 import GetWppSessionKeys from "../../../services/WppKeyServices/GetWppSessionKeys";
+import ClearWppSessionKeys from "../../../services/WppKeyServices/ClearWppSessionKeys";
 import { getRedisClient } from "../../../libs/redisStore";
 import {
   SendMessageOptions,
@@ -137,10 +138,26 @@ const sentMessagesCache = new NodeCache({
   useClones: false
 });
 
+/**
+ * Os serviços montam o JID na convenção do wwebjs (`numero@c.us`); aqui ele
+ * vira o domínio que o Baileys espera.
+ *
+ * O usuário é extraído até o primeiro "@" em vez de trocar o sufixo por regex:
+ * um número já gravado com domínio produzia "numero@s.whatsapp.net@c.us", que
+ * a troca de sufixo apenas reescrevia para outro JID inválido — e resolver
+ * dispositivo para ele estoura em timeout no envio.
+ */
 const normalizeJid = (jid: string): string => {
   if (!jid) return jid;
-  if (!jid.includes("@")) return `${jid}@s.whatsapp.net`;
-  return jid.replace(/@c\.us$/i, "@s.whatsapp.net");
+
+  const [user] = jid.split("@");
+  if (!user) return jid;
+
+  if (/@g\.us/i.test(jid)) return `${user}@g.us`;
+  if (/@lid/i.test(jid)) return `${user}@lid`;
+  if (/@broadcast/i.test(jid)) return jid;
+
+  return `${user}@s.whatsapp.net`;
 };
 
 const msgCache = {
@@ -170,6 +187,10 @@ const msgCache = {
 };
 
 const clearSessionKeys = async (sessionId: number): Promise<void> => {
+  // As chaves podem estar no banco (sempre, para alguns tipos; para todos
+  // quando não há Redis), então essa limpeza acontece independente do Redis.
+  await ClearWppSessionKeys(sessionId);
+
   const client = getRedisClient();
   if (!client) return;
 

@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:${MYSQL_VERSION:-8.0}
+    container_name: whaticket-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      TZ: ${TZ}
+    ports:
+      - "${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - whaticket-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: whaticket-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      BACKEND_PORT: ${BACKEND_PORT}
+      BACKEND_URL: http://${BACKEND_SERVER_NAME}:${BACKEND_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL}
+    ports:
+      - "0.0.0.0:${BACKEND_PORT}:${BACKEND_PORT}"
+    networks:
+      - whaticket-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL}
+    container_name: whaticket-frontend
+    restart: always
+    ports:
+      - "0.0.0.0:${FRONTEND_PORT}:${FRONTEND_PORT}"
+    networks:
+      - whaticket-network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  nginx:
+    image: nginx:latest
+    container_name: whaticket-nginx
+    restart: always
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - whaticket-network
+
+  browserless:
+    image: browserless/chrome:latest
+    container_name: whaticket-browserless
+    restart: always
+    environment:
+      MAX_CONCURRENT_SESSIONS: ${MAX_CONCURRENT_SESSIONS}
+    ports:
+      - "0.0.0.0:${BROWSERLESS_PORT}:3000"
+    networks:
+      - whaticket-network
+
+networks:
+  whaticket-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

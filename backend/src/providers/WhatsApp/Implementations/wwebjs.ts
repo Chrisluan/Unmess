@@ -448,7 +448,9 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     const sessionName = whatsapp.name;
     const sessionCfg = whatsapp?.session ? JSON.parse(whatsapp.session) : {};
 
-    const args: string = process.env.CHROME_ARGS || "";
+    // split(" ") em string vazia devolve [""], e esse argumento vazio vai parar
+    // no argv do Chromium. Filtrar mantém a lista limpa quando não há extras.
+    const extraArgs = (process.env.CHROME_ARGS || "").split(" ").filter(Boolean);
 
     const wbot: Session = new Client({
       
@@ -465,7 +467,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
           "--no-first-run",
           "--no-zygote",
           "--disable-gpu",
-          ...args.split(" ")
+          ...extraArgs
         ]
       }
     });
