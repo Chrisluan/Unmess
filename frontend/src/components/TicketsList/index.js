@@ -9,6 +9,8 @@ import TicketListItem from "../TicketListItem";
 import TicketsListSkeleton from "../TicketsListSkeleton";
 
 import useTickets from "../../hooks/useTickets";
+import useTicketTabRules from "../../hooks/useTicketTabRules";
+import { matchesTabRule } from "../../helpers/ticketTabRules";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
@@ -175,6 +177,8 @@ const reducer = (state, action) => {
 	const whatsappIdsKey = JSON.stringify(selectedWhatsappIds);
 	const tagIdsKey = JSON.stringify(selectedTagIds);
 
+	const { rules: tabRules, loaded: rulesLoaded } = useTicketTabRules();
+
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
@@ -201,6 +205,11 @@ const reducer = (state, action) => {
 	}, [tickets]);
 
 	useEffect(() => {
+		// Sem a regra das abas em mãos não dá para julgar pertencimento, e um
+		// palpite errado aqui não é inofensivo: o tratamento de "update" abaixo
+		// remove da lista o ticket que não passa no teste. Melhor esperar.
+		if (tab && !rulesLoaded) return undefined;
+
 		const socket = openSocket();
 
 		// Respeita o filtro de conexão também no tempo real: sem isso um ticket
@@ -227,26 +236,14 @@ const reducer = (state, action) => {
 			if (!belongsToSelectedTags(ticket)) return false;
 			if (!belongsToGroupFilter(ticket)) return false;
 
-			if (tab === "myTickets") {
-				return ticket.status === "open" && ticket.userId === user?.id;
+			// A regra de cada aba vem do backend; aqui só se obedece.
+			if (tab && tabRules?.[tab]) {
+				return matchesTabRule(tabRules[tab], ticket, {
+					userId: user?.id,
+					queueIds: selectedQueueIds,
+				});
 			}
-			if (tab === "attending") {
-				return (
-					ticket.status === "open" &&
-					!!ticket.userId &&
-					ticket.userId !== user?.id &&
-					ticket.queueId &&
-					selectedQueueIds.indexOf(ticket.queueId) > -1
-				);
-			}
-			if (tab === "waiting") {
-				return ticket.status === "pending" && !ticket.userId && !ticket.queueId;
-			}
-			if (tab === "groups") {
-				return (
-					!!ticket.isGroup && ["open", "pending"].includes(ticket.status)
-				);
-			}
+
 			// Fallback (aba "closed"/"search" ou uso antigo baseado só em status)
 			return (
 				(!ticket.userId || ticket.userId === user?.id || showAll) &&
@@ -313,7 +310,7 @@ const reducer = (state, action) => {
 			socket.disconnect();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups]);
+	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups, tabRules, rulesLoaded]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {

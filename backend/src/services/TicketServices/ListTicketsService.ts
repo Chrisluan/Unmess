@@ -8,6 +8,7 @@ import Queue from "../../models/Queue";
 import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
+import { buildTabWhere } from "../../helpers/TicketTabRules";
 
 interface Request {
   searchParam?: string;
@@ -85,43 +86,14 @@ const ListTicketsService = async ({
     whereCondition = { companyId, queueId: { [Op.or]: [queueIds, null] } };
   }
 
-  // Regras das 3 abas do painel de atendimento (chat "aberto"):
-  // - myTickets: tickets abertos atribuídos diretamente a mim (userId = eu),
-  //   independente de qual setor estejam.
-  // - attending: tickets abertos, COM atendente, em algum dos setores que
-  //   tenho acesso, mas atribuídos a OUTRO atendente (não duplica "myTickets").
-  // - waiting: tickets pendentes sem atendente, nos setores a que tenho
-  //   acesso, mais os órfãos (sem setor). Exigir setor nulo aqui esvaziava a
-  //   aba por completo assim que a empresa configurava um setor padrão, já que
-  //   FindOrCreateTicketService passa a preencher queueId em todo ticket novo.
-  if (tab === "myTickets") {
-    whereCondition = {
-      companyId,
-      status: "open",
-      userId
-    };
-  } else if (tab === "attending") {
-    whereCondition = {
-      companyId,
-      status: "open",
-      userId: ({ [Op.and]: [{ [Op.ne]: userId }, { [Op.not]: null }] } as unknown) as string,
-      queueId: { [Op.or]: [queueIds] }
-    };
-  } else if (tab === "waiting") {
-    whereCondition = {
-      companyId,
-      status: "pending",
-      userId: null,
-      queueId: { [Op.or]: [queueIds, null] }
-    };
-  } else if (tab === "groups") {
-    // Grupos: todos os ativos da empresa, com ou sem atendente. Atribuir
-    // grupo a um atendente específico raramente faz sentido no dia a dia.
-    whereCondition = {
-      companyId,
-      status: { [Op.in]: ["open", "pending"] },
-      isGroup: true
-    };
+  // As abas do painel são definidas uma única vez em TicketTabRules, de onde
+  // saem tanto esta cláusula quanto a regra que o frontend recebe pela API.
+  const tabWhere = tab
+    ? buildTabWhere(tab, { companyId, userId, queueIds })
+    : null;
+
+  if (tabWhere) {
+    whereCondition = tabWhere;
   }
 
   if (status && !tab) {

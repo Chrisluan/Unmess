@@ -40,6 +40,7 @@ import AppError from "../../../errors/AppError";
 import StoreWppSessionKeys from "../../../services/WppKeyServices/StoreWppSessionKeys";
 import GetWppSessionKeys from "../../../services/WppKeyServices/GetWppSessionKeys";
 import ClearWppSessionKeys from "../../../services/WppKeyServices/ClearWppSessionKeys";
+import FindDuplicateWhatsappNumber from "../../../services/WhatsappService/FindDuplicateWhatsappNumber";
 import { getRedisClient } from "../../../libs/redisStore";
 import {
   SendMessageOptions,
@@ -139,6 +140,22 @@ const sentMessagesCache = new NodeCache({
 });
 
 /**
+ * Ids das mensagens que este sistema enviou.
+ *
+ * Toda mensagem própria volta pelo messages.upsert com fromMe verdadeiro, seja
+ * ela enviada daqui ou pelo aplicativo no celular. O id é a única forma de
+ * separar as duas: o que não passou por aqui saiu do aparelho.
+ *
+ * A janela é curta de propósito — serve só para a viagem de ida e volta do
+ * evento. Reinício do processo esvazia o cache e mensagens em trânsito podem
+ * ser marcadas como vindas do aplicativo.
+ */
+const systemSentIds = new LRUCache<string, true>({
+  max: 5000,
+  ttl: 10 * 60 * 1000
+});
+
+/**
  * Os serviços montam o JID na convenção do wwebjs (`numero@c.us`); aqui ele
  * vira o domínio que o Baileys espera.
  *
@@ -147,6 +164,23 @@ const sentMessagesCache = new NodeCache({
  * a troca de sufixo apenas reescrevia para outro JID inválido — e resolver
  * dispositivo para ele estoura em timeout no envio.
  */
+/**
+ * Descarta o dispositivo do LID: "117763842552042:35@lid" e
+ * "117763842552042@lid" são a mesma pessoa em aparelhos diferentes.
+ *
+ * CreateOrUpdateContactService procura o contato por igualdade exata de lid,
+ * então gravar as duas formas criava dois cadastros para o mesmo cliente — e,
+ * como o ticket é preso ao contato, dois atendimentos para a mesma conversa.
+ */
+const normalizeLid = (value: string | undefined): string | undefined => {
+  // Sem a checagem de domínio, um JID de telefone entraria aqui e sairia
+  // convertido em lid falso.
+  if (!value || !value.includes("@lid")) return undefined;
+
+  const user = jidDecode(value)?.user;
+  return user ? `${user}@lid` : value;
+};
+
 const normalizeJid = (jid: string): string => {
   if (!jid) return jid;
 
@@ -221,6 +255,50 @@ const clearSessionKeys = async (sessionId: number): Promise<void> => {
   } catch (err) {
     logger.error({ info: "Error clearing Redis session keys", sessionId, err });
   }
+};
+
+/**
+ * Recusa uma conexão pareada num telefone que já pertence a outra: marca
+ * DUPLICATED, descarta as credenciais e desvincula o dispositivo do aparelho.
+ * Sem desvincular, o celular continuaria espelhando as mensagens para ela.
+ */
+const refuseDuplicate = async (
+  whatsappId: number,
+  conflictsWith: Whatsapp
+): Promise<void> => {
+  const target = await Whatsapp.findByPk(whatsappId);
+  if (!target) return;
+
+  logger.warn({
+    info: "Refused duplicate pairing: number already in use",
+    whatsappId,
+    conflictingWhatsappId: conflictsWith.id,
+    conflictingName: conflictsWith.name
+  });
+
+  await target.update({
+    status: "DUPLICATED",
+    qrcode: "",
+    session: "",
+    number: null,
+    retries: 0
+  });
+
+  getIO()
+    .to(`company-${target.companyId}`)
+    .emit("whatsappSession", { action: "update", session: target });
+
+  const wbot = sessions.get(whatsappId);
+  if (wbot) {
+    try {
+      await wbot.logout();
+    } catch (err) {
+      logger.error({ info: "Error logging out duplicate session", whatsappId, err });
+    }
+  }
+
+  await clearSessionKeys(whatsappId);
+  await removeSession(whatsappId);
 };
 
 const assertUnique = (sessionId: number) => {
@@ -509,12 +587,18 @@ const convertToMessagePayload = (msg: WAMessage): MessagePayload => {
     fromMe,
     hasMedia: hasMedia(msg),
     type: mapMessageType(msg),
-    timestamp: msg.messageTimestamp ? Number(msg.messageTimestamp) : Date.now(),
+    // Em segundos, como manda o protocolo do WhatsApp. O fallback precisa da
+    // mesma unidade: Date.now() puro entraria mil vezes maior.
+    timestamp: msg.messageTimestamp
+      ? Number(msg.messageTimestamp)
+      : Math.floor(Date.now() / 1000),
     from: fromJid,
     to: toJid,
     hasQuotedMsg: Boolean(getQuotedMessageId(msg)),
     quotedMsgId: getQuotedMessageId(msg),
-    ack: fromMe ? 1 : 0
+    ack: fromMe ? 1 : 0,
+    // Mensagem própria que não saiu daqui veio do aplicativo no celular.
+    fromApp: fromMe && !systemSentIds.has(msg.key.id || "")
   };
 };
 
@@ -700,8 +784,9 @@ const convertToContactPayload = async (
     jidDecode(preferPn || "")?.user ||
     normalizedJid.split("@")[0];
 
-  const lidValue =
-    isLidUser(resolvedJid) && decoded?.user ? `${decoded.user}@lid` : lid;
+  const lidValue = normalizeLid(
+    isLidUser(resolvedJid) && decoded?.user ? `${decoded.user}@lid` : lid
+  );
 
   const name =
     contactInfo?.name ||
@@ -774,8 +859,11 @@ const convertToMediaPayload = async (
       const docMsg = msg.message?.documentMessage;
       const mimetype = docMsg?.mimetype || "application/octet-stream";
       const ext = getExtension(mimetype, "bin");
+      // fileName carrega o nome original ("orçamento.pdf"); title costuma vir
+      // vazio, e usá-lo primeiro fazia todo documento cair no nome genérico.
       return {
-        filename: docMsg?.title || `document-${Date.now()}.${ext}`,
+        filename:
+          docMsg?.fileName || docMsg?.title || `document-${Date.now()}.${ext}`,
         mimetype,
         data: buffer.toString("base64")
       };
@@ -1137,9 +1225,35 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     if (connection === "open") {
       await flushPendingCredsSave(sessionId);
 
+      // jidDecode separa o device do número: "5544920023577:87@s.whatsapp.net"
+      // vira "5544920023577". Sem isso, dois pareamentos do mesmo aparelho
+      // pareceriam números distintos, que é justamente o caso a barrar.
+      const number = jidDecode(wbot.user?.id)?.user || "";
+
+      const duplicate = await FindDuplicateWhatsappNumber(
+        number,
+        whatsapp.companyId,
+        sessionId
+      );
+
+      if (duplicate) {
+        // Desempate pelo id, e não por quem conectou primeiro: no boot todas
+        // as conexões sobem em paralelo, então a ordem é aleatória e a conexão
+        // legítima poderia ser desvinculada por acaso. A criada por último é a
+        // que sai, porque duplicar é quase sempre engano de quem acabou de
+        // parear.
+        if (sessionId > duplicate.id) {
+          await refuseDuplicate(sessionId, duplicate);
+          return;
+        }
+
+        await refuseDuplicate(duplicate.id, whatsapp);
+      }
+
       await whatsapp.update({
         status: "CONNECTED",
         qrcode: "",
+        number,
         retries: 0
       });
 
@@ -1151,7 +1265,7 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
         });
       }
 
-      logger.info({ info: "Session connected", sessionId });
+      logger.info({ info: "Session connected", sessionId, number });
     }
 
     if (qr !== undefined) {
@@ -1285,6 +1399,8 @@ const sendMessage = async (
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 
+  systemSentIds.set(sentMsg.key.id, true);
+
   logger.debug({
     info: "[RAW] Message sent",
     sessionId,
@@ -1305,7 +1421,7 @@ const sendMessage = async (
     type: "chat",
     timestamp: sentMsg.messageTimestamp
       ? Number(sentMsg.messageTimestamp)
-      : Date.now(),
+      : Math.floor(Date.now() / 1000),
     from: wbot.user?.id || "",
     to,
     ack: 1
@@ -1379,6 +1495,8 @@ const sendMedia = async (
   const sent = await wbot.sendMessage(toJid, message);
   if (!sent?.key?.id) throw new AppError("ERR_SENDING_WAPP_MEDIA_MSG");
 
+  systemSentIds.set(sent.key.id, true);
+
   logger.debug({
     info: "[RAW] Media sent",
     sessionId,
@@ -1402,11 +1520,42 @@ const sendMedia = async (
     type,
     timestamp: sent.messageTimestamp
       ? Number(sent.messageTimestamp)
-      : Date.now(),
+      : Math.floor(Date.now() / 1000),
     from: wbot.user?.id || "",
     to,
     ack: 1
   };
+};
+
+/**
+ * Reescreve uma mensagem já enviada. O WhatsApp trata isso como um envio novo
+ * carregando a chave da original em `edit`; do lado do destinatário a bolha é
+ * substituída e ganha a marca de editada.
+ *
+ * O servidor recusa edição de mensagem antiga (por volta de 15 minutos) e de
+ * mensagem que não seja própria — nos dois casos o erro vem do wbot.sendMessage.
+ */
+const editMessage = async (
+  sessionId: number,
+  chatId: string,
+  messageId: string,
+  body: string
+): Promise<void> => {
+  const wbot = getWbot(sessionId);
+  const toJid = normalizeJid(chatId);
+
+  const sent = await wbot.sendMessage(toJid, {
+    text: body,
+    edit: { remoteJid: toJid, id: messageId, fromMe: true }
+  });
+
+  if (!sent?.key?.id) {
+    throw new AppError("ERR_EDITING_WAPP_MSG");
+  }
+
+  // A edição volta pelo messages.upsert como mensagem própria; sem registrar o
+  // id ela seria marcada como enviada pelo aplicativo do celular.
+  systemSentIds.set(sent.key.id, true);
 };
 
 const deleteMessage = async (
@@ -1533,7 +1682,11 @@ const fetchChatMessages = async (
     fromMe: msg.key.fromMe || false,
     hasMedia: hasMedia(msg),
     type: mapMessageType(msg),
-    timestamp: msg.messageTimestamp ? Number(msg.messageTimestamp) : Date.now(),
+    // Em segundos, como manda o protocolo do WhatsApp. O fallback precisa da
+    // mesma unidade: Date.now() puro entraria mil vezes maior.
+    timestamp: msg.messageTimestamp
+      ? Number(msg.messageTimestamp)
+      : Math.floor(Date.now() / 1000),
     from: msg.key.participant || msg.key.remoteJid || "",
     to: normalizedChatId,
     ack: mapMessageAck(msg.status)
@@ -1547,6 +1700,7 @@ export const WhaileysProvider: WhatsappProvider = {
   sendMessage,
   sendMedia,
   deleteMessage,
+  editMessage,
   checkNumber,
   getProfilePicUrl,
   getContacts,

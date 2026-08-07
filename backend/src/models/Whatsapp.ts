@@ -31,6 +31,11 @@ class Whatsapp extends Model<Whatsapp> {
   @Column(DataType.TEXT)
   name: string;
 
+  /** Telefone autenticado, preenchido quando a sessão abre. */
+  @AllowNull
+  @Column
+  number: string;
+
   @Column(DataType.TEXT)
   session: string;
 

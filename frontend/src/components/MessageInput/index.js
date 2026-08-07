@@ -37,22 +37,12 @@ import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessa
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
+import VoiceRecorder, { formatoSuportado } from "../../helpers/VoiceRecorder";
 
-let Mp3Recorder = null;
-
-const initRecorder = async () => {
-  if (!Mp3Recorder) {
-    try {
-      const MicRecorder = (await import("mic-recorder-to-mp3")).default;
-      Mp3Recorder = new MicRecorder({ bitRate: 128 });
-    } catch (error) {
-      console.error("Failed to initialize recorder:", error);
-      return null;
-    }
-  }
-  return Mp3Recorder;
-};
+// Uma instância por aba: o gravador segura o microfone enquanto ativo.
+const gravador = new VoiceRecorder();
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
@@ -361,12 +351,19 @@ const MessageInput = ({ ticketStatus }) => {
   const handleStartRecording = async () => {
     setLoading(true);
     try {
-      const recorder = await initRecorder();
-      if (!recorder) {
-        throw new Error("Recorder not available");
+      // O navegador só expõe o microfone em contexto seguro: HTTPS ou
+      // localhost. Acessando o sistema pelo IP da rede em HTTP puro,
+      // navigator.mediaDevices vem indefinido — sem esta checagem o atendente
+      // recebia um "cannot read properties of undefined" sem sentido.
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error(i18n.t("messageInput.recording.insecureContext"));
       }
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      await recorder.start();
+
+      if (!formatoSuportado()) {
+        throw new Error(i18n.t("messageInput.recording.unavailable"));
+      }
+
+      await gravador.start();
       setRecording(true);
       setLoading(false);
     } catch (err) {
@@ -378,7 +375,7 @@ const MessageInput = ({ ticketStatus }) => {
   const handleLoadQuickAnswer = async value => {
     if (value && value.indexOf("/") === 0) {
       try {
-        const { data } = await api.get("/quickAnswers/", {
+        const { data } = await api.get("/quick-answers", {
           params: { searchParam: inputMessage.substring(1) },
         });
         setQuickAnswer(data.quickAnswers);
@@ -398,20 +395,20 @@ const MessageInput = ({ ticketStatus }) => {
   const handleUploadAudio = async () => {
     setLoading(true);
     try {
-      const recorder = await initRecorder();
-      if (!recorder) {
-        throw new Error("Recorder not available");
-      }
-      const [, blob] = await recorder.stop().getMp3();
-      if (blob.size < 10000) {
+      const gravacao = await gravador.stop();
+
+      // Opus a 1s de fala fica bem abaixo de 10 KB, então o limite antigo
+      // descartaria áudio legítimo. 2 KB separa o clique acidental da fala.
+      if (!gravacao || gravacao.blob.size < 2000) {
+        toast.info(i18n.t("messageInput.recording.tooShort"));
         setLoading(false);
         setRecording(false);
         return;
       }
 
       const formData = new FormData();
-      const filename = `${new Date().getTime()}.mp3`;
-      formData.append("medias", blob, filename);
+      const filename = `${new Date().getTime()}.${gravacao.extensao}`;
+      formData.append("medias", gravacao.blob, filename);
       formData.append("body", filename);
       formData.append("fromMe", true);
 
@@ -426,13 +423,13 @@ const MessageInput = ({ ticketStatus }) => {
 
   const handleCancelAudio = async () => {
     try {
-      const recorder = await initRecorder();
-      if (recorder) {
-        await recorder.stop().getMp3();
-      }
-      setRecording(false);
+      // Descarta o áudio, mas precisa parar mesmo assim para soltar o
+      // microfone — senão o indicador de gravação fica aceso no navegador.
+      await gravador.stop();
     } catch (err) {
       toastError(err);
+    } finally {
+      setRecording(false);
     }
   };
 

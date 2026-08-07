@@ -9,11 +9,13 @@ import { Menu } from "@material-ui/core";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
 import ForwardMessageModal from "../ForwardMessageModal";
+import EditMessageModal from "../EditMessageModal";
 
 const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
   const { setReplyingMessage } = useContext(ReplyMessageContext);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const handleDeleteMessage = async () => {
     try {
@@ -38,11 +40,29 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
     handleClose();
   };
 
+  const handleOpenEdit = () => {
+    setEditOpen(true);
+    handleClose();
+  };
+
+  // O WhatsApp só aceita reescrever mensagem própria, de texto e recente.
+  // Anexo não dá para trocar, e nota interna nunca saiu daqui.
+  const podeEditar =
+    message.fromMe &&
+    !message.isDeleted &&
+    !message.isInternal &&
+    !message.mediaUrl;
+
   return (
     <>
       <ForwardMessageModal
         open={forwardOpen}
         onClose={() => setForwardOpen(false)}
+        message={message}
+      />
+      <EditMessageModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
         message={message}
       />
       <ConfirmationModal
@@ -67,6 +87,11 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
         open={menuOpen}
         onClose={handleClose}
       >
+        {podeEditar && (
+          <MenuItem onClick={handleOpenEdit}>
+            {i18n.t("messageOptionsMenu.edit")}
+          </MenuItem>
+        )}
         {message.fromMe && (
           <MenuItem onClick={handleOpenConfirmationModal}>
             {i18n.t("messageOptionsMenu.delete")}

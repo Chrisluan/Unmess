@@ -6,6 +6,7 @@ import * as TicketController from "../controllers/TicketController";
 
 const ticketRoutes = express.Router();
 
+ticketRoutes.get("/tickets/tab-rules",    isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.tabRules);
 ticketRoutes.get("/tickets",              isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.index);
 ticketRoutes.get("/tickets/:ticketId",    isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.show);
 ticketRoutes.post("/tickets",             isAuth, requiresCompany, hasPermission("tickets:create"), TicketController.store);

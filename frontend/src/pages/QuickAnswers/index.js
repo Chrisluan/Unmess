@@ -106,7 +106,7 @@ const QuickAnswers = () => {
     const delayDebounceFn = setTimeout(() => {
       const fetchQuickAnswers = async () => {
         try {
-          const { data } = await api.get("/quickAnswers/", {
+          const { data } = await api.get("/quick-answers", {
             params: { searchParam, pageNumber },
           });
           dispatch({ type: "LOAD_QUICK_ANSWERS", payload: data.quickAnswers });
@@ -163,7 +163,7 @@ const QuickAnswers = () => {
 
   const handleDeleteQuickAnswers = async (quickAnswerId) => {
     try {
-      await api.delete(`/quickAnswers/${quickAnswerId}`);
+      await api.delete(`/quick-answers/${quickAnswerId}`);
       toast.success(i18n.t("quickAnswers.toasts.deleted"));
     } catch (err) {
       toastError(err);

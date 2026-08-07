@@ -46,6 +46,15 @@ messageRoutes.post(
   MessageController.forward
 );
 
+// Reescrever o texto de uma mensagem já enviada.
+messageRoutes.put(
+  "/messages/:messageId",
+  isAuth,
+  requiresCompany,
+  hasPermission("tickets:edit"),
+  MessageController.edit
+);
+
 messageRoutes.delete(
   "/messages/:messageId",
   isAuth,

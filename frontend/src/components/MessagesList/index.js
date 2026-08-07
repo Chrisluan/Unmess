@@ -21,6 +21,7 @@ import {
   DoneAll,
   ExpandMore,
   GetApp,
+  PhoneAndroid,
   Search as SearchIcon,
 } from "@material-ui/icons";
 
@@ -35,6 +36,7 @@ import whatsBackground from "../../assets/wa-background.png";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import Audio from "../Audio";
+import { messageDate } from "../../helpers/messageDate";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -263,6 +265,21 @@ const useStyles = makeStyles((theme) => ({
     textTransform: "uppercase",
     letterSpacing: 0.4,
     marginBottom: 2,
+  },
+
+  // Discreto de propósito: fica junto do horário, só para o atendente saber
+  // que a resposta saiu do celular e não do painel.
+  fromAppLabel: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 2,
+    marginRight: 4,
+    fontSize: "0.7rem",
+    opacity: 0.75,
+  },
+
+  fromAppIcon: {
+    fontSize: "0.85rem",
   },
 
   searchBar: {
@@ -609,14 +626,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
           key={`timestamp-${message.id}`}
         >
           <div className={classes.dailyTimestampText}>
-            {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+            {format(parseISO(messageDate(messagesList[index])), "dd/MM/yyyy")}
           </div>
         </span>
       );
     }
     if (index < messagesList.length - 1) {
-      let messageDay = parseISO(messagesList[index].createdAt);
-      let previousMessageDay = parseISO(messagesList[index - 1].createdAt);
+      let messageDay = parseISO(messageDate(messagesList[index]));
+      let previousMessageDay = parseISO(messageDate(messagesList[index - 1]));
 
       if (!isSameDay(messageDay, previousMessageDay)) {
         return (
@@ -625,7 +642,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
             key={`timestamp-${message.id}`}
           >
             <div className={classes.dailyTimestampText}>
-              {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+              {format(parseISO(messageDate(messagesList[index])), "dd/MM/yyyy")}
             </div>
           </span>
         );
@@ -634,7 +651,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
     if (index === messagesList.length - 1) {
       return (
         <div
-          key={`ref-${message.createdAt}`}
+          key={`ref-${messageDate(message)}`}
           ref={lastMessageRef}
           style={{ float: "left", clear: "both" }}
         />
@@ -696,7 +713,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   </span>
                   <MarkdownWrapper>{message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
-                    {format(parseISO(message.createdAt), "HH:mm")}
+                    {format(parseISO(messageDate(message)), "HH:mm")}
                   </span>
                 </div>
               </div>
@@ -734,7 +751,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   {message.quotedMsg && renderQuotedMessage(message)}
                   <MarkdownWrapper>{message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
-                    {format(parseISO(message.createdAt), "HH:mm")}
+                    {format(parseISO(messageDate(message)), "HH:mm")}
                   </span>
                 </div>
               </div>
@@ -776,7 +793,21 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   {message.quotedMsg && renderQuotedMessage(message)}
                   <MarkdownWrapper>{message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
-                    {format(parseISO(message.createdAt), "HH:mm")}
+                    {message.fromApp && (
+                      <span
+                        className={classes.fromAppLabel}
+                        title={i18n.t("messagesList.fromAppTooltip")}
+                      >
+                        <PhoneAndroid className={classes.fromAppIcon} />
+                        {i18n.t("messagesList.fromApp")}
+                      </span>
+                    )}
+                    {message.isEdited && (
+                      <span className={classes.fromAppLabel}>
+                        {i18n.t("messagesList.edited")}
+                      </span>
+                    )}
+                    {format(parseISO(messageDate(message)), "HH:mm")}
                     {renderMessageAck(message)}
                   </span>
                 </div>

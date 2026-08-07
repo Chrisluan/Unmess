@@ -25,3 +25,5 @@ yarn-error.log
 /coverage.data
 /coverage/
 .wwebjs_auth/
+# Certificados TLS locais (contem chave privada)
+certs/

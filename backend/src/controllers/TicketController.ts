@@ -10,6 +10,7 @@ import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
 import getCompanyId from "../helpers/GetCompanyId";
+import { TAB_RULES } from "../helpers/TicketTabRules";
 
 type IndexQuery = {
   searchParam: string;
@@ -34,6 +35,18 @@ interface TicketData {
   removeUser?: boolean;
   removeQueue?: boolean;
 }
+
+/**
+ * Entrega ao frontend a definição das abas. Sem isso ele precisaria manter uma
+ * cópia própria da regra, que foi exatamente o que fez a lista parar de
+ * atualizar quando as duas divergiram.
+ */
+export const tabRules = async (
+  _req: Request,
+  res: Response
+): Promise<Response> => {
+  return res.status(200).json(TAB_RULES);
+};
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const {

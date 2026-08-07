@@ -53,9 +53,11 @@ export default function({url}) {
 
     return (
         <>
-            <audio ref={audioRef} controls>
-                <source src={url} type="audio/ogg"></source>
-            </audio>
+            {/* Sem type declarado: o navegador detecta pelo conteúdo. Fixar
+                "audio/ogg" fazia ele descartar a fonte sem tentar quando o
+                arquivo era mp3, webm ou m4a — formatos que também chegam aqui,
+                do WhatsApp e da gravação do painel. */}
+            <audio ref={audioRef} controls src={url} />
             {showButtonRate && <Button style={{marginLeft: "5px", marginTop: "-45px"}} onClick={toogleRate}>{audioRate}x</Button>}
         </>
     );

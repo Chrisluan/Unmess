@@ -107,9 +107,15 @@ const messages = {
             content:
               "Asegúrese de que su teléfono celular esté conectado a Internet y que WhatsApp esté abierto, o haga clic en el botón 'Desconectar' para obtener un nuevo código QR",
           },
+          duplicated: {
+            title: "Este número ya está en otra conexión",
+            content:
+              "El código QR fue leído con un teléfono que ya está vinculado a otra conexión. Dos conexiones en el mismo número duplican todas las atenciones. Lea el nuevo código QR con el teléfono correcto.",
+          },
         },
         table: {
           name: "Nombre",
+          number: "Número",
           status: "Estado",
           lastUpdate: "Última Actualización",
           default: "Por Defecto",
@@ -798,6 +804,10 @@ const messages = {
       },
       messagesList: {
         internalNote: "Nota interna",
+        fromApp: "desde el celular",
+        edited: "editada",
+        fromAppTooltip:
+          "Enviada desde la aplicación de WhatsApp en el celular, fuera del sistema",
         searchPlaceholder: "Buscar en esta conversación",
         searchResults: "{{count}} resultado(s)",
         header: {
@@ -865,8 +875,27 @@ const messages = {
           cancel: "Cancelar",
         },
       },
+      messageInput: {
+        recording: {
+          insecureContext:
+            "El navegador solo permite el micrófono en conexión segura (HTTPS). Al acceder por la IP de la red en HTTP, la grabación no está disponible.",
+          unavailable: "No se pudo iniciar el grabador de audio.",
+          tooShort: "Grabación demasiado corta, no se envió nada.",
+        },
+      },
+      editMessageModal: {
+        title: "Editar mensaje",
+        field: "Mensaje",
+        timeLimit:
+          "WhatsApp solo permite editar mensajes enviados hace pocos minutos.",
+        buttons: {
+          cancel: "Cancelar",
+          save: "Guardar",
+        },
+      },
       messageOptionsMenu: {
         delete: "Borrar",
+        edit: "Editar",
         reply: "Responder",
         forward: "Reenviar",
         confirmationModal: {

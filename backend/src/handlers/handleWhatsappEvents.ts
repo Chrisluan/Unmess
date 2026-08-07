@@ -48,6 +48,8 @@ export interface MessagePayload {
   mediaUrl?: string;
   mediaType?: string;
   ack?: MessageAck;
+  /** Própria, porém enviada pelo aplicativo no celular e não por este sistema. */
+  fromApp?: boolean;
 }
 
 export interface MediaPayload {
@@ -61,6 +63,22 @@ export interface WhatsappContextPayload {
   unreadMessages: number;
   groupContact?: ContactPayload;
 }
+
+/**
+ * Converte o timestamp do WhatsApp (segundos) em Date.
+ *
+ * A tolerância existe porque provedores já entregaram o valor em
+ * milissegundos; distinguir pela ordem de grandeza evita gravar uma data no
+ * ano 57000 caso isso volte a acontecer.
+ */
+const toMessageDate = (timestamp?: number): Date | undefined => {
+  if (!timestamp || !Number.isFinite(timestamp)) return undefined;
+
+  const ms = timestamp > 1e11 ? timestamp : timestamp * 1000;
+  const data = new Date(ms);
+
+  return Number.isNaN(data.getTime()) ? undefined : data;
+};
 
 const makeRandomId = (length: number): string => {
   let result = "";
@@ -321,13 +339,19 @@ export const handleMessage = async (
       read: processedMessage.fromMe,
       mediaType: processedMessage.type,
       quotedMsgId: processedMessage.quotedMsgId,
-      ack: processedMessage.ack !== undefined ? processedMessage.ack : 0
+      ack: processedMessage.ack !== undefined ? processedMessage.ack : 0,
+      fromApp: Boolean(processedMessage.fromApp),
+      timestamp: toMessageDate(processedMessage.timestamp)
     };
 
     if (mediaPayload && processedMessage.hasMedia) {
       const filename = await saveMediaFile(mediaPayload);
       messageData.mediaUrl = filename;
-      messageData.body = processedMessage.body || filename;
+      // saveMediaFile insere um sufixo aleatório para os arquivos não
+      // colidirem em disco. Na conversa deve aparecer o nome original, não o
+      // nome de armazenamento.
+      messageData.body =
+        processedMessage.body || mediaPayload.filename || filename;
       const [mediaType] = mediaPayload.mimetype.split("/");
       messageData.mediaType = mediaType;
     }

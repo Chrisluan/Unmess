@@ -10,6 +10,8 @@ import CreateInternalNoteService from "../services/MessageServices/CreateInterna
 import ForwardMessageService from "../services/MessageServices/ForwardMessageService";
 import ShowTicketService from "../services/TicketServices/ShowTicketService";
 import DeleteWhatsAppMessage from "../services/WbotServices/DeleteWhatsAppMessage";
+import EditWhatsAppMessage from "../services/WbotServices/EditWhatsAppMessage";
+import AppError from "../errors/AppError";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 
@@ -106,6 +108,31 @@ export const forward = async (
   });
 
   return res.status(200).json({ ticketId: ticket.id });
+};
+
+export const edit = async (req: Request, res: Response): Promise<Response> => {
+  const { messageId } = req.params;
+  const { body } = req.body as { body: string };
+
+  if (!body || !body.trim()) {
+    throw new AppError("ERR_EDIT_EMPTY_BODY");
+  }
+
+  const message = await EditWhatsAppMessage(
+    messageId,
+    body.trim(),
+    getCompanyId(req)
+  );
+
+  const io = getIO();
+  io.to(`company-${req.user.companyId}`)
+    .to(message.ticketId.toString())
+    .emit("appMessage", {
+      action: "update",
+      message
+    });
+
+  return res.status(200).json(message);
 };
 
 export const remove = async (

@@ -106,9 +106,15 @@ const messages = {
             content:
               "Certifique-se de que seu celular esteja conectado à internet e o WhatsApp esteja aberto, ou clique no botão 'Desconectar' para obter um novo QR Code",
           },
+          duplicated: {
+            title: "Este número já está em outra conexão",
+            content:
+              "O QR Code foi lido com um celular que já está vinculado a outra conexão. Duas conexões no mesmo número duplicam todos os atendimentos. Leia o novo QR Code com o celular correto.",
+          },
         },
         table: {
           name: "Nome",
+          number: "Número",
           status: "Status",
           lastUpdate: "Última atualização",
           default: "Padrão",
@@ -798,6 +804,10 @@ const messages = {
       },
       messagesList: {
         internalNote: "Nota interna",
+        fromApp: "pelo celular",
+        edited: "editada",
+        fromAppTooltip:
+          "Enviada pelo aplicativo do WhatsApp no celular, fora do sistema",
         searchPlaceholder: "Buscar nesta conversa",
         searchResults: "{{count}} resultado(s)",
         header: {
@@ -865,8 +875,27 @@ const messages = {
           cancel: "Cancelar",
         },
       },
+      messageInput: {
+        recording: {
+          insecureContext:
+            "O navegador só libera o microfone em conexão segura (HTTPS). Acessando pelo IP da rede em HTTP, a gravação fica indisponível.",
+          unavailable: "Não foi possível iniciar o gravador de áudio.",
+          tooShort: "Gravação muito curta, nada foi enviado.",
+        },
+      },
+      editMessageModal: {
+        title: "Editar mensagem",
+        field: "Mensagem",
+        timeLimit:
+          "O WhatsApp só permite editar mensagens enviadas há poucos minutos.",
+        buttons: {
+          cancel: "Cancelar",
+          save: "Salvar",
+        },
+      },
       messageOptionsMenu: {
         delete: "Deletar",
+        edit: "Editar",
         reply: "Responder",
         forward: "Encaminhar",
         confirmationModal: {

@@ -91,7 +91,7 @@ const QuickAnswersModal = ({
       if (!quickAnswerId) return;
 
       try {
-        const { data } = await api.get(`/quickAnswers/${quickAnswerId}`);
+        const { data } = await api.get(`/quick-answers/${quickAnswerId}`);
         if (isMounted.current) {
           setQuickAnswer(data);
         }
@@ -111,10 +111,10 @@ const QuickAnswersModal = ({
   const handleSaveQuickAnswer = async (values) => {
     try {
       if (quickAnswerId) {
-        await api.put(`/quickAnswers/${quickAnswerId}`, values);
+        await api.put(`/quick-answers/${quickAnswerId}`, values);
         handleClose();
       } else {
-        const { data } = await api.post("/quickAnswers", values);
+        const { data } = await api.post("/quick-answers", values);
         if (onSave) {
           onSave(data);
         }

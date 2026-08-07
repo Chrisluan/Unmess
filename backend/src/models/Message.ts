@@ -58,6 +58,22 @@ class Message extends Model<Message> {
   @Column
   isInternal: boolean;
 
+  // Enviada pelo aplicativo do WhatsApp no celular, não por este sistema.
+  // Só tem significado quando fromMe é verdadeiro.
+  @Default(false)
+  @Column
+  fromApp: boolean;
+
+  // Texto reescrito depois do envio.
+  @Default(false)
+  @Column
+  isEdited: boolean;
+
+  // Horário real de envio informado pelo WhatsApp. Difere de createdAt quando
+  // a mensagem demora a chegar. Nulo nas linhas anteriores à coluna.
+  @Column
+  timestamp: Date;
+
   // Autor da nota interna (ou do envio, quando registrado).
   @ForeignKey(() => User)
   @Column

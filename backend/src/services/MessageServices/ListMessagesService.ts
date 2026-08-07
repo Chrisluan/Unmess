@@ -1,4 +1,4 @@
-import { Op, WhereOptions } from "sequelize";
+import { Op, WhereOptions, fn, col } from "sequelize";
 
 import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
@@ -56,7 +56,19 @@ const ListMessagesService = async ({
       }
     ],
     offset,
-    order: [["createdAt", "DESC"]]
+    // Ordena pelo horário real de envio, caindo em createdAt nas linhas
+    // anteriores à coluna. Ordenar só por createdAt jogava a mensagem que
+    // demorou a chegar para o fim da conversa, fora da sequência do diálogo.
+    //
+    // As duas colunas precisam do prefixo da tabela: quotedMsg é um join da
+    // própria Messages, então "timestamp" sozinho fica ambíguo e o MySQL
+    // recusa a consulta.
+    order: [
+      [
+        fn("COALESCE", col("Message.timestamp"), col("Message.createdAt")),
+        "DESC"
+      ]
+    ]
   });
 
   const hasMore = count > offset + messages.length;

@@ -105,9 +105,15 @@ const messages = {
             content:
               "Make sure your cell phone is connected to the internet and WhatsApp is open, or click on 'Disconnect' button to get a new QRcode",
           },
+          duplicated: {
+            title: "This number is already used by another connection",
+            content:
+              "The QR Code was scanned with a phone that is already linked to another connection. Two connections on the same number duplicate every ticket. Scan the new QR Code with the correct phone.",
+          },
         },
         table: {
           name: "Name",
+          number: "Number",
           status: "Status",
           lastUpdate: "Last Update",
           default: "Default",
@@ -793,6 +799,10 @@ const messages = {
       },
       messagesList: {
         internalNote: "Internal note",
+        fromApp: "from phone",
+        edited: "edited",
+        fromAppTooltip:
+          "Sent from the WhatsApp app on the phone, outside the system",
         searchPlaceholder: "Search in this conversation",
         searchResults: "{{count}} result(s)",
         header: {
@@ -858,8 +868,27 @@ const messages = {
           cancel: "Cancel",
         },
       },
+      messageInput: {
+        recording: {
+          insecureContext:
+            "Browsers only allow microphone access over a secure connection (HTTPS). Recording is unavailable when reaching the system by IP over plain HTTP.",
+          unavailable: "Could not start the audio recorder.",
+          tooShort: "Recording too short, nothing was sent.",
+        },
+      },
+      editMessageModal: {
+        title: "Edit message",
+        field: "Message",
+        timeLimit:
+          "WhatsApp only allows editing messages sent a few minutes ago.",
+        buttons: {
+          cancel: "Cancel",
+          save: "Save",
+        },
+      },
       messageOptionsMenu: {
         delete: "Delete",
+        edit: "Edit",
         reply: "Reply",
         forward: "Forward",
         confirmationModal: {

@@ -25,6 +25,7 @@ import {
 	SignalCellular4Bar,
 	CropFree,
 	DeleteOutline,
+	ErrorOutline,
 } from "@material-ui/icons";
 
 import MainContainer from "../../components/MainContainer";
@@ -211,7 +212,8 @@ const Connections = ({ embedded = false }) => {
 						{i18n.t("connections.buttons.qrcode")}
 					</Button>
 				)}
-				{whatsApp.status === "DISCONNECTED" && (
+				{(whatsApp.status === "DISCONNECTED" ||
+					whatsApp.status === "DUPLICATED") && (
 					<>
 						<Button
 							size="small"
@@ -289,6 +291,14 @@ const Connections = ({ embedded = false }) => {
 						<SignalCellularConnectedNoInternet2Bar color="secondary" />
 					</CustomToolTip>
 				)}
+				{whatsApp.status === "DUPLICATED" && (
+					<CustomToolTip
+						title={i18n.t("connections.toolTips.duplicated.title")}
+						content={i18n.t("connections.toolTips.duplicated.content")}
+					>
+						<ErrorOutline color="secondary" />
+					</CustomToolTip>
+				)}
 			</div>
 		);
 	};
@@ -357,6 +367,9 @@ const Connections = ({ embedded = false }) => {
 								{i18n.t("connections.table.name")}
 							</TableCell>
 							<TableCell align="center">
+								{i18n.t("connections.table.number")}
+							</TableCell>
+							<TableCell align="center">
 								{i18n.t("connections.table.status")}
 							</TableCell>
 							<TableCell align="center">
@@ -382,6 +395,9 @@ const Connections = ({ embedded = false }) => {
 									whatsApps.map(whatsApp => (
 										<TableRow key={whatsApp.id}>
 											<TableCell align="center">{whatsApp.name}</TableCell>
+											<TableCell align="center">
+												{whatsApp.number || "—"}
+											</TableCell>
 											<TableCell align="center">
 												{renderStatusToolTips(whatsApp)}
 											</TableCell>
