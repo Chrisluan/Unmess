@@ -197,25 +197,12 @@ const handleQueueLogic = async (
   const choosenQueue = queues[+selectedOption - 1];
 
   if (choosenQueue) {
+    // A sauda\u00e7\u00e3o do setor escolhido sai por sendQueueGreeting, no fim do
+    // handleMessage \u2014 envi\u00e1-la aqui tamb\u00e9m mandaria a mensagem duas vezes.
     await UpdateTicketService({
       ticketData: { queueId: choosenQueue.id },
       ticketId: ticket.id
     });
-
-    const body = formatBody(
-      `\u200e${choosenQueue.greetingMessage}`,
-      contactPayload as any
-    );
-
-    try {
-      await whatsappProvider.sendMessage(
-        whatsappId,
-        `${contactPayload.number}@c.us`,
-        body
-      );
-    } catch (error) {
-      logger.error("Error sending queue greeting message:", error);
-    }
   } else {
     let options = "";
     queues.forEach((queue, index) => {
@@ -244,6 +231,45 @@ const handleQueueLogic = async (
     );
 
     debouncedSentMessage();
+  }
+};
+
+/**
+ * Envia a mensagem de saudação do setor em que a conversa caiu, uma única vez.
+ *
+ * Fica fora do handleQueueLogic de propósito: aquele só roda para conversa sem
+ * setor, e desde que o ticket passou a nascer no setor padrão isso deixou de
+ * acontecer. Também não depende da associação entre conexão e setor — o
+ * atendente configura a saudação no setor e espera que ela valha, sem precisar
+ * amarrar setor a cada número.
+ */
+const sendQueueGreeting = async (
+  ticketId: number,
+  contactPayload: ContactPayload,
+  whatsappId: number
+): Promise<void> => {
+  const ticket = await Ticket.findByPk(ticketId, { include: ["queue"] });
+
+  if (!ticket || ticket.greetingSent || !ticket.queue) return;
+
+  const saudacao = ticket.queue.greetingMessage?.trim();
+
+  // Marca antes de enviar: uma falha no envio não deve fazer o cliente receber
+  // a saudação repetida a cada nova mensagem dele.
+  await ticket.update({ greetingSent: true });
+
+  if (!saudacao) return;
+
+  try {
+    await whatsappProvider.sendMessage(
+      whatsappId,
+      `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+      // O ‎ marca a mensagem como enviada pelo sistema, para o handler
+      // não reprocessá-la ao vê-la voltar.
+      formatBody(`‎${saudacao}`, ticket)
+    );
+  } catch (error) {
+    logger.error({ info: "Error sending queue greeting", ticketId, error });
   }
 };
 
@@ -383,6 +409,17 @@ export const handleMessage = async (
         processedMessage.body,
         ticket,
         contactPayload
+      );
+    }
+
+    // Depois do roteamento, porque handleQueueLogic pode ter acabado de
+    // definir o setor. Só para mensagem recebida: responder à própria
+    // saudação, ou saudar um grupo, não faz sentido.
+    if (!processedMessage.fromMe && !contextPayload.groupContact) {
+      await sendQueueGreeting(
+        ticket.id,
+        contactPayload,
+        contextPayload.whatsappId
       );
     }
   } catch (err) {

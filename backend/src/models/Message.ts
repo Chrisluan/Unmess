@@ -35,14 +35,18 @@ class Message extends Model<Message> {
   @Column(DataType.TEXT)
   body: string;
 
+  /**
+   * Caminho relativo do anexo. O frontend prefixa com o endereço pelo qual ele
+   * mesmo alcançou a API.
+   *
+   * Antes montava a URL absoluta a partir de BACKEND_URL, o que prendia o
+   * anexo a um único endereço: quem entrasse pelo IP da VPN ou pelo nome da
+   * máquina recebia links apontando para o IP da rede local, inalcançável dali.
+   */
   @Column(DataType.STRING)
   get mediaUrl(): string | null {
-    if (this.getDataValue("mediaUrl")) {
-      return `${process.env.BACKEND_URL}:${
-        process.env.PROXY_PORT
-      }/public/${this.getDataValue("mediaUrl")}`;
-    }
-    return null;
+    const arquivo = this.getDataValue("mediaUrl");
+    return arquivo ? `/public/${arquivo}` : null;
   }
 
   @Column

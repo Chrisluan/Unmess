@@ -8,8 +8,10 @@ function getConfig(name, defaultValue = null) {
 }
 
 export function getBackendUrl() {
-  // Sem VITE_BACKEND_URL, deriva do host que serviu a página: um localhost fixo
-  // aqui quebraria todo acesso vindo de outro computador da rede.
+  // Derivar do host que serviu a página é o comportamento normal: a mesma
+  // instalação é alcançada pelo IP da rede, pelo nome da máquina, pela VPN e
+  // por localhost, e um endereço fixo só funcionaria para um deles.
+  // VITE_BACKEND_URL existe para o caso de a API ficar em outro host.
   const { protocol, hostname } = window.location;
   return getConfig("VITE_BACKEND_URL", `${protocol}//${hostname}:8080`);
 }

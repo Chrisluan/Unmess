@@ -37,6 +37,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import Audio from "../Audio";
 import { messageDate } from "../../helpers/messageDate";
+import { mediaUrl } from "../../helpers/mediaUrl";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -572,14 +573,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
       }
     }
     else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
-      return <ModalImageCors imageUrl={message.mediaUrl} />;
+      return <ModalImageCors imageUrl={mediaUrl(message.mediaUrl)} />;
     } else if (message.mediaType === "audio") {
-      return <Audio url={message.mediaUrl} />
+      return <Audio url={mediaUrl(message.mediaUrl)} />
     } else if (message.mediaType === "video") {
       return (
         <video
           className={classes.messageMedia}
-          src={message.mediaUrl}
+          src={mediaUrl(message.mediaUrl)}
           controls
         />
       );
@@ -592,7 +593,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
               color="primary"
               variant="outlined"
               target="_blank"
-              href={message.mediaUrl}
+              href={mediaUrl(message.mediaUrl)}
             >
               Download
             </Button>

@@ -43,6 +43,12 @@ class Ticket extends Model<Ticket> {
   @Column
   isGroup: boolean;
 
+  // Saudação do setor já enviada neste atendimento — evita repetir a cada
+  // mensagem que o cliente manda.
+  @Default(false)
+  @Column
+  greetingSent: boolean;
+
   @CreatedAt
   createdAt: Date;
 
