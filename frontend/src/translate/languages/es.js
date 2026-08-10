@@ -35,6 +35,16 @@ const messages = {
         },
       },
       dashboard: {
+        period: {
+          today: "Hoy",
+          week: "7 días",
+          month: "Mes",
+          all: "Todo",
+          custom: "Período",
+          from: "Desde",
+          to: "Hasta",
+          apply: "Aplicar",
+        },
         charts: {
           perDay: {
             title: "Chats hoy: ",
@@ -53,6 +63,13 @@ const messages = {
         },
         metrics: {
           avgFirstResponse: "Tiempo medio de 1ª respuesta",
+          avgResolution: "Tiempo medio de resolución",
+          resolutionRate: "Tasa de resolución",
+          stalePending: "Esperando +30min",
+          newContacts: "Nuevos contactos",
+          byHour: "Movimiento por hora del día",
+          byDay: "Movimiento por día",
+          byConnection: "Chats por conexión",
           avgHandling: "Tiempo medio de atención",
           totalPeriod: "Total en el período",
           closed: "Finalizados",
@@ -149,6 +166,13 @@ const messages = {
           deleted: "¡Contacto borrado satisfactoriamente!",
         },
         searchPlaceholder: "Buscar...",
+        known: {
+          badge: "Conocido",
+          set: "Marcar como persona conocida (no entra en Oportunidades)",
+          unset: "Dejar de tratar como persona conocida",
+          toastSet: "Contacto marcado como conocido. Sus chats van a la pestaña Conocidos.",
+          toastUnset: "Contacto desmarcado. Sus chats vuelven a Oportunidades.",
+        },
         confirmationModal: {
           deleteTitle: "Borrar",
           importTitlte: "Importar contactos",
@@ -370,6 +394,8 @@ const messages = {
       ticketsManager: {
         buttons: {
           newTicket: "Nuevo",
+          filters: "Filtros",
+          clearFilters: "Limpiar filtros",
         },
       },
       ticketsQueueSelect: {
@@ -423,9 +449,15 @@ const messages = {
         assignedHeader: "Trabajando en",
         myTicketsHeader: "Míos",
         attendingHeader: "En atención",
-        waitingHeader: "Esperando atención",
+        waitingHeader: "Oportunidades",
+        knownHeader: "Conocidos",
         noTicketsTitle: "¡Nada acá!",
         connectionTitle: "Conexión que se está utilizando actualmente.",
+        waitingFor: "Tiempo que el cliente está esperando",
+        pendingBar: {
+          readOnly: "Solo está visualizando. Acepte la atención para responder.",
+          accept: "Aceptar atención",
+        },
         noTicketsMessage:
           "No se encontraron chats con este estado o término de búsqueda",
         buttons: {
@@ -658,6 +690,7 @@ const messages = {
           ticketStatuses: "Estados de Finalización",
           tags: "Etiquetas",
           autoMessages: "Mensajes Automáticos",
+          branding: "Identidad Visual",
         },
         general: {
           sections: {
@@ -788,6 +821,20 @@ const messages = {
             type: "Vinculado a",
             isDefault: "Usar como predeterminado para este tipo",
           },
+        },
+        branding: {
+          title: "Identidad de la empresa",
+          description:
+            "Nombre y logo mostrados en la barra lateral y en la parte superior, para todos los agentes.",
+          nameLabel: "Nombre de la empresa",
+          nameHelp: "Deje en blanco para usar el nombre del sistema (Unmess).",
+          choose: "Elegir logo",
+          remove: "Quitar logo",
+          save: "Guardar",
+          saved: "¡Identidad actualizada!",
+          fileHelp: "PNG, JPG, WEBP o SVG, hasta 2 MB. Ideal cuadrada.",
+          invalidType: "Formato no soportado. Use PNG, JPG, WEBP o SVG.",
+          tooLarge: "Imagen demasiado grande. El límite es 2 MB.",
         },
         autoMessages: {
           outOfHours: {

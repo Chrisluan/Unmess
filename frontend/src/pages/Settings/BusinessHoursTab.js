@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from "react";
 
 import {
-	Paper,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Switch,
-	TextField,
-	Button,
-	makeStyles,
-} from "@material-ui/core";
+    Paper,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Switch,
+    TextField,
+    Button,
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n.js";

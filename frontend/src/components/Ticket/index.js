@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { Paper, makeStyles } from "@material-ui/core";
+import { Paper } from "@mui/material";
+
+import makeStyles from '@mui/styles/makeStyles';
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput/";
@@ -14,8 +16,10 @@ import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
 import MessagesList from "../MessagesList";
 import TicketTagsSelect from "../TicketTagsSelect";
+import PendingTicketBar from "../PendingTicketBar";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
 const drawerWidth = 320;
@@ -31,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
   ticketInfo: {
     maxWidth: "50%",
     flexBasis: "50%",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down('md')]: {
       maxWidth: "80%",
       flexBasis: "80%",
     },
@@ -40,7 +44,7 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: "50%",
     flexBasis: "50%",
     display: "flex",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down('md')]: {
       maxWidth: "100%",
       flexBasis: "100%",
       marginBottom: "5px",
@@ -78,6 +82,7 @@ const Ticket = () => {
   const { ticketId } = useParams();
   const history = useHistory();
   const classes = useStyles();
+  const { user } = useContext(AuthContext);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -176,7 +181,15 @@ const Ticket = () => {
             ticketId={ticketId}
             isGroup={ticket.isGroup}
           ></MessagesList>
-          <MessageInput ticketStatus={ticket.status} />
+          {/* Conhecido responde direto, mesmo se o ticket ainda estiver
+              pendente por ter nascido antes da marcação. */}
+          {ticket.status === "pending" && !ticket.contact?.isKnown ? (
+            <PendingTicketBar ticket={ticket} userId={user?.id} />
+          ) : (
+            <MessageInput
+              ticketStatus={ticket.contact?.isKnown ? "open" : ticket.status}
+            />
+          )}
         </ReplyMessageProvider>
       </Paper>
       <ContactDrawer

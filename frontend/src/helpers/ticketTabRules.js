@@ -32,6 +32,15 @@ export const matchesTabRule = (rule, ticket, { userId, queueIds }) => {
     return false;
   }
 
+  // Regra sobre o contato, não sobre o ticket: separa conversas de pessoas
+  // conhecidas da fila de oportunidades.
+  if (
+    rule.contactIsKnown !== undefined &&
+    Boolean(ticket.contact?.isKnown) !== rule.contactIsKnown
+  ) {
+    return false;
+  }
+
   return true;
 };
 

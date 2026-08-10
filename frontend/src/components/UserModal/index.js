@@ -19,10 +19,10 @@ import {
   InputAdornment,
   IconButton,
   Tooltip,
-} from "@material-ui/core";
-import { Visibility, VisibilityOff, Security } from "@material-ui/icons";
-import { makeStyles } from "@material-ui/core/styles";
-import { green } from "@material-ui/core/colors";
+} from "@mui/material";
+import { Visibility, VisibilityOff, Security } from "@mui/icons-material";
+import makeStyles from '@mui/styles/makeStyles';
+import { green } from "@mui/material/colors";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -188,7 +188,7 @@ const UserModal = ({ open, onClose, userId }) => {
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword((e) => !e)}>
+                          <IconButton onClick={() => setShowPassword((e) => !e)} size="large">
                             {showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>

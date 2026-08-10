@@ -1,6 +1,7 @@
 import {
   Table,
   Column,
+  DataType,
   CreatedAt,
   UpdatedAt,
   Model,
@@ -26,6 +27,17 @@ class Company extends Model<Company> {
   @AllowNull(false)
   @Column
   name: string;
+
+  /**
+   * Caminho relativo da logo. O frontend prefixa com o endereço por onde
+   * alcançou a API — um endereço absoluto aqui quebraria a imagem para quem
+   * acessa pela VPN ou pelo nome da máquina.
+   */
+  @Column(DataType.STRING)
+  get logo(): string | null {
+    const arquivo = this.getDataValue("logo");
+    return arquivo ? `/public/${arquivo}` : null;
+  }
 
   @Column
   document: string;

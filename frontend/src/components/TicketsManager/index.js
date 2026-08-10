@@ -1,16 +1,19 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Paper from "@material-ui/core/Paper";
-import SearchIcon from "@material-ui/icons/Search";
-import InputBase from "@material-ui/core/InputBase";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
-import Badge from "@material-ui/core/Badge";
-import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
-import CheckBoxIcon from "@material-ui/icons/CheckBox";
-import GroupIcon from "@material-ui/icons/Group";
-import FormControlLabel from "@material-ui/core/FormControlLabel";
-import Switch from "@material-ui/core/Switch";
+import makeStyles from '@mui/styles/makeStyles';
+import Paper from "@mui/material/Paper";
+import SearchIcon from "@mui/icons-material/Search";
+import InputBase from "@mui/material/InputBase";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Badge from "@mui/material/Badge";
+import MoveToInboxIcon from "@mui/icons-material/MoveToInbox";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import GroupIcon from "@mui/icons-material/Group";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Switch from "@mui/material/Switch";
+import Popover from "@mui/material/Popover";
+import AddIcon from "@mui/icons-material/Add";
+import FilterListIcon from "@mui/icons-material/FilterList";
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
@@ -21,7 +24,7 @@ import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
 import TicketsTagSelect from "../TicketsTagSelect";
-import { Button } from "@material-ui/core";
+import { Button } from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -48,12 +51,37 @@ const useStyles = makeStyles((theme) => ({
     minWidth: 120,
     width: 120,
   },
+  // Rótulo em uma linha só. Com "Aguardando atendimento" o texto quebrava e
+  // era cortado pela altura da aba; o corte some com o nome curto, mas a
+  // trava evita que volte se algum rótulo crescer de novo.
+  abaCompacta: {
+    minWidth: 0,
+    padding: "10px 8px",
+    fontSize: "0.82rem",
+    whiteSpace: "nowrap",
+  },
   ticketOptionsBox: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: theme.spacing(1),
     background: theme.palette.background.paper,
     padding: theme.spacing(1),
+  },
+  espacador: {
+    flex: 1,
+  },
+  painelFiltros: {
+    width: 280,
+    padding: theme.spacing(2),
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1.5),
+  },
+  switchFiltro: {
+    marginLeft: 0,
+  },
+  limparFiltros: {
+    alignSelf: "flex-start",
   },
   serachInputWrapper: {
     flex: 1,
@@ -100,6 +128,7 @@ const TicketsManager = () => {
   const [myTicketsCount, setMyTicketsCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
+  const [knownCount, setKnownCount] = useState(0);
   const [groupsCount, setGroupsCount] = useState(0);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -115,6 +144,20 @@ const TicketsManager = () => {
   });
 
   const [selectedTagIds, setSelectedTagIds] = useState([]);
+  const [filtrosAnchor, setFiltrosAnchor] = useState(null);
+
+  // Quantidade de filtros restringindo a lista. Vira o número no badge, para
+  // o atendente perceber que está vendo um recorte mesmo com o painel fechado.
+  const filtrosAtivos =
+    (selectedWhatsappIds.length > 0 ? 1 : 0) +
+    (selectedTagIds.length > 0 ? 1 : 0) +
+    (selectedQueueIds.length !== userQueueIds.length ? 1 : 0);
+
+  const limparFiltros = () => {
+    setSelectedWhatsappIds([]);
+    setSelectedTagIds([]);
+    setSelectedQueueIds(userQueueIds);
+  };
 
   useEffect(() => {
     localStorage.setItem(
@@ -218,6 +261,9 @@ const TicketsManager = () => {
           />
         </Tabs>
       </Paper>
+      {/* Uma faixa só: ação principal à esquerda, filtros recolhidos à direita.
+          Antes os três seletores dividiam a largura da lista com o botão e o
+          switch, cada um espremido em 150px e truncando o próprio rótulo. */}
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
         {tab === "search" ? (
           <div className={classes.serachInputWrapper}>
@@ -233,73 +279,112 @@ const TicketsManager = () => {
         ) : (
           <>
             <Button
-              variant="outlined"
+              variant="contained"
               color="primary"
+              size="small"
+              startIcon={<AddIcon />}
               onClick={() => setNewTicketModalOpen(true)}
             >
               {i18n.t("ticketsManager.buttons.newTicket")}
             </Button>
-            {/* O switch "Todos" fica disponível para admin ou, se a empresa
-                liberou, para qualquer atendente. */}
-            <Can
-              role={user.profile}
-              perform="tickets-manager:showall"
-              yes={() => (
-                <FormControlLabel
-                  label={i18n.t("tickets.buttons.showAll")}
-                  labelPlacement="start"
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showAllTickets}
-                      onChange={() =>
-                        setShowAllTickets((prevState) => !prevState)
-                      }
-                      name="showAllTickets"
-                      color="primary"
-                    />
-                  }
-                />
-              )}
-              no={() =>
-                isEnabled("allowAgentSeeAllTickets") ? (
-                  <FormControlLabel
-                    label={i18n.t("tickets.buttons.showAll")}
-                    labelPlacement="start"
-                    control={
-                      <Switch
-                        size="small"
-                        checked={showAllTickets}
-                        onChange={() =>
-                          setShowAllTickets((prevState) => !prevState)
-                        }
-                        name="showAllTickets"
-                        color="primary"
-                      />
-                    }
-                  />
-                ) : null
-              }
-            />
+
+            <div className={classes.espacador} />
+
+            <Badge
+              badgeContent={filtrosAtivos}
+              color="primary"
+              overlap="circular"
+            >
+              <Button
+                size="small"
+                variant={filtrosAtivos ? "contained" : "outlined"}
+                color={filtrosAtivos ? "primary" : "inherit"}
+                startIcon={<FilterListIcon />}
+                onClick={(e) => setFiltrosAnchor(e.currentTarget)}
+              >
+                {i18n.t("ticketsManager.buttons.filters")}
+              </Button>
+            </Badge>
           </>
         )}
+      </Paper>
+
+      <Popover
+        open={Boolean(filtrosAnchor)}
+        anchorEl={filtrosAnchor}
+        onClose={() => setFiltrosAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { className: classes.painelFiltros } }}
+      >
+        {/* Aqui cada seletor ocupa a largura toda do painel, então o rótulo
+            aparece inteiro. */}
         <TicketsWhatsappSelect
-          style={{ marginLeft: 6 }}
+          style={{ width: "100%", marginTop: 0 }}
           selectedWhatsappIds={selectedWhatsappIds}
           onChange={(values) => setSelectedWhatsappIds(values)}
         />
         <TicketsTagSelect
-          style={{ marginLeft: 6 }}
+          style={{ width: "100%", marginTop: 0 }}
           selectedTagIds={selectedTagIds}
           onChange={(values) => setSelectedTagIds(values)}
         />
         <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
+          style={{ width: "100%", marginTop: 0 }}
           selectedQueueIds={selectedQueueIds}
           userQueues={user?.queues}
           onChange={(values) => setSelectedQueueIds(values)}
         />
-      </Paper>
+
+        {/* O switch "Todos" fica disponível para admin ou, se a empresa
+            liberou, para qualquer atendente. */}
+        <Can
+          role={user.profile}
+          perform="tickets-manager:showall"
+          yes={() => (
+            <FormControlLabel
+              className={classes.switchFiltro}
+              label={i18n.t("tickets.buttons.showAll")}
+              control={
+                <Switch
+                  size="small"
+                  checked={showAllTickets}
+                  onChange={() => setShowAllTickets((prevState) => !prevState)}
+                  name="showAllTickets"
+                  color="primary"
+                />
+              }
+            />
+          )}
+          no={() =>
+            isEnabled("allowAgentSeeAllTickets") ? (
+              <FormControlLabel
+                className={classes.switchFiltro}
+                label={i18n.t("tickets.buttons.showAll")}
+                control={
+                  <Switch
+                    size="small"
+                    checked={showAllTickets}
+                    onChange={() => setShowAllTickets((prevState) => !prevState)}
+                    name="showAllTickets"
+                    color="primary"
+                  />
+                }
+              />
+            ) : null
+          }
+        />
+
+        {filtrosAtivos > 0 && (
+          <Button
+            size="small"
+            onClick={limparFiltros}
+            className={classes.limparFiltros}
+          >
+            {i18n.t("ticketsManager.buttons.clearFilters")}
+          </Button>
+        )}
+      </Popover>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
@@ -318,6 +403,7 @@ const TicketsManager = () => {
                 {i18n.t("ticketsList.myTicketsHeader")}
               </Badge>
             }
+            className={classes.abaCompacta}
             value={"myTickets"}
           />
           <Tab
@@ -330,6 +416,7 @@ const TicketsManager = () => {
                 {i18n.t("ticketsList.attendingHeader")}
               </Badge>
             }
+            className={classes.abaCompacta}
             value={"attending"}
           />
           <Tab
@@ -342,7 +429,23 @@ const TicketsManager = () => {
                 {i18n.t("ticketsList.waitingHeader")}
               </Badge>
             }
+            className={classes.abaCompacta}
             value={"waiting"}
+          />
+          {/* Conversas de pessoas conhecidas: já abertas, sem passar por fila
+              nem exigir aceite. */}
+          <Tab
+            label={
+              <Badge
+                className={classes.badge}
+                badgeContent={knownCount}
+                color="primary"
+              >
+                {i18n.t("ticketsList.knownHeader")}
+              </Badge>
+            }
+            className={classes.abaCompacta}
+            value={"known"}
           />
         </Tabs>
         <Paper className={classes.ticketsWrapper}>
@@ -375,6 +478,16 @@ const TicketsManager = () => {
             selectedTagIds={selectedTagIds}
             updateCount={(val) => setWaitingCount(val)}
             style={applyPanelStyle("waiting")}
+          />
+          <TicketsList
+            tab="known"
+            groups="exclude"
+            showAll={true}
+            selectedQueueIds={selectedQueueIds}
+            selectedWhatsappIds={selectedWhatsappIds}
+            selectedTagIds={selectedTagIds}
+            updateCount={(val) => setKnownCount(val)}
+            style={applyPanelStyle("known")}
           />
         </Paper>
       </TabPanel>

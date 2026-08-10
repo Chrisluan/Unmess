@@ -4,15 +4,9 @@ import { isSameDay, parseISO, format } from "date-fns";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { green } from "@material-ui/core/colors";
-import {
-  Button,
-  CircularProgress,
-  Divider,
-  IconButton,
-  InputBase,
-  makeStyles,
-} from "@material-ui/core";
+import { green } from "@mui/material/colors";
+import { Button, CircularProgress, Divider, IconButton, InputBase } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import {
   AccessTime,
   Block,
@@ -23,7 +17,7 @@ import {
   GetApp,
   PhoneAndroid,
   Search as SearchIcon,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 
 import { i18n } from "../../translate/i18n";
 import MarkdownWrapper from "../MarkdownWrapper";
@@ -55,7 +49,7 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
     padding: "20px 20px 20px 20px",
     overflowY: "scroll",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down('md')]: {
       paddingBottom: "90px",
     },
     ...theme.scrollbarStyles,

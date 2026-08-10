@@ -1,14 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 
-import {
-	Button,
-	Chip,
-	Divider,
-	Paper,
-	Typography,
-	makeStyles,
-} from "@material-ui/core";
+import { Button, Chip, Divider, Paper, Typography } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import { format, parseISO } from "date-fns";
 
 import api from "../../services/api";

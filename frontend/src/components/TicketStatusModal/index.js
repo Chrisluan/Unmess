@@ -5,20 +5,21 @@ import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import {
-	Button,
-	Dialog,
-	DialogActions,
-	DialogContent,
-	DialogTitle,
-	TextField,
-	Select,
-	MenuItem,
-	InputLabel,
-	FormControl,
-	FormControlLabel,
-	Checkbox,
-	makeStyles,
-} from "@material-ui/core";
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    TextField,
+    Select,
+    MenuItem,
+    InputLabel,
+    FormControl,
+    FormControlLabel,
+    Checkbox,
+} from "@mui/material";
+
+import makeStyles from '@mui/styles/makeStyles';
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";

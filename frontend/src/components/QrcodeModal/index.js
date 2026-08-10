@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
-import QRCode from "qrcode.react";
+// qrcode.react v4 deixou de ter export default: os componentes são nomeados
+// por formato de renderização.
+import { QRCodeSVG } from "qrcode.react";
 import openSocket from "../../services/socket-io";
 import toastError from "../../errors/toastError";
 
-import { Dialog, DialogContent, Paper, Typography } from "@material-ui/core";
+import { Dialog, DialogContent, Paper, Typography } from "@mui/material";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 
@@ -51,7 +53,7 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
 						{i18n.t("qrCode.message")}
 					</Typography>
 					{qrCode ? (
-						<QRCode value={qrCode} size={256} />
+						<QRCodeSVG value={qrCode} size={256} />
 					) : (
 						<span>Waiting for QR Code</span>
 					)}

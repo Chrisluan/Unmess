@@ -81,9 +81,14 @@ const FindOrCreateTicketService = async (
     // um configurado, em vez de nascer órfã de setor.
     const defaultQueue = await GetDefaultQueue(companyId);
 
+    // Conversa de pessoa conhecida nasce aberta e sem dono: fica pronta para
+    // responder sem passar pela fila. "pending" a jogaria em Oportunidades e
+    // exigiria aceite, que é justamente o que não faz sentido aqui.
+    const conhecido = groupContact ? groupContact.isKnown : contact.isKnown;
+
     ticket = await Ticket.create({
       contactId: groupContact ? groupContact.id : contact.id,
-      status: "pending",
+      status: conhecido ? "open" : "pending",
       isGroup: !!groupContact,
       unreadMessages,
       whatsappId,
@@ -94,8 +99,11 @@ const FindOrCreateTicketService = async (
     await ensureProtocol(ticket);
 
     // Distribuição automática: se habilitada, já entrega o chat a um
-    // atendente online em vez de deixá-lo na pilha de pendentes.
-    ticket = await AutoAssignTicketService(ticket);
+    // atendente online em vez de deixá-lo na pilha de pendentes. Conhecido
+    // fica sem dono de propósito — não é demanda a distribuir.
+    if (!conhecido) {
+      ticket = await AutoAssignTicketService(ticket);
+    }
   }
 
   ticket = await ShowTicketService(ticket.id);

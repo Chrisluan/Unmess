@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 
-import MenuItem from "@material-ui/core/MenuItem";
-import FormControl from "@material-ui/core/FormControl";
-import Select from "@material-ui/core/Select";
-import { Checkbox, ListItemText, Tooltip } from "@material-ui/core";
-import FiberManualRecordIcon from "@material-ui/icons/FiberManualRecord";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import Select from "@mui/material/Select";
+import { Checkbox, ListItemText, Tooltip } from "@mui/material";
+import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import { i18n } from "../../translate/i18n";

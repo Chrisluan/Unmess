@@ -1,7 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
 import {
-  makeStyles,
   Drawer,
   AppBar,
   Toolbar,
@@ -13,16 +12,19 @@ import {
   Menu,
   Switch,
   Button,
-} from "@material-ui/core";
-import MenuIcon from "@material-ui/icons/Menu";
-import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
-import AccountCircle from "@material-ui/icons/AccountCircle";
-import Brightness4Icon from "@material-ui/icons/Brightness4";
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import MenuIcon from "@mui/icons-material/Menu";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import AccountCircle from "@mui/icons-material/AccountCircle";
+import Brightness4Icon from "@mui/icons-material/Brightness4";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import UserModal from "../components/UserModal";
 import { AuthContext } from "../context/Auth/AuthContext";
+import { useBranding } from "../context/Branding";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
@@ -33,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
     height: "100vh",
-    [theme.breakpoints.down("sm")]: {
+    [theme.breakpoints.down('md')]: {
       height: "calc(100vh - 56px)",
     },
   },
@@ -43,9 +45,48 @@ const useStyles = makeStyles((theme) => ({
   toolbarIcon: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    gap: 8,
     padding: "0 8px",
-    minHeight: "48px",
+    minHeight: "56px",
+  },
+
+  brandBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0, // deixa o noWrap do nome funcionar em vez de estourar a barra
+    paddingLeft: 4,
+  },
+
+  brandLogo: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    objectFit: "contain",
+    flexShrink: 0,
+  },
+
+  // Sem logo, a inicial do nome dá alguma identidade em vez de espaço vazio.
+  brandInitial: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 700,
+    fontSize: "0.9rem",
+    color: "#fff",
+    backgroundColor: theme.palette.primary.main,
+  },
+
+  brandName: {
+    fontWeight: 700,
+    color: theme.palette.text.primary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -79,18 +120,22 @@ const useStyles = makeStyles((theme) => ({
     whiteSpace: "nowrap",
     width: drawerWidth,
     transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
+      // easeInOut em vez de sharp: recolher/expandir fica menos brusco.
+      easing: theme.transitions.easing.easeInOut,
+      duration: theme.transitions.duration.standard,
     }),
     backgroundColor: theme.palette.background.paper,
+    borderRight: `1px solid ${theme.palette.divider}`,
+    ...theme.scrollbarStyles,
   },
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
+      easing: theme.transitions.easing.easeInOut,
+      duration: theme.transitions.duration.standard,
     }),
-    width: theme.spacing(7),
+    // Largura suficiente para o ícone respirar dentro da pílula arredondada.
+    width: theme.spacing(8),
     [theme.breakpoints.up("sm")]: {
       width: theme.spacing(9),
     },
@@ -133,6 +178,7 @@ const LoggedInLayout = ({ children }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { handleLogout, handleLeaveCompany, loading, user } = useContext(AuthContext);
+  const { name: brandName, logo: brandLogo } = useBranding();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
@@ -201,14 +247,35 @@ const LoggedInLayout = ({ children }) => {
         }}
         open={drawerOpen}
       >
+        {/* Cabeçalho da lateral: identidade da empresa à esquerda, recolher à
+            direita. Antes era só o botão solto, sem nada identificando o
+            sistema dentro da barra. */}
         <div className={classes.toolbarIcon}>
-          <IconButton onClick={() => setDrawerOpen(!drawerOpen)}>
-            <ChevronLeftIcon />
+          {drawerOpen && (
+            <div className={classes.brandBox}>
+              {brandLogo ? (
+                <img
+                  src={brandLogo}
+                  alt={brandName}
+                  className={classes.brandLogo}
+                />
+              ) : (
+                <div className={classes.brandInitial}>
+                  {brandName.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <Typography noWrap variant="subtitle2" className={classes.brandName}>
+                {brandName}
+              </Typography>
+            </div>
+          )}
+          <IconButton onClick={() => setDrawerOpen(!drawerOpen)} size="small">
+            {drawerOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
           </IconButton>
         </div>
         <Divider />
-        <List>
-          <MainListItems drawerClose={drawerClose} />
+        <List component="nav" disablePadding>
+          <MainListItems drawerClose={drawerClose} recolhida={!drawerOpen} />
         </List>
         <Divider />
       </Drawer>
@@ -254,7 +321,7 @@ const LoggedInLayout = ({ children }) => {
               classes.menuButton,
               drawerOpen && classes.menuButtonHidden
             )}
-          >
+            size="large">
             <MenuIcon />
           </IconButton>
           <Typography
@@ -263,7 +330,7 @@ const LoggedInLayout = ({ children }) => {
             noWrap
             className={classes.title}
           >
-            WhaTicket
+            {brandName}
           </Typography>
 
           <div className={classes.themeSwitchContainer}>
@@ -287,7 +354,7 @@ const LoggedInLayout = ({ children }) => {
               aria-haspopup="true"
               onClick={handleMenu}
               className={classes.iconButton}
-            >
+              size="large">
               <AccountCircle />
             </IconButton>
             <Menu

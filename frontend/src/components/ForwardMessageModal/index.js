@@ -2,15 +2,15 @@ import React, { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
 
-import Button from "@material-ui/core/Button";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogContentText from "@material-ui/core/DialogContentText";
-import DialogTitle from "@material-ui/core/DialogTitle";
-import TextField from "@material-ui/core/TextField";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import Autocomplete from "@material-ui/lab/Autocomplete";
+import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
+import CircularProgress from "@mui/material/CircularProgress";
+import Autocomplete from '@mui/material/Autocomplete';
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -92,7 +92,7 @@ const ForwardMessageModal = ({ open, onClose, message }) => {
           value={selected}
           onChange={(e, value) => setSelected(value)}
           getOptionLabel={(option) => `${option.name} - ${option.number}`}
-          getOptionSelected={(option, value) => option.id === value?.id}
+          isOptionEqualToValue={(option, value) => option.id === value?.id}
           noOptionsText={i18n.t("forwardMessageModal.noOptions")}
           renderInput={(params) => (
             <TextField

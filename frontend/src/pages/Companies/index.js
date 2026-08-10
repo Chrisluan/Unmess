@@ -3,17 +3,18 @@ import React, { useEffect, useReducer, useState } from "react";
 import openSocket from "../../services/socket-io";
 
 import {
-	Button,
-	Chip,
-	IconButton,
-	makeStyles,
-	Paper,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-} from "@material-ui/core";
+    Button,
+    Chip,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+} from "@mui/material";
+
+import makeStyles from '@mui/styles/makeStyles';
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -23,7 +24,7 @@ import Title from "../../components/Title";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
-import { DeleteOutline, Edit } from "@material-ui/icons";
+import { DeleteOutline, Edit } from "@mui/icons-material";
 import CompanyModal from "../../components/CompanyModal";
 import { toast } from "react-toastify";
 import ConfirmationModal from "../../components/ConfirmationModal";

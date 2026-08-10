@@ -3,23 +3,27 @@ import openSocket from "../../services/socket-io";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
-import { makeStyles } from "@material-ui/core/styles";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
-import Paper from "@material-ui/core/Paper";
-import Button from "@material-ui/core/Button";
-import Avatar from "@material-ui/core/Avatar";
-import WhatsAppIcon from "@material-ui/icons/WhatsApp";
-import SearchIcon from "@material-ui/icons/Search";
-import TextField from "@material-ui/core/TextField";
-import InputAdornment from "@material-ui/core/InputAdornment";
+import makeStyles from '@mui/styles/makeStyles';
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
+import Button from "@mui/material/Button";
+import Avatar from "@mui/material/Avatar";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import SearchIcon from "@mui/icons-material/Search";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
 
-import IconButton from "@material-ui/core/IconButton";
-import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import EditIcon from "@material-ui/icons/Edit";
+import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditIcon from "@mui/icons-material/Edit";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
@@ -177,6 +181,24 @@ const Contacts = () => {
     setLoading(false);
   };
 
+  const handleToggleKnown = async (contact) => {
+    try {
+      await api.put(`/contacts/${contact.id}/known`, {
+        isKnown: !contact.isKnown,
+      });
+      // A lista se atualiza pelo evento de socket "contact"; aqui só o aviso.
+      toast.success(
+        i18n.t(
+          contact.isKnown
+            ? "contacts.known.toastUnset"
+            : "contacts.known.toastSet"
+        )
+      );
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   const hadleEditContact = (contactId) => {
     setSelectedContactId(contactId);
     setContactModalOpen(true);
@@ -303,7 +325,17 @@ const Contacts = () => {
                   <TableCell style={{ paddingRight: 0 }}>
                     {<Avatar src={contact.profilePicUrl} />}
                   </TableCell>
-                  <TableCell>{contact.name}</TableCell>
+                  <TableCell>
+                    {contact.name}
+                    {contact.isKnown && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={i18n.t("contacts.known.badge")}
+                        style={{ marginLeft: 8 }}
+                      />
+                    )}
+                  </TableCell>
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
                   <TableCell align="center">
@@ -313,6 +345,24 @@ const Contacts = () => {
                     >
                       <WhatsAppIcon />
                     </IconButton>
+                    <Tooltip
+                      title={i18n.t(
+                        contact.isKnown
+                          ? "contacts.known.unset"
+                          : "contacts.known.set"
+                      )}
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => handleToggleKnown(contact)}
+                      >
+                        {contact.isKnown ? (
+                          <StarIcon color="secondary" />
+                        ) : (
+                          <StarBorderIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
                     <IconButton
                       size="small"
                       onClick={() => hadleEditContact(contact.id)}

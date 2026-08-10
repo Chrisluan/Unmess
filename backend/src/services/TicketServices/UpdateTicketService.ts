@@ -3,6 +3,7 @@ import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import GetDefaultQueue from "../../helpers/GetDefaultQueue";
 import { getIO } from "../../libs/socket";
 import Ticket from "../../models/Ticket";
+import Contact from "../../models/Contact";
 import Setting from "../../models/Setting";
 import formatBody from "../../helpers/Mustache";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
@@ -117,6 +118,19 @@ const UpdateTicketService = async ({
   };
   if (userId !== undefined) updatePayload.userId = userId;
   if (queueId !== undefined) updatePayload.queueId = queueId;
+
+  // Conversa de pessoa conhecida não tem dono: qualquer atendente fala com o
+  // gerente ou com o dono sem precisar assumir a conversa. Sem esta trava,
+  // aceitar ou transferir prenderia o chat a uma pessoa e ele sumiria da aba
+  // Conhecidos para os demais.
+  const contatoConhecido = await Contact.findByPk(ticket.contactId, {
+    attributes: ["isKnown"]
+  });
+
+  if (contatoConhecido?.isKnown) {
+    updatePayload.userId = null;
+    delete updatePayload.firstResponseAt;
+  }
 
   // Ao finalizar o atendimento: some das filas ativas (Meus / Em
   // Atendimento / Aguardando), mas SEM apagar nada — mensagens, contato e o

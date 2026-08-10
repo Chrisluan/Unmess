@@ -6,6 +6,7 @@ import ListContactsService from "../services/ContactServices/ListContactsService
 import CreateContactService from "../services/ContactServices/CreateContactService";
 import ShowContactService from "../services/ContactServices/ShowContactService";
 import UpdateContactService from "../services/ContactServices/UpdateContactService";
+import ToggleKnownContactService from "../services/ContactServices/ToggleKnownContactService";
 import DeleteContactService from "../services/ContactServices/DeleteContactService";
 
 import CheckContactNumber from "../services/WbotServices/CheckNumber";
@@ -149,6 +150,36 @@ export const update = async (
     contactData,
     contactId,
     companyId: getCompanyId(req)
+  });
+
+  const io = getIO();
+  io.to(`company-${req.user.companyId}`).emit("contact", {
+    action: "update",
+    contact
+  });
+
+  return res.status(200).json(contact);
+};
+
+/**
+ * Marca o contato como pessoa conhecida (ou desfaz). Conversas de conhecidos
+ * ficam fora da fila de Oportunidades e não precisam ser aceitas.
+ */
+export const toggleKnown = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { contactId } = req.params;
+  const { isKnown } = req.body as { isKnown?: boolean };
+
+  if (typeof isKnown !== "boolean") {
+    throw new AppError("ERR_INVALID_KNOWN_VALUE");
+  }
+
+  const contact = await ToggleKnownContactService({
+    contactId,
+    companyId: getCompanyId(req),
+    isKnown
   });
 
   const io = getIO();

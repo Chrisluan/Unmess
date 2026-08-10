@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 
-import Chip from "@material-ui/core/Chip";
-import Autocomplete from "@material-ui/lab/Autocomplete";
-import TextField from "@material-ui/core/TextField";
-import { makeStyles } from "@material-ui/core/styles";
+import Chip from "@mui/material/Chip";
+import Autocomplete from '@mui/material/Autocomplete';
+import TextField from "@mui/material/TextField";
+import makeStyles from '@mui/styles/makeStyles';
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -63,15 +63,15 @@ const TicketTagsSelect = ({ ticket, disabled }) => {
 	if (available.length === 0 && selected.length === 0) return null;
 
 	return (
-		<div className={classes.root}>
-			<Autocomplete
+        <div className={classes.root}>
+            <Autocomplete
 				multiple
 				size="small"
 				disabled={disabled || saving}
 				options={available}
 				value={selected}
 				getOptionLabel={option => option.name}
-				getOptionSelected={(option, value) => option.id === value.id}
+				isOptionEqualToValue={(option, value) => option.id === value.id}
 				onChange={handleChange}
 				renderTags={(value, getTagProps) =>
 					value.map((option, index) => (
@@ -94,8 +94,8 @@ const TicketTagsSelect = ({ ticket, disabled }) => {
 					/>
 				)}
 			/>
-		</div>
-	);
+        </div>
+    );
 };
 
 export default TicketTagsSelect;

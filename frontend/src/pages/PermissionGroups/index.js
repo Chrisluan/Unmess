@@ -3,17 +3,17 @@ import React, { useEffect, useReducer, useState } from "react";
 import openSocket from "../../services/socket-io";
 
 import {
-	Button,
-	IconButton,
-	makeStyles,
-	Paper,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-} from "@material-ui/core";
-import { DeleteOutline, Edit } from "@material-ui/icons";
+    Button,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import { DeleteOutline, Edit } from "@mui/icons-material";
 import { toast } from "react-toastify";
 
 import MainContainer from "../../components/MainContainer";

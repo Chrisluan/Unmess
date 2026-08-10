@@ -1,25 +1,25 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
-import Select from "@material-ui/core/Select";
-import FormControl from "@material-ui/core/FormControl";
-import InputLabel from "@material-ui/core/InputLabel";
-import MenuItem from "@material-ui/core/MenuItem";
-import { makeStyles } from "@material-ui/core";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
+import Select from "@mui/material/Select";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import MenuItem from "@mui/material/MenuItem";
+import makeStyles from '@mui/styles/makeStyles';
 
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Autocomplete, {
 	createFilterOptions,
-} from "@material-ui/lab/Autocomplete";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import ClearIcon from "@material-ui/icons/Clear";
-import IconButton from "@material-ui/core/IconButton";
-import Typography from "@material-ui/core/Typography";
+} from '@mui/material/Autocomplete';
+import CircularProgress from "@mui/material/CircularProgress";
+import ClearIcon from "@mui/icons-material/Clear";
+import IconButton from "@mui/material/IconButton";
+import Typography from "@mui/material/Typography";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -214,33 +214,40 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 							}}
 							options={options}
 							filterOptions={filterOptions}
-							renderOption={option => (
-								<span
-									style={{
-										display: "flex",
-										alignItems: "center",
-										gap: 8,
-									}}
-								>
-									<span
+							renderOption={(props, option) => {
+								// (props, option) desde o MUI v5 — com um parâmetro só, o
+								// indicador de online e o nome saíam indefinidos.
+								const { key, ...rest } = props;
+								return (
+									<li
+										key={option.id ?? option.name}
+										{...rest}
 										style={{
-											width: 8,
-											height: 8,
-											borderRadius: "50%",
-											display: "inline-block",
-											backgroundColor: option.online
-												? "#2ecc71"
-												: "#bdc3c7",
+											display: "flex",
+											alignItems: "center",
+											gap: 8,
 										}}
-									/>
-									{option.name}
-									{!option.online && (
-										<em style={{ fontSize: "0.75rem", color: "#7f8c8d" }}>
-											{i18n.t("users.table.offline")}
-										</em>
-									)}
-								</span>
-							)}
+									>
+										<span
+											style={{
+												width: 8,
+												height: 8,
+												borderRadius: "50%",
+												display: "inline-block",
+												backgroundColor: option.online
+													? "#2ecc71"
+													: "#bdc3c7",
+											}}
+										/>
+										{option.name}
+										{!option.online && (
+											<em style={{ fontSize: "0.75rem", color: "#7f8c8d" }}>
+												{i18n.t("users.table.offline")}
+											</em>
+										)}
+									</li>
+								);
+							}}
 							freeSolo
 							autoHighlight
 							noOptionsText={i18n.t("transferTicketModal.noOptions")}

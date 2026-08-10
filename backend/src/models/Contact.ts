@@ -45,6 +45,12 @@ class Contact extends Model<Contact> {
   @Column
   isGroup: boolean;
 
+  // Pessoa conhecida (dono, gerente, equipe). A conversa acontece normalmente,
+  // mas fica fora da fila de Oportunidades e não precisa ser aceita.
+  @Default(false)
+  @Column
+  isKnown: boolean;
+
   @CreatedAt
   createdAt: Date;
 

@@ -4,32 +4,103 @@ import { useHistory, useParams } from "react-router-dom";
 import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
 
-import { makeStyles } from "@material-ui/core/styles";
-import { green } from "@material-ui/core/colors";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
-import ListItemAvatar from "@material-ui/core/ListItemAvatar";
-import Typography from "@material-ui/core/Typography";
-import Avatar from "@material-ui/core/Avatar";
-import Divider from "@material-ui/core/Divider";
-import Badge from "@material-ui/core/Badge";
+import makeStyles from '@mui/styles/makeStyles';
+import { green } from "@mui/material/colors";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemAvatar from "@mui/material/ListItemAvatar";
+import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
+import Divider from "@mui/material/Divider";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 import { i18n } from "../../translate/i18n";
+import { formatWaitingTime, waitingLevel } from "../../helpers/waitingTime";
+import { ticketDate } from "../../helpers/messageDate";
 
 import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
-import { Tooltip } from "@material-ui/core";
+import { Tooltip } from "@mui/material";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles(theme => ({
+	// Três colunas: avatar (fixo), miolo (elástico) e trilho direito (fixo).
+	// Antes o botão e a tag da conexão eram position:absolute e passavam por
+	// cima do nome e da prévia da mensagem.
 	ticket: {
 		position: "relative",
+		display: "flex",
+		alignItems: "flex-start",
+		gap: 10,
+		paddingLeft: 18, // espaço para a faixa colorida do setor
+		paddingRight: 10,
+		paddingTop: 8,
+		paddingBottom: 8,
 	},
 
 	pendingTicket: {
-		cursor: "unset",
+		cursor: "pointer",
+	},
+
+	avatarBox: {
+		minWidth: "auto",
+		marginTop: 2,
+	},
+
+	miolo: {
+		flex: 1,
+		minWidth: 0, // sem isto o texto empurra o trilho para fora da lista
+		display: "flex",
+		flexDirection: "column",
+		gap: 2,
+	},
+
+	linhaNome: {
+		display: "flex",
+		alignItems: "center",
+		gap: 6,
+		minWidth: 0,
+	},
+
+	nome: {
+		fontWeight: 600,
+		minWidth: 0,
+	},
+
+	previa: {
+		minWidth: 0,
+		"& p": { margin: 0 },
+	},
+
+	naoLidas: {
+		flexShrink: 0,
+		minWidth: 18,
+		height: 18,
+		padding: "0 5px",
+		borderRadius: 9,
+		backgroundColor: green[500],
+		color: "#fff",
+		fontSize: "0.68rem",
+		fontWeight: 700,
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+	},
+
+	trilho: {
+		flexShrink: 0,
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "flex-end",
+		gap: 4,
+		maxWidth: 132,
+	},
+
+	linhaTopo: {
+		display: "flex",
+		alignItems: "center",
+		gap: 4,
 	},
 
 	noTicketsDiv: {
@@ -55,40 +126,40 @@ const useStyles = makeStyles(theme => ({
 		margin: "0px",
 	},
 
-	contactNameWrapper: {
-		display: "flex",
-		justifyContent: "space-between",
+	// Tempo de espera: numa fila, saber há quanto tempo o cliente aguarda vale
+	// mais que qualquer outro dado da linha. Muda de cor conforme atrasa.
+	waitBadge: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: 3,
+		marginLeft: 6,
+		padding: "1px 7px",
+		borderRadius: 8,
+		fontSize: "0.68rem",
+		fontWeight: 700,
+		whiteSpace: "nowrap",
 	},
-
-	lastMessageTime: {
-		justifySelf: "flex-end",
+	waitOk: {
+		backgroundColor: "rgba(46,158,91,0.14)",
+		color: "#2e9e5b",
 	},
-
-	closedBadge: {
-		alignSelf: "center",
-		justifySelf: "flex-end",
-		marginRight: 32,
-		marginLeft: "auto",
+	waitAtencao: {
+		backgroundColor: "rgba(199,119,0,0.16)",
+		color: "#c77700",
 	},
-
-	contactLastMessage: {
-		paddingRight: 20,
+	waitCritico: {
+		backgroundColor: "rgba(214,69,69,0.16)",
+		color: "#d64545",
 	},
-
-	newMessagesCount: {
-		alignSelf: "center",
-		marginRight: 8,
-		marginLeft: "auto",
-	},
-
-	badgeStyle: {
-		color: "white",
-		backgroundColor: green[500],
+	waitIcon: {
+		fontSize: "0.82rem",
 	},
 
 	acceptButton: {
-		position: "absolute",
-		left: "50%",
+		minWidth: 0,
+		padding: "2px 12px",
+		fontSize: "0.75rem",
+		whiteSpace: "nowrap",
 	},
 
 	ticketQueueColor: {
@@ -121,23 +192,37 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	userTag: {
-		position: "absolute",
-		marginRight: 5,
-		right: 5,
-		bottom: 5,
+		maxWidth: "100%",
 		background: "#2576D2",
 		color: "#ffffff",
-		border: "1px solid #CCC",
-		padding: 1,
-		paddingLeft: 5,
-		paddingRight: 5,
-		borderRadius: 10,
-		fontSize: "0.9em"
+		padding: "1px 8px",
+		borderRadius: 8,
+		fontSize: "0.68rem",
+		fontWeight: 600,
+		whiteSpace: "nowrap",
+		overflow: "hidden",
+		textOverflow: "ellipsis",
 	},
 }));
 
 const TicketListItem = ({ ticket }) => {
 	const classes = useStyles();
+
+	// Recalcula de minuto em minuto: um contador de espera parado enganaria
+	// mais do que ajudaria. Só roda enquanto houver ticket pendente na tela.
+	const [agora, setAgora] = useState(() => new Date());
+
+	useEffect(() => {
+		if (ticket.status !== "pending") return undefined;
+		const t = setInterval(() => setAgora(new Date()), 60000);
+		return () => clearInterval(t);
+	}, [ticket.status]);
+
+	const espera =
+		ticket.status === "pending"
+			? formatWaitingTime(ticketDate(ticket), agora)
+			: null;
+	const nivelEspera = waitingLevel(ticketDate(ticket), agora);
 	const history = useHistory();
 	const [loading, setLoading] = useState(false);
 	const { ticketId } = useParams();
@@ -173,13 +258,14 @@ const TicketListItem = ({ ticket }) => {
 
 	return (
 		<React.Fragment key={ticket.id}>
-			<ListItem
+			{/* ListItemButton porque o prop `button` do ListItem saiu no MUI v6:
+			    mantê-lo deixava a linha sem hover, foco nem ripple. */}
+			<ListItemButton
 				dense
-				button
-				onClick={e => {
-					if (ticket.status === "pending") return;
-					handleSelectTicket(ticket.id);
-				}}
+				// Pendente também abre: dá para ler o que o cliente quer antes de
+				// puxar o atendimento. O envio continua bloqueado enquanto o
+				// ticket não for aceito, então abrir não assume a conversa.
+				onClick={() => handleSelectTicket(ticket.id)}
 				selected={ticketId && +ticketId === ticket.id}
 				className={clsx(classes.ticket, {
 					[classes.pendingTicket]: ticket.status === "pending",
@@ -195,106 +281,109 @@ const TicketListItem = ({ ticket }) => {
 						className={classes.ticketQueueColor}
 					></span>
 				</Tooltip>
-				<ListItemAvatar>
+				<ListItemAvatar className={classes.avatarBox}>
 					<Avatar src={ticket?.contact?.profilePicUrl} />
 				</ListItemAvatar>
-				<ListItemText
-					disableTypography
-					primary={
-						<span className={classes.contactNameWrapper}>
-							<Typography
-								noWrap
-								component="span"
-								variant="body2"
-								color="textPrimary"
-							>
-								{ticket.contact.name}
-							</Typography>
-							{ticket.status === "closed" && (
-								<Badge
-									className={classes.closedBadge}
-									badgeContent={"closed"}
-									color="primary"
-								/>
-							)}
-							{ticket.lastMessage && (
-								<Typography
-									className={classes.lastMessageTime}
-									component="span"
-									variant="body2"
-									color="textSecondary"
-								>
-									{isSameDay(parseISO(ticket.updatedAt), new Date()) ? (
-										<>{format(parseISO(ticket.updatedAt), "HH:mm")}</>
-									) : (
-										<>{format(parseISO(ticket.updatedAt), "dd/MM/yyyy")}</>
-									)}
-								</Typography>
-							)}
-							{ticket.whatsappId && (
-								<div className={classes.userTag} title={i18n.t("ticketsList.connectionTitle")}>{ticket.whatsapp?.name}</div>
-							)}
-						</span>
-					}
-					secondary={
-						<span className={classes.contactNameWrapper}>
-							<Typography
-								className={classes.contactLastMessage}
-								noWrap
-								component="span"
-								variant="body2"
-								color="textSecondary"
-							>
-								{ticket.lastMessage ? (
-									<MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
-								) : (
-									<br />
-								)}
-							</Typography>
 
-							{ticket.tags?.length > 0 && (
-								<span className={classes.tagsWrapper}>
-									{ticket.tags.slice(0, 3).map(tag => (
-										<span
-											key={tag.id}
-											className={classes.tagChip}
-											style={{ backgroundColor: tag.color }}
-											title={tag.name}
-										>
-											{tag.name}
-										</span>
-									))}
-									{ticket.tags.length > 3 && (
-										<span className={classes.tagChip} style={{ backgroundColor: "#95a5a6" }}>
-											+{ticket.tags.length - 3}
-										</span>
-									)}
+				{/* Coluna do meio: encolhe e trunca. O minWidth 0 é o que permite
+				    o texto ser cortado em vez de empurrar a coluna da direita. */}
+				<div className={classes.miolo}>
+					<div className={classes.linhaNome}>
+						<Typography noWrap component="span" variant="body2" className={classes.nome}>
+							{ticket.contact.name}
+						</Typography>
+						{ticket.unreadMessages > 0 && (
+							<span className={classes.naoLidas}>{ticket.unreadMessages}</span>
+						)}
+					</div>
+
+					<Typography
+						noWrap
+						component="div"
+						variant="body2"
+						color="textSecondary"
+						className={classes.previa}
+					>
+						{ticket.lastMessage ? (
+							<MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
+						) : (
+							" "
+						)}
+					</Typography>
+
+					{ticket.tags?.length > 0 && (
+						<div className={classes.tagsWrapper}>
+							{ticket.tags.slice(0, 2).map(tag => (
+								<span
+									key={tag.id}
+									className={classes.tagChip}
+									style={{ backgroundColor: tag.color }}
+									title={tag.name}
+								>
+									{tag.name}
+								</span>
+							))}
+							{ticket.tags.length > 2 && (
+								<span className={classes.tagChip} style={{ backgroundColor: "#95a5a6" }}>
+									+{ticket.tags.length - 2}
 								</span>
 							)}
+						</div>
+					)}
+				</div>
 
-							<Badge
-								className={classes.newMessagesCount}
-								badgeContent={ticket.unreadMessages}
-								classes={{
-									badge: classes.badgeStyle,
-								}}
-							/>
+				{/* Coluna da direita: largura própria, nunca sobreposta ao texto. */}
+				<div className={classes.trilho}>
+					<div className={classes.linhaTopo}>
+						<Typography component="span" variant="caption" color="textSecondary">
+							{isSameDay(parseISO(ticketDate(ticket)), new Date())
+								? format(parseISO(ticketDate(ticket)), "HH:mm")
+								: format(parseISO(ticketDate(ticket)), "dd/MM/yy")}
+						</Typography>
+						{ticket.status === "pending" && espera && (
+							<span
+								className={clsx(classes.waitBadge, {
+									[classes.waitOk]: nivelEspera === "ok",
+									[classes.waitAtencao]: nivelEspera === "atencao",
+									[classes.waitCritico]: nivelEspera === "critico",
+								})}
+								title={i18n.t("ticketsList.waitingFor")}
+							>
+								<AccessTimeIcon className={classes.waitIcon} />
+								{espera}
+							</span>
+						)}
+					</div>
+
+					{ticket.whatsappId && ticket.whatsapp?.name && (
+						<span
+							className={classes.userTag}
+							title={i18n.t("ticketsList.connectionTitle")}
+						>
+							{ticket.whatsapp.name}
 						</span>
-					}
-				/>
-				{ticket.status === "pending" && (
-					<ButtonWithSpinner
-						color="primary"
-						variant="contained"
-						className={classes.acceptButton}
-						size="small"
-						loading={loading}
-						onClick={e => handleAcepptTicket(ticket.id)}
-					>
-						{i18n.t("ticketsList.buttons.accept")}
-					</ButtonWithSpinner>
-				)}
-			</ListItem>
+					)}
+
+					{/* Conhecido não se aceita: qualquer atendente já pode responder. */}
+					{ticket.status === "pending" && !ticket.contact?.isKnown && (
+						<ButtonWithSpinner
+							color="primary"
+							variant="contained"
+							className={classes.acceptButton}
+							size="small"
+							loading={loading}
+							onClick={e => {
+								// Sem isto o clique subiria para a linha e abriria a
+								// conversa junto com o aceite.
+								e.stopPropagation();
+								handleAcepptTicket(ticket.id);
+							}}
+						>
+							{i18n.t("ticketsList.buttons.accept")}
+						</ButtonWithSpinner>
+					)}
+				</div>
+			</ListItemButton>
 			<Divider variant="inset" component="li" />
 		</React.Fragment>
 	);

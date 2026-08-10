@@ -7,6 +7,9 @@ import CreateCompanyService from "../services/CompanyServices/CreateCompanyServi
 import ShowCompanyService from "../services/CompanyServices/ShowCompanyService";
 import UpdateCompanyService from "../services/CompanyServices/UpdateCompanyService";
 import DeleteCompanyService from "../services/CompanyServices/DeleteCompanyService";
+import ShowBrandingService from "../services/CompanyServices/ShowBrandingService";
+import UpdateBrandingService from "../services/CompanyServices/UpdateBrandingService";
+import getCompanyId from "../helpers/GetCompanyId";
 import AppError from "../errors/AppError";
 
 type IndexQuery = {
@@ -26,6 +29,42 @@ interface CompanyData {
   adminEmail: string;
   adminPassword: string;
 }
+
+/**
+ * Nome e logo da empresa logada. Liberado a qualquer usuário autenticado
+ * porque a barra lateral precisa desses dados para todo mundo — diferente das
+ * demais rotas de empresa, restritas ao super-admin.
+ */
+export const branding = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const dados = await ShowBrandingService(getCompanyId(req));
+  return res.status(200).json(dados);
+};
+
+export const updateBranding = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { name, removeLogo } = req.body as {
+    name?: string;
+    removeLogo?: string;
+  };
+
+  const dados = await UpdateBrandingService({
+    companyId: getCompanyId(req),
+    name,
+    logoFile: req.file,
+    removeLogo: removeLogo === "true"
+  });
+
+  getIO()
+    .to(`company-${req.user.companyId}`)
+    .emit("branding", { action: "update", branding: dados });
+
+  return res.status(200).json(dados);
+};
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, pageNumber } = req.query as IndexQuery;

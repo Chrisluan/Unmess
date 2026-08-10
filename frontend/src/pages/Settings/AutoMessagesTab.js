@@ -1,14 +1,7 @@
 import React from "react";
 
-import {
-	Paper,
-	Typography,
-	TextField,
-	Switch,
-	FormControlLabel,
-	Chip,
-	makeStyles,
-} from "@material-ui/core";
+import { Paper, Typography, TextField, Switch, FormControlLabel, Chip } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n.js";

@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from "react";
 
 import {
-	Paper,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	IconButton,
-	Button,
-	Chip,
-	makeStyles,
-} from "@material-ui/core";
-import { DeleteOutline, Edit, Add } from "@material-ui/icons";
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    IconButton,
+    Button,
+    Chip,
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import { DeleteOutline, Edit, Add } from "@mui/icons-material";
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n.js";

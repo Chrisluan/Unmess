@@ -49,6 +49,12 @@ class Ticket extends Model<Ticket> {
   @Column
   greetingSent: boolean;
 
+  // Horário real da última mensagem, informado pelo WhatsApp. Diferente de
+  // updatedAt, que reflete o relógio do servidor e muda a cada alteração do
+  // ticket, mesmo sem mensagem nova.
+  @Column
+  lastMessageAt: Date;
+
   @CreatedAt
   createdAt: Date;
 

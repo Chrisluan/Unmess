@@ -3,21 +3,21 @@ import { toast } from "react-toastify";
 import { format, parseISO } from "date-fns";
 
 import {
-	Button,
-	Checkbox,
-	FormControlLabel,
-	IconButton,
-	Paper,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	TextField,
-	Typography,
-	makeStyles,
-} from "@material-ui/core";
-import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+    Button,
+    Checkbox,
+    FormControlLabel,
+    IconButton,
+    Paper,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    TextField,
+    Typography,
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";

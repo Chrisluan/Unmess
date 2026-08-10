@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import Dialog from "@material-ui/core/Dialog";
+import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
+import Dialog from "@mui/material/Dialog";
 
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
 import Autocomplete, {
 	createFilterOptions,
-} from "@material-ui/lab/Autocomplete";
-import CircularProgress from "@material-ui/core/CircularProgress";
-import FormControl from "@material-ui/core/FormControl";
-import InputLabel from "@material-ui/core/InputLabel";
-import Select from "@material-ui/core/Select";
-import MenuItem from "@material-ui/core/MenuItem";
-import FormHelperText from "@material-ui/core/FormHelperText";
+} from '@mui/material/Autocomplete';
+import CircularProgress from "@mui/material/CircularProgress";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormHelperText from "@mui/material/FormHelperText";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -140,12 +140,18 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 		return filtered;
 	};
 
-	const renderOption = option => {
-		if (option.number) {
-			return `${option.name} - ${option.number}`;
-		} else {
-			return `${i18n.t("newTicketModal.add")} ${option.name}`;
-		}
+	// A partir do MUI v5 a assinatura é (props, option): o primeiro argumento
+	// traz os atributos do <li>. Recebendo só um parâmetro, o código lia .name
+	// do objeto de props e exibia "Adicionar undefined".
+	const renderOption = (props, option) => {
+		const { key, ...rest } = props;
+		return (
+			<li key={option.id ?? option.name} {...rest}>
+				{option.number
+					? `${option.name} - ${option.number}`
+					: `${i18n.t("newTicketModal.add")} ${option.name}`}
+			</li>
+		);
 	};
 
 	const renderOptionLabel = option => {

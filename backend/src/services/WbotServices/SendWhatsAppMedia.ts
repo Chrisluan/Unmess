@@ -1,9 +1,12 @@
 import fs from "fs";
+import path from "path";
 import AppError from "../../errors/AppError";
+import convertToVoiceNote from "../../helpers/ConvertToVoiceNote";
 import Ticket from "../../models/Ticket";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
+import { logger } from "../../utils/logger";
 
 interface Request {
   media: Express.Multer.File;
@@ -27,10 +30,18 @@ const SendWhatsAppMedia = async ({
       ? formatBody(body as string, ticket.contact)
       : undefined;
 
+    // Áudio vira mensagem de voz, e o WhatsApp só aceita Ogg/Opus nesse papel.
+    // O navegador entrega WebM/Opus, então o contêiner precisa ser trocado
+    // antes do envio.
+    const ehAudio = media.mimetype.startsWith("audio/");
+    const audio = ehAudio ? await convertToVoiceNote(media.path) : null;
+
     const mediaInput = {
-      filename: media.filename,
-      mimetype: media.mimetype,
-      path: media.path
+      filename: audio?.convertido
+        ? path.basename(audio.path)
+        : media.filename,
+      mimetype: audio ? audio.mimetype : media.mimetype,
+      path: audio ? audio.path : media.path
     };
 
     const mediaOptions = {
@@ -50,11 +61,22 @@ const SendWhatsAppMedia = async ({
 
     await ticket.update({ lastMessage: body || media.filename });
 
-    fs.unlinkSync(media.path);
+    // Apaga o arquivo efetivamente enviado: quando houve conversão, o
+    // original já foi removido e media.path não existe mais.
+    fs.unlinkSync(mediaInput.path);
 
     return sentMessage;
   } catch (err) {
-    console.log(err);
+    // console.log engolia o contexto: sem saber o arquivo e o mimetype, o
+    // erro no log não dizia por que a mídia foi recusada.
+    logger.error({
+      info: "Error sending WhatsApp media",
+      ticketId: ticket.id,
+      filename: media?.filename,
+      mimetype: media?.mimetype,
+      tamanho: media?.size,
+      err
+    });
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

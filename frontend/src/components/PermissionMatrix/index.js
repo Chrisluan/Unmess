@@ -8,9 +8,9 @@ import {
   InputBase,
   Chip,
   Tooltip,
-  makeStyles,
   Divider,
-} from "@material-ui/core";
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import {
   ExpandMore,
   ExpandLess,
@@ -18,7 +18,7 @@ import {
   CheckBoxOutlineBlank,
   IndeterminateCheckBox,
   Search,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 import { PERMISSION_MODULES } from "../../constants/permissions";
 
 const useStyles = makeStyles((theme) => ({

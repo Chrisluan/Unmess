@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import openSocket from "../../services/socket-io";
 
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
-import Box from "@material-ui/core/Box";
+import makeStyles from '@mui/styles/makeStyles';
+import Container from "@mui/material/Container";
+import Tabs from "@mui/material/Tabs";
+import Tab from "@mui/material/Tab";
+import Box from "@mui/material/Box";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n.js";
@@ -17,6 +17,7 @@ import TicketStatusesTab from "./TicketStatusesTab";
 import AutoMessagesTab from "./AutoMessagesTab";
 import Connections from "../Connections";
 import TagsTab from "./TagsTab";
+import BrandingTab from "./BrandingTab";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -93,6 +94,7 @@ const Settings = () => {
 					<Tab label={i18n.t("settings.tabs.ticketStatuses")} />
 					<Tab label={i18n.t("settings.tabs.tags")} />
 					<Tab label={i18n.t("settings.tabs.autoMessages")} />
+					<Tab label={i18n.t("settings.tabs.branding")} />
 				</Tabs>
 
 				<Box className={classes.tabPanel} hidden={tab !== 0}>
@@ -122,6 +124,9 @@ const Settings = () => {
 						getSettingValue={getSettingValue}
 						onSettingSaved={fetchSettings}
 					/>
+				</Box>
+				<Box className={classes.tabPanel} hidden={tab !== 6}>
+					<BrandingTab />
 				</Box>
 			</Container>
 		</div>

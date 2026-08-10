@@ -1,10 +1,10 @@
 import React from "react";
 import { toast } from "react-toastify";
 
-import { Avatar, CardHeader, Chip, Tooltip } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
-import WhatsAppIcon from "@material-ui/icons/WhatsApp";
-import ConfirmationNumberIcon from "@material-ui/icons/ConfirmationNumber";
+import { Avatar, CardHeader, Chip, Tooltip } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
 
 import { i18n } from "../../translate/i18n";
 

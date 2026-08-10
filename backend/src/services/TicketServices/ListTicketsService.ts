@@ -8,7 +8,7 @@ import Queue from "../../models/Queue";
 import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
 import Tag from "../../models/Tag";
-import { buildTabWhere } from "../../helpers/TicketTabRules";
+import { buildTabWhere, buildContactWhere } from "../../helpers/TicketTabRules";
 
 interface Request {
   searchParam?: string;
@@ -61,7 +61,8 @@ const ListTicketsService = async ({
     {
       model: Contact,
       as: "contact",
-      attributes: ["id", "name", "number", "profilePicUrl"]
+      // isKnown vai junto para o frontend distinguir a conversa na lista.
+      attributes: ["id", "name", "number", "profilePicUrl", "isKnown"]
     },
     {
       model: Queue,
@@ -94,6 +95,23 @@ const ListTicketsService = async ({
 
   if (tabWhere) {
     whereCondition = tabWhere;
+  }
+
+  // Abas que filtram por atributo do contato viram condição no join. required
+  // fica true para o join restringir a consulta, não só enriquecer o retorno.
+  const contactWhere = tab ? buildContactWhere(tab) : null;
+  if (contactWhere) {
+    includeCondition = includeCondition.map(include =>
+      (include as { as?: string }).as === "contact"
+        ? {
+            model: Contact,
+            as: "contact",
+            attributes: ["id", "name", "number", "profilePicUrl", "isKnown"],
+            where: contactWhere,
+            required: true
+          }
+        : include
+    );
   }
 
   if (status && !tab) {

@@ -14,8 +14,8 @@ import {
   TextField,
   Tooltip,
   Typography,
-  makeStyles,
-} from "@material-ui/core";
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import {
   Business,
   CheckCircle,
@@ -23,7 +23,7 @@ import {
   Search,
   Warning,
   Add,
-} from "@material-ui/icons";
+} from "@mui/icons-material";
 import { toast } from "react-toastify";
 
 import api from "../../services/api";

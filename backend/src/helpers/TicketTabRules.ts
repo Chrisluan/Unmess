@@ -24,6 +24,11 @@ export interface TabRule {
   userId?: RegraAtendente;
   queueId?: RegraSetor;
   isGroup?: boolean;
+  /**
+   * Filtra pelo contato, não pelo ticket. Separa as conversas de pessoas
+   * conhecidas (dono, gerente) da fila de demanda comercial.
+   */
+  contactIsKnown?: boolean;
 }
 
 export const TAB_RULES: Record<string, TabRule> = {
@@ -39,11 +44,19 @@ export const TAB_RULES: Record<string, TabRule> = {
     userId: "other",
     queueId: "mine"
   },
-  // Pendentes sem atendente, nos meus setores ou ainda sem setor.
+  // Pendentes sem atendente, nos meus setores ou ainda sem setor. Pessoas
+  // conhecidas ficam de fora: elas têm aba própria e não são oportunidade.
   waiting: {
     status: "pending",
     userId: "none",
-    queueId: "mineOrNone"
+    queueId: "mineOrNone",
+    contactIsKnown: false
+  },
+
+  // Conversas de pessoas conhecidas, abertas ou pendentes, com ou sem dono.
+  known: {
+    status: ["open", "pending"],
+    contactIsKnown: true
   },
   // Grupos ativos da empresa, com ou sem atendente: atribuir grupo a um
   // atendente específico raramente faz sentido no dia a dia.
@@ -88,7 +101,20 @@ export const buildTabWhere = (
 
   if (rule.isGroup !== undefined) where.isGroup = rule.isGroup;
 
+  // contactIsKnown não entra aqui: mora na tabela de contatos e vira condição
+  // no include, montado por buildTabInclude.
   return where as Filterable["where"];
+};
+
+/**
+ * Condição a aplicar no include do contato, quando a aba filtra por ele.
+ * Devolve null quando a aba não depende do contato.
+ */
+export const buildContactWhere = (tab: string): Filterable["where"] | null => {
+  const rule = TAB_RULES[tab];
+  if (!rule || rule.contactIsKnown === undefined) return null;
+
+  return { isKnown: rule.contactIsKnown } as Filterable["where"];
 };
 
 export default TAB_RULES;

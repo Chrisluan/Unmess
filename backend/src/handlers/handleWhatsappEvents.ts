@@ -314,6 +314,7 @@ export const handleMessage = async (
       return;
     }
 
+
     const ticket = await FindOrCreateTicketService(
       contact,
       contextPayload.whatsappId,
@@ -391,7 +392,12 @@ export const handleMessage = async (
       lastMessageText = processedMessage.body || mediaPayload?.filename || "";
     }
 
-    await ticket.update({ lastMessage: lastMessageText });
+    // lastMessageAt vem do WhatsApp, não do relógio do servidor: é o mesmo
+    // horário exibido dentro da conversa, então lista e conversa concordam.
+    await ticket.update({
+      lastMessage: lastMessageText,
+      lastMessageAt: messageData.timestamp || new Date()
+    });
 
     await CreateMessageService({ messageData });
 

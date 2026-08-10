@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from "react";
 
 import {
-	Grid,
-	Paper,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	makeStyles,
-	Chip,
-} from "@material-ui/core";
+    Grid,
+    Paper,
+    Typography,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableRow,
+    Chip,
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import {
 	BarChart,
 	Bar,
@@ -24,11 +24,14 @@ import {
 	Pie,
 	Cell,
 	Legend,
+	LineChart,
+	Line,
 } from "recharts";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import PeriodFilter, { PRESETS } from "./PeriodFilter";
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -62,26 +65,49 @@ const DashboardMetrics = () => {
 	const classes = useStyles();
 	const [metrics, setMetrics] = useState(null);
 	const [loading, setLoading] = useState(true);
+	// Semana como padrão: o histórico inteiro dilui a leitura do momento atual.
+	const [periodo, setPeriodo] = useState(() => ({
+		preset: "week",
+		...PRESETS.week(),
+	}));
 
 	useEffect(() => {
 		(async () => {
 			setLoading(true);
 			try {
-				const { data } = await api.get("/dashboard/metrics");
+				const params = {};
+				if (periodo.start && periodo.end) {
+					params.startDate = periodo.start.toISOString();
+					params.endDate = periodo.end.toISOString();
+				}
+				const { data } = await api.get("/dashboard/metrics", { params });
 				setMetrics(data);
 			} catch (err) {
 				toastError(err);
 			}
 			setLoading(false);
 		})();
-	}, []);
+	}, [periodo]);
+
+	// O filtro continua visível durante o carregamento: escondê-lo faria a
+	// página saltar a cada troca de período.
+	const filtro = (
+		<Grid item xs={12}>
+			<PeriodFilter value={periodo} onChange={setPeriodo} />
+		</Grid>
+	);
 
 	if (loading || !metrics) {
-		return null;
+		return (
+			<Grid container spacing={3} style={{ marginTop: 8 }}>
+				{filtro}
+			</Grid>
+		);
 	}
 
 	return (
 		<Grid container spacing={3} style={{ marginTop: 8 }}>
+			{filtro}
 			<Grid item xs={12} sm={6} md={3}>
 				<Paper className={classes.metricCard} variant="outlined">
 					<Typography variant="body2" color="textSecondary">
@@ -118,6 +144,119 @@ const DashboardMetrics = () => {
 					<Typography variant="h5">{metrics.totals.closed}</Typography>
 				</Paper>
 			</Grid>
+
+			{/* Segunda faixa: indicadores que apontam ação, não só volume. */}
+			<Grid item xs={12} sm={6} md={3}>
+				<Paper className={classes.metricCard} variant="outlined">
+					<Typography variant="body2" color="textSecondary">
+						{i18n.t("dashboard.metrics.resolutionRate")}
+					</Typography>
+					<Typography variant="h5">
+						{metrics.resolutionRate == null
+							? "—"
+							: `${metrics.resolutionRate.toFixed(1)}%`}
+					</Typography>
+				</Paper>
+			</Grid>
+			<Grid item xs={12} sm={6} md={3}>
+				<Paper className={classes.metricCard} variant="outlined">
+					<Typography variant="body2" color="textSecondary">
+						{i18n.t("dashboard.metrics.avgResolution")}
+					</Typography>
+					<Typography variant="h5">
+						{formatSeconds(metrics.avgResolutionSeconds)}
+					</Typography>
+				</Paper>
+			</Grid>
+			<Grid item xs={12} sm={6} md={3}>
+				<Paper className={classes.metricCard} variant="outlined">
+					<Typography variant="body2" color="textSecondary">
+						{i18n.t("dashboard.metrics.stalePending")}
+					</Typography>
+					{/* Vermelho quando há alguém esperando: é o único número
+					    daqui que pede ação imediata. */}
+					<Typography
+						variant="h5"
+						style={{ color: metrics.stalePending > 0 ? "#d64545" : undefined }}
+					>
+						{metrics.stalePending}
+					</Typography>
+				</Paper>
+			</Grid>
+			<Grid item xs={12} sm={6} md={3}>
+				<Paper className={classes.metricCard} variant="outlined">
+					<Typography variant="body2" color="textSecondary">
+						{i18n.t("dashboard.metrics.newContacts")}
+					</Typography>
+					<Typography variant="h5">{metrics.newContacts}</Typography>
+				</Paper>
+			</Grid>
+
+			<Grid item xs={12} md={8}>
+				<Paper className={classes.paper} variant="outlined">
+					<Typography variant="subtitle1" gutterBottom>
+						{i18n.t("dashboard.metrics.byHour")}
+					</Typography>
+					<ResponsiveContainer width="100%" height={220}>
+						<BarChart data={metrics.byHour}>
+							<CartesianGrid strokeDasharray="3 3" vertical={false} />
+							<XAxis dataKey="label" interval={1} tick={{ fontSize: 11 }} />
+							<YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+							<Tooltip />
+							<Bar dataKey="total" fill="#2576d2" radius={[6, 6, 0, 0]} />
+						</BarChart>
+					</ResponsiveContainer>
+				</Paper>
+			</Grid>
+
+			<Grid item xs={12} md={4}>
+				<Paper className={classes.paper} variant="outlined">
+					<Typography variant="subtitle1" gutterBottom>
+						{i18n.t("dashboard.metrics.byConnection")}
+					</Typography>
+					{metrics.byConnection.length === 0 ? (
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("dashboard.metrics.noData")}
+						</Typography>
+					) : (
+						<Table size="small">
+							<TableBody>
+								{metrics.byConnection.map(c => (
+									<TableRow key={c.whatsappId}>
+										<TableCell>{c.name}</TableCell>
+										<TableCell align="right">{c.totalChats}</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					)}
+				</Paper>
+			</Grid>
+
+			{metrics.byDay.length > 1 && (
+				<Grid item xs={12}>
+					<Paper className={classes.paper} variant="outlined">
+						<Typography variant="subtitle1" gutterBottom>
+							{i18n.t("dashboard.metrics.byDay")}
+						</Typography>
+						<ResponsiveContainer width="100%" height={200}>
+							<LineChart data={metrics.byDay}>
+								<CartesianGrid strokeDasharray="3 3" vertical={false} />
+								<XAxis dataKey="label" tick={{ fontSize: 11 }} />
+								<YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+								<Tooltip />
+								<Line
+									type="monotone"
+									dataKey="total"
+									stroke="#2576d2"
+									strokeWidth={2}
+									dot={{ r: 3 }}
+								/>
+							</LineChart>
+						</ResponsiveContainer>
+					</Paper>
+				</Grid>
+			)}
 
 			<Grid item xs={12} md={6}>
 				<Paper className={classes.paper} variant="outlined">

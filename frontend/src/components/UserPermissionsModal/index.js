@@ -11,10 +11,10 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  makeStyles,
-} from "@material-ui/core";
-import { Security, Group, Person } from "@material-ui/icons";
-import { green } from "@material-ui/core/colors";
+} from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
+import { Security, Group, Person } from "@mui/icons-material";
+import { green } from "@mui/material/colors";
 
 import PermissionMatrix from "../PermissionMatrix";
 import api from "../../services/api";
