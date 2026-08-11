@@ -48,7 +48,12 @@ export interface WhatsappProvider {
   ): Promise<ProviderMessage[]>;
 }
 
-const provider = process.env.WHATSAPP_PROVIDER || "wwebjs";
+// Baileys é o provedor de trabalho: fala o protocolo do WhatsApp direto, sem
+// subir um Chrome por conexão. A diferença de memória é de ordem de grandeza
+// (dezenas de MB contra centenas), e é ela que decide quantas conexões cabem
+// num servidor. O wwebjs continua no mapa como saída de emergência, mas quem
+// esquecer a variável de ambiente não sobe mais um navegador sem querer.
+const provider = process.env.WHATSAPP_PROVIDER || "whaileys";
 
 const providersMap: Record<string, WhatsappProvider> = {
   wwebjs: WhatsappWebJsProvider,
