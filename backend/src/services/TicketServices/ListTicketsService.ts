@@ -1,9 +1,15 @@
-import { Op, fn, where, col, Filterable, Includeable } from "sequelize";
+import {
+  Op,
+  literal,
+  Filterable,
+  Includeable,
+  WhereAttributeHash
+} from "sequelize";
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
+import AppError from "../../errors/AppError";
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
-import Message from "../../models/Message";
 import Queue from "../../models/Queue";
 import ShowUserService from "../UserServices/ShowUserService";
 import Whatsapp from "../../models/Whatsapp";
@@ -24,6 +30,11 @@ interface Request {
   whatsappIds?: number[];
   /** Filtro por etiqueta. Vazio = todas. */
   tagIds?: number[];
+  /**
+   * Filtro por atendente responsável. Vazio = todos. Só chega aqui preenchido
+   * quando o controller confirmou que o usuário pode ver todas as conversas.
+   */
+  userIds?: number[];
   /** "only" = só grupos, "exclude" = só individuais, undefined = tudo. */
   groups?: string;
   companyId: number;
@@ -47,6 +58,7 @@ const ListTicketsService = async ({
   withUnreadMessages,
   whatsappIds,
   tagIds,
+  userIds,
   groups,
   companyId
 }: Request): Promise<Response> => {
@@ -124,44 +136,61 @@ const ListTicketsService = async ({
   if (searchParam) {
     const sanitizedSearchParam = searchParam.toLocaleLowerCase().trim();
 
-    includeCondition = [
-      ...includeCondition,
+    // A busca só compara colunas da própria tabela de tickets (contactId, id).
+    // Referenciar "contact.name" ou "message.body" direto quebrava com
+    // "Unknown column in where clause": o limit faz o Sequelize embrulhar a
+    // consulta numa subconsulta onde esses joins não existem.
+    //
+    // O termo passa pelo escape do Sequelize — é entrada do usuário indo para
+    // SQL literal.
+    const conexao = Ticket.sequelize;
+    if (!conexao) throw new AppError("ERR_DB_NOT_INITIALIZED");
+
+    const termo = conexao.escape(`%${sanitizedSearchParam}%`);
+    const empresa = conexao.escape(companyId);
+
+    const criterios: WhereAttributeHash[] = [
       {
-        model: Message,
-        as: "messages",
-        attributes: ["id", "body"],
-        where: {
-          body: where(
-            fn("LOWER", col("body")),
-            "LIKE",
-            `%${sanitizedSearchParam}%`
+        contactId: {
+          [Op.in]: literal(
+            `(SELECT id FROM Contacts WHERE companyId = ${empresa} ` +
+              `AND (LOWER(name) LIKE ${termo} OR number LIKE ${termo}))`
           )
-        },
-        required: false,
-        duplicating: false
+        }
+      },
+      {
+        id: {
+          [Op.in]: literal(
+            `(SELECT DISTINCT ticketId FROM Messages WHERE LOWER(body) LIKE ${termo})`
+          )
+        }
       }
     ];
+
+    // Protocolo (AAAAMMDD + id com 6 dígitos, ver BuildTicketProtocol).
+    //
+    // Só entra na busca quando o termo é numérico do começo ao fim. Assim
+    // "joão 11" não vira consulta por protocolo — o "11" casaria com quase
+    // tudo. Separadores comuns são tolerados porque o cliente dita o número em
+    // blocos e o atendente digita como ouviu ("2026 0729 000482", "#2026...").
+    //
+    // O mínimo de 4 dígitos existe pelo mesmo motivo: termo mais curto é quase
+    // sempre pedaço de telefone, que as outras cláusulas já cobrem.
+    //
+    // Casa por trecho para aceitar tanto o protocolo colado inteiro quanto só
+    // o final, que é o pedaço que o atendente costuma digitar.
+    const protocoloDigitado = sanitizedSearchParam.replace(/[\s.\-/#]/g, "");
+
+    if (/^\d{4,}$/.test(protocoloDigitado)) {
+      criterios.push({
+        protocol: { [Op.like]: `%${protocoloDigitado}%` }
+      });
+    }
 
     whereCondition = {
       ...whereCondition,
       companyId,
-      [Op.or]: [
-        {
-          "$contact.name$": where(
-            fn("LOWER", col("contact.name")),
-            "LIKE",
-            `%${sanitizedSearchParam}%`
-          )
-        },
-        { "$contact.number$": { [Op.like]: `%${sanitizedSearchParam}%` } },
-        {
-          "$message.body$": where(
-            fn("LOWER", col("body")),
-            "LIKE",
-            `%${sanitizedSearchParam}%`
-          )
-        }
-      ]
+      [Op.or]: criterios
     };
   }
 
@@ -192,6 +221,16 @@ const ListTicketsService = async ({
     whereCondition = {
       ...whereCondition,
       whatsappId: { [Op.in]: whatsappIds }
+    };
+  }
+
+  // Filtro por atendente. Mesma posição do filtro de conexão, e pelo mesmo
+  // motivo: aplicado por último para não ser sobrescrito por aba/data.
+  // Ele restringe o que a aba já traz — nunca amplia a visibilidade.
+  if (userIds && userIds.length > 0) {
+    whereCondition = {
+      ...whereCondition,
+      userId: { [Op.in]: userIds }
     };
   }
 

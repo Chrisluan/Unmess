@@ -191,6 +191,15 @@ const useStyles = makeStyles(theme => ({
 		textOverflow: "ellipsis",
 	},
 
+	// Só aparece nos resultados de busca: quem procurou por protocolo precisa
+	// confirmar que achou o atendimento certo sem abrir a conversa.
+	protocolo: {
+		fontFamily: "monospace",
+		fontSize: "0.68rem",
+		letterSpacing: "0.02em",
+		color: theme.palette.text.secondary,
+	},
+
 	userTag: {
 		maxWidth: "100%",
 		background: "#2576D2",
@@ -205,7 +214,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketListItem = ({ ticket }) => {
+const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 	const classes = useStyles();
 
 	// Recalcula de minuto em minuto: um contador de espera parado enganaria
@@ -310,6 +319,18 @@ const TicketListItem = ({ ticket }) => {
 							" "
 						)}
 					</Typography>
+
+					{mostrarProtocolo && ticket.protocol && (
+						<Typography
+							noWrap
+							component="span"
+							variant="caption"
+							className={classes.protocolo}
+							title={i18n.t("ticketsList.protocol")}
+						>
+							{ticket.protocol}
+						</Typography>
+					)}
 
 					{ticket.tags?.length > 0 && (
 						<div className={classes.tagsWrapper}>

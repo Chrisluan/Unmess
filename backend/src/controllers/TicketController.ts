@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
+import {
+  companyRoom,
+  notificationRoom,
+  statusRoom,
+  ticketRoom
+} from "../libs/socketRooms";
 
 import CreateTicketService from "../services/TicketServices/CreateTicketService";
 import DeleteTicketService from "../services/TicketServices/DeleteTicketService";
@@ -11,6 +17,7 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import formatBody from "../helpers/Mustache";
 import getCompanyId from "../helpers/GetCompanyId";
 import { TAB_RULES } from "../helpers/TicketTabRules";
+import { userHasPermission } from "../helpers/permissions/GetUserPermissions";
 
 type IndexQuery = {
   searchParam: string;
@@ -23,6 +30,7 @@ type IndexQuery = {
   queueIds: string;
   whatsappIds: string;
   tagIds: string;
+  userIds: string;
   groups: string;
 };
 
@@ -59,6 +67,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds: queueIdsStringified,
     whatsappIds: whatsappIdsStringified,
     tagIds: tagIdsStringified,
+    userIds: userIdsStringified,
     groups,
     withUnreadMessages
   } = req.query as IndexQuery;
@@ -69,6 +78,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   let queueIds: number[] = [];
   let whatsappIds: number[] = [];
   let tagIds: number[] = [];
+  let userIds: number[] = [];
 
   if (queueIdsStringified) {
     queueIds = JSON.parse(queueIdsStringified);
@@ -82,6 +92,20 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     tagIds = JSON.parse(tagIdsStringified);
   }
 
+  // Filtrar por atendente é visão de supervisão: só quem pode ver todas as
+  // conversas escolhe de quem são. Para os demais o parâmetro é ignorado em
+  // silêncio — a lista continua sendo a que eles já teriam.
+  if (userIdsStringified) {
+    const podeFiltrarPorAtendente = await userHasPermission(
+      Number(userId),
+      "tickets:viewAll"
+    );
+
+    if (podeFiltrarPorAtendente) {
+      userIds = JSON.parse(userIdsStringified);
+    }
+  }
+
   const { tickets, count, hasMore } = await ListTicketsService({
     searchParam,
     pageNumber,
@@ -93,6 +117,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     queueIds,
     whatsappIds,
     tagIds,
+    userIds,
     groups,
     withUnreadMessages,
     companyId
@@ -115,8 +140,10 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   });
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}`)
-    .to(ticket.status)
+  const empresa = getCompanyId(req);
+
+  io.to(companyRoom(empresa))
+    .to(statusRoom(empresa, ticket.status))
     .emit("ticket", {
       action: "update",
       ticket
@@ -173,10 +200,12 @@ export const remove = async (
   const ticket = await DeleteTicketService(ticketId, getCompanyId(req));
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}`)
-    .to(ticket.status)
-    .to(ticketId)
-    .to("notification")
+  const empresa = getCompanyId(req);
+
+  io.to(companyRoom(empresa))
+    .to(statusRoom(empresa, ticket.status))
+    .to(ticketRoom(empresa, ticketId))
+    .to(notificationRoom(empresa))
     .emit("ticket", {
       action: "delete",
       ticketId: +ticketId

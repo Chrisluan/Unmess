@@ -422,7 +422,7 @@ const messages = {
           search: { title: "Buscar" },
         },
         search: {
-          placeholder: "Buscar chats y mensajes.",
+          placeholder: "Buscar por nombre, mensaje o protocolo",
         },
         buttons: {
           showAll: "Todos",
@@ -454,6 +454,7 @@ const messages = {
         noTicketsTitle: "¡Nada acá!",
         connectionTitle: "Conexión que se está utilizando actualmente.",
         waitingFor: "Tiempo que el cliente está esperando",
+        protocol: "Protocolo de la atención",
         pendingBar: {
           readOnly: "Solo está visualizando. Acepte la atención para responder.",
           accept: "Aceptar atención",
@@ -468,6 +469,11 @@ const messages = {
         all: "Etiquetas",
         multiple: "{{count}} etiquetas",
         tooltip: "Filtrar chats por etiqueta",
+      },
+      ticketsUserSelect: {
+        all: "Agentes",
+        multiple: "{{count}} agentes",
+        tooltip: "Filtrar chats por agente responsable",
       },
       ticketTags: {
         placeholder: "Agregar etiqueta...",

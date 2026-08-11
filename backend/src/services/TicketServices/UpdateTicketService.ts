@@ -2,6 +2,12 @@ import CheckContactOpenTickets from "../../helpers/CheckContactOpenTickets";
 import SetTicketMessagesAsRead from "../../helpers/SetTicketMessagesAsRead";
 import GetDefaultQueue from "../../helpers/GetDefaultQueue";
 import { getIO } from "../../libs/socket";
+import {
+  companyRoom,
+  notificationRoom,
+  statusRoom,
+  ticketRoom
+} from "../../libs/socketRooms";
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import Setting from "../../models/Setting";
@@ -188,16 +194,18 @@ const UpdateTicketService = async ({
   const io = getIO();
 
   if (ticket.status !== oldStatus || ticket.user?.id !== oldUserId) {
-    io.to(`company-${ticket.companyId}`).to(oldStatus).emit("ticket", {
-      action: "delete",
-      ticketId: ticket.id
-    });
+    io.to(companyRoom(ticket.companyId))
+      .to(statusRoom(ticket.companyId, oldStatus))
+      .emit("ticket", {
+        action: "delete",
+        ticketId: ticket.id
+      });
   }
 
-  io.to(`company-${ticket.companyId}`)
-    .to(ticket.status)
-    .to("notification")
-    .to(ticketId.toString())
+  io.to(companyRoom(ticket.companyId))
+    .to(statusRoom(ticket.companyId, ticket.status))
+    .to(notificationRoom(ticket.companyId))
+    .to(ticketRoom(ticket.companyId, ticketId))
     .emit("ticket", {
       action: "update",
       ticket

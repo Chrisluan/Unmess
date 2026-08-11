@@ -163,6 +163,7 @@ const reducer = (state, action) => {
 			selectedQueueIds,
 			selectedWhatsappIds = [],
 			selectedTagIds = [],
+			selectedUserIds = [],
 			groups,
 			updateCount,
 			style,
@@ -176,13 +177,14 @@ const reducer = (state, action) => {
 	// referência a cada render.
 	const whatsappIdsKey = JSON.stringify(selectedWhatsappIds);
 	const tagIdsKey = JSON.stringify(selectedTagIds);
+	const userIdsKey = JSON.stringify(selectedUserIds);
 
 	const { rules: tabRules, loaded: rulesLoaded } = useTicketTabRules();
 
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups]);
+	}, [status, tab, searchParam, dispatch, showAll, selectedQueueIds, whatsappIdsKey, tagIdsKey, userIdsKey, groups]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -193,6 +195,7 @@ const reducer = (state, action) => {
 		queueIds: JSON.stringify(selectedQueueIds),
 		whatsappIds: whatsappIdsKey,
 		tagIds: tagIdsKey,
+		userIds: userIdsKey,
 		groups,
 	});
 
@@ -225,6 +228,14 @@ const reducer = (state, action) => {
 			return selectedTagIds.some(id => ticketTagIds.includes(id));
 		};
 
+		// Mesma razão do filtro de conexão: sem isto, um ticket de outro
+		// atendente voltaria para a lista filtrada assim que chegasse mensagem.
+		const belongsToSelectedUser = ticket => {
+			if (!selectedUserIds || selectedUserIds.length === 0) return true;
+			// Comparação frouxa: o id vem número da API e string em algumas rotas.
+			return selectedUserIds.some(id => String(id) === String(ticket.userId));
+		};
+
 		const belongsToGroupFilter = ticket => {
 			if (groups === "only") return !!ticket.isGroup;
 			if (groups === "exclude") return !ticket.isGroup;
@@ -234,6 +245,7 @@ const reducer = (state, action) => {
 		const belongsToTab = ticket => {
 			if (!belongsToSelectedWhatsapp(ticket)) return false;
 			if (!belongsToSelectedTags(ticket)) return false;
+			if (!belongsToSelectedUser(ticket)) return false;
 			if (!belongsToGroupFilter(ticket)) return false;
 
 			// A regra de cada aba vem do backend; aqui só se obedece.
@@ -310,7 +322,7 @@ const reducer = (state, action) => {
 			socket.disconnect();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey, groups, tabRules, rulesLoaded]);
+	}, [status, tab, searchParam, showAll, user, selectedQueueIds, whatsappIdsKey, tagIdsKey, userIdsKey, groups, tabRules, rulesLoaded]);
 
 	useEffect(() => {
     if (typeof updateCount === "function") {
@@ -356,7 +368,13 @@ const reducer = (state, action) => {
 					) : (
 						<>
 							{ticketsList.map(ticket => (
-								<TicketListItem ticket={ticket} key={ticket.id} />
+								<TicketListItem
+									ticket={ticket}
+									key={ticket.id}
+									// Só na busca: no dia a dia o protocolo seria ruído em
+									// todas as linhas da fila.
+									mostrarProtocolo={Boolean(searchParam)}
+								/>
 							))}
 						</>
 					)}

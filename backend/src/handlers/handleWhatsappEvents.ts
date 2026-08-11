@@ -4,6 +4,7 @@ import { writeFile } from "fs";
 import * as Sentry from "@sentry/node";
 
 import { getIO } from "../libs/socket";
+import { companyRoom, ticketRoom } from "../libs/socketRooms";
 import { logger } from "../utils/logger";
 import { debounce } from "../helpers/Debounce";
 import formatBody from "../helpers/Mustache";
@@ -472,8 +473,10 @@ export const handleMessageAck = async (
 
     await messageToUpdate.update({ ack });
 
-    io.to(`company-${messageToUpdate.ticket.companyId}`)
-      .to(messageToUpdate.ticketId.toString())
+    io.to(companyRoom(messageToUpdate.ticket.companyId))
+      .to(
+        ticketRoom(messageToUpdate.ticket.companyId, messageToUpdate.ticketId)
+      )
       .emit("appMessage", {
         action: "update",
         message: messageToUpdate

@@ -13,6 +13,7 @@ const useTickets = ({
     queueIds,
     whatsappIds,
     tagIds,
+    userIds,
     groups,
     withUnreadMessages,
 }) => {
@@ -37,6 +38,7 @@ const useTickets = ({
                             queueIds,
                             whatsappIds,
                             tagIds,
+                            userIds,
                             groups,
                             withUnreadMessages,
                         },
@@ -70,6 +72,7 @@ const useTickets = ({
         queueIds,
         whatsappIds,
         tagIds,
+        userIds,
         groups,
         withUnreadMessages,
     ])

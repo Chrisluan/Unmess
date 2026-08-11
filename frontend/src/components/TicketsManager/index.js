@@ -24,6 +24,7 @@ import { Can } from "../Can";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
 import TicketsTagSelect from "../TicketsTagSelect";
+import TicketsUserSelect from "../TicketsUserSelect";
 import { Button } from "@mui/material";
 
 const useStyles = makeStyles((theme) => ({
@@ -144,6 +145,8 @@ const TicketsManager = () => {
   });
 
   const [selectedTagIds, setSelectedTagIds] = useState([]);
+  // Vazio = todos os atendentes. Só é oferecido a quem vê todas as conversas.
+  const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [filtrosAnchor, setFiltrosAnchor] = useState(null);
 
   // Quantidade de filtros restringindo a lista. Vira o número no badge, para
@@ -151,11 +154,13 @@ const TicketsManager = () => {
   const filtrosAtivos =
     (selectedWhatsappIds.length > 0 ? 1 : 0) +
     (selectedTagIds.length > 0 ? 1 : 0) +
+    (selectedUserIds.length > 0 ? 1 : 0) +
     (selectedQueueIds.length !== userQueueIds.length ? 1 : 0);
 
   const limparFiltros = () => {
     setSelectedWhatsappIds([]);
     setSelectedTagIds([]);
+    setSelectedUserIds([]);
     setSelectedQueueIds(userQueueIds);
   };
 
@@ -336,6 +341,17 @@ const TicketsManager = () => {
           onChange={(values) => setSelectedQueueIds(values)}
         />
 
+        {/* Filtro por atendente: ferramenta de supervisão, só aparece para
+            quem enxerga o atendimento inteiro. O backend valida a mesma
+            permissão, então esconder aqui é conveniência, não a trava. */}
+        <Can permission="tickets:viewAll">
+          <TicketsUserSelect
+            style={{ width: "100%", marginTop: 0 }}
+            selectedUserIds={selectedUserIds}
+            onChange={(values) => setSelectedUserIds(values)}
+          />
+        </Can>
+
         {/* O switch "Todos" fica disponível para admin ou, se a empresa
             liberou, para qualquer atendente. */}
         <Can
@@ -456,6 +472,7 @@ const TicketsManager = () => {
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
             selectedTagIds={selectedTagIds}
+            selectedUserIds={selectedUserIds}
             updateCount={(val) => setMyTicketsCount(val)}
             style={applyPanelStyle("myTickets")}
           />
@@ -466,6 +483,7 @@ const TicketsManager = () => {
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
             selectedTagIds={selectedTagIds}
+            selectedUserIds={selectedUserIds}
             updateCount={(val) => setAttendingCount(val)}
             style={applyPanelStyle("attending")}
           />
@@ -476,6 +494,7 @@ const TicketsManager = () => {
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
             selectedTagIds={selectedTagIds}
+            selectedUserIds={selectedUserIds}
             updateCount={(val) => setWaitingCount(val)}
             style={applyPanelStyle("waiting")}
           />
@@ -486,6 +505,7 @@ const TicketsManager = () => {
             selectedQueueIds={selectedQueueIds}
             selectedWhatsappIds={selectedWhatsappIds}
             selectedTagIds={selectedTagIds}
+            selectedUserIds={selectedUserIds}
             updateCount={(val) => setKnownCount(val)}
             style={applyPanelStyle("known")}
           />
@@ -498,6 +518,7 @@ const TicketsManager = () => {
           selectedQueueIds={selectedQueueIds}
           selectedWhatsappIds={selectedWhatsappIds}
           selectedTagIds={selectedTagIds}
+          selectedUserIds={selectedUserIds}
           updateCount={(val) => setGroupsCount(val)}
         />
       </TabPanel>
@@ -508,6 +529,7 @@ const TicketsManager = () => {
           selectedQueueIds={selectedQueueIds}
           selectedWhatsappIds={selectedWhatsappIds}
           selectedTagIds={selectedTagIds}
+          selectedUserIds={selectedUserIds}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
@@ -517,6 +539,7 @@ const TicketsManager = () => {
           selectedQueueIds={selectedQueueIds}
           selectedWhatsappIds={selectedWhatsappIds}
           selectedTagIds={selectedTagIds}
+          selectedUserIds={selectedUserIds}
         />
       </TabPanel>
     </Paper>

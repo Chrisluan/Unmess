@@ -420,7 +420,7 @@ const messages = {
           search: { title: "Busca" },
         },
         search: {
-          placeholder: "Buscar chats e mensagens",
+          placeholder: "Buscar por nome, mensagem ou protocolo",
         },
         buttons: {
           showAll: "Todos",
@@ -454,6 +454,7 @@ const messages = {
           "Nenhum chat encontrado com esse status ou termo pesquisado",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         waitingFor: "Tempo que o cliente está aguardando",
+        protocol: "Protocolo do atendimento",
         pendingBar: {
           readOnly:
             "Você está apenas visualizando. Aceite o atendimento para responder.",
@@ -467,6 +468,11 @@ const messages = {
         all: "Etiquetas",
         multiple: "{{count}} etiquetas",
         tooltip: "Filtrar chats por etiqueta",
+      },
+      ticketsUserSelect: {
+        all: "Atendentes",
+        multiple: "{{count}} atendentes",
+        tooltip: "Filtrar chats por atendente responsável",
       },
       ticketTags: {
         placeholder: "Adicionar etiqueta...",

@@ -39,7 +39,6 @@ const TicketsWhatsappSelect = ({
 
   return (
     <div style={{ width: 150, marginTop: -4, ...style }}>
-      <Tooltip title={i18n.t("ticketsWhatsappSelect.tooltip")}>
         <FormControl fullWidth margin="dense">
           <Select
             multiple
@@ -82,7 +81,6 @@ const TicketsWhatsappSelect = ({
               ))}
           </Select>
         </FormControl>
-      </Tooltip>
     </div>
   );
 };

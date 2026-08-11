@@ -1,4 +1,10 @@
 import { getIO } from "../../libs/socket";
+import {
+  companyRoom,
+  notificationRoom,
+  statusRoom,
+  ticketRoom
+} from "../../libs/socketRooms";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import Whatsapp from "../../models/Whatsapp";
@@ -55,10 +61,12 @@ const CreateMessageService = async ({
   }
 
   const io = getIO();
-  io.to(`company-${message.ticket.companyId}`)
-    .to(message.ticketId.toString())
-    .to(message.ticket.status)
-    .to("notification")
+  const empresa = message.ticket.companyId;
+
+  io.to(companyRoom(empresa))
+    .to(ticketRoom(empresa, message.ticketId))
+    .to(statusRoom(empresa, message.ticket.status))
+    .to(notificationRoom(empresa))
     .emit("appMessage", {
       action: "create",
       message,

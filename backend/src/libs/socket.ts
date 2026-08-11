@@ -4,6 +4,12 @@ import { verify } from "jsonwebtoken";
 import AppError from "../errors/AppError";
 import { logger } from "../utils/logger";
 import { isAllowedOrigin } from "../helpers/IsAllowedOrigin";
+import {
+  companyRoom,
+  notificationRoom,
+  statusRoom,
+  ticketRoom
+} from "./socketRooms";
 import authConfig from "../config/auth";
 import User from "../models/User";
 
@@ -71,7 +77,7 @@ export const initIO = (httpServer: Server): SocketIO => {
     // evitando que uma empresa receba eventos (tickets, contatos, etc.)
     // de outra empresa através do mesmo servidor Socket.io compartilhado.
     if (tokenData?.companyId) {
-      socket.join(`company-${tokenData.companyId}`);
+      socket.join(companyRoom(tokenData.companyId));
     }
 
     const userId = tokenData?.id;
@@ -89,19 +95,26 @@ export const initIO = (httpServer: Server): SocketIO => {
     }
 
     logger.info("Client Connected");
+
+    // Toda sala leva o companyId do token — nunca o que o cliente mandar.
+    // Sem isso as salas eram compartilhadas entre empresas e um usuário
+    // recebia mensagens de clientes de outra.
     socket.on("joinChatBox", (ticketId: string) => {
+      if (!companyId) return;
       logger.info("A client joined a ticket channel");
-      socket.join(ticketId);
+      socket.join(ticketRoom(companyId, ticketId));
     });
 
     socket.on("joinNotification", () => {
+      if (!companyId) return;
       logger.info("A client joined notification channel");
-      socket.join("notification");
+      socket.join(notificationRoom(companyId));
     });
 
     socket.on("joinTickets", (status: string) => {
+      if (!companyId) return;
       logger.info(`A client joined to ${status} tickets channel.`);
-      socket.join(status);
+      socket.join(statusRoom(companyId, status));
     });
 
     socket.on("disconnect", () => {

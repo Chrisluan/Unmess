@@ -1,6 +1,12 @@
 import { Request, Response } from "express";
 
 import { getIO } from "../libs/socket";
+import {
+  companyRoom,
+  notificationRoom,
+  statusRoom,
+  ticketRoom
+} from "../libs/socketRooms";
 import getCompanyId from "../helpers/GetCompanyId";
 
 import ListTagsService from "../services/TagServices/ListTagsService";
@@ -87,9 +93,11 @@ export const syncTicketTags = async (
   });
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}`)
-    .to(ticket.status)
-    .to(ticketId)
+  const empresa = getCompanyId(req);
+
+  io.to(companyRoom(empresa))
+    .to(statusRoom(empresa, ticket.status))
+    .to(ticketRoom(empresa, ticketId))
     .emit("ticket", { action: "update", ticket });
 
   return res.status(200).json(ticket);

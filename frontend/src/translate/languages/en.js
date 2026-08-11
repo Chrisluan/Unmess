@@ -419,7 +419,7 @@ const messages = {
           search: { title: "Search" },
         },
         search: {
-          placeholder: "Search chats and messages.",
+          placeholder: "Search by name, message or protocol",
         },
         buttons: {
           showAll: "All",
@@ -452,6 +452,7 @@ const messages = {
         noTicketsMessage: "No chats found with this status or search term.",
         connectionTitle: "Connection that is currently being used.",
         waitingFor: "How long the customer has been waiting",
+        protocol: "Chat protocol",
         pendingBar: {
           readOnly: "You are only viewing. Accept the ticket to reply.",
           accept: "Accept ticket",
@@ -464,6 +465,11 @@ const messages = {
         all: "Tags",
         multiple: "{{count}} tags",
         tooltip: "Filter chats by tag",
+      },
+      ticketsUserSelect: {
+        all: "Agents",
+        multiple: "{{count}} agents",
+        tooltip: "Filter chats by assigned agent",
       },
       ticketTags: {
         placeholder: "Add tag...",

@@ -43,7 +43,6 @@ const TicketsTagSelect = ({ selectedTagIds = [], onChange, style }) => {
 
   return (
     <div style={{ width: 130, marginTop: -4, ...style }}>
-      <Tooltip title={i18n.t("ticketsTagSelect.tooltip")}>
         <FormControl fullWidth margin="dense">
           <Select
             multiple
@@ -70,7 +69,6 @@ const TicketsTagSelect = ({ selectedTagIds = [], onChange, style }) => {
             ))}
           </Select>
         </FormControl>
-      </Tooltip>
     </div>
   );
 };

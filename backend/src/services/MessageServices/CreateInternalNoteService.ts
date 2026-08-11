@@ -4,6 +4,7 @@ import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import User from "../../models/User";
 import { getIO } from "../../libs/socket";
+import { companyRoom, ticketRoom } from "../../libs/socketRooms";
 import ShowTicketService from "../TicketServices/ShowTicketService";
 
 interface Request {
@@ -58,8 +59,8 @@ const CreateInternalNoteService = async ({
   // Não atualiza unreadMessages nem lastMessage: nota interna não é
   // interação do cliente e não deve reordenar/realçar a lista de chats.
   const io = getIO();
-  io.to(`company-${companyId}`)
-    .to(ticket.id.toString())
+  io.to(companyRoom(companyId))
+    .to(ticketRoom(companyId, ticket.id))
     .emit("appMessage", {
       action: "create",
       message,

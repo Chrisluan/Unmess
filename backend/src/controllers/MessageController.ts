@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import getCompanyId from "../helpers/GetCompanyId";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
+import { companyRoom, ticketRoom } from "../libs/socketRooms";
 import Message from "../models/Message";
 
 import ListMessagesService from "../services/MessageServices/ListMessagesService";
@@ -125,8 +126,8 @@ export const edit = async (req: Request, res: Response): Promise<Response> => {
   );
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}`)
-    .to(message.ticketId.toString())
+  io.to(companyRoom(getCompanyId(req)))
+    .to(ticketRoom(getCompanyId(req), message.ticketId))
     .emit("appMessage", {
       action: "update",
       message
@@ -144,8 +145,8 @@ export const remove = async (
   const message = await DeleteWhatsAppMessage(messageId, getCompanyId(req));
 
   const io = getIO();
-  io.to(`company-${req.user.companyId}`)
-    .to(message.ticketId.toString())
+  io.to(companyRoom(getCompanyId(req)))
+    .to(ticketRoom(getCompanyId(req), message.ticketId))
     .emit("appMessage", {
       action: "update",
       message
