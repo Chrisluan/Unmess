@@ -1,0 +1,335 @@
+/* Painel Unmess — folha única, sem framework.
+   A paleta segue o tema do sistema operacional: quem opera servidor costuma
+   passar o dia no escuro, e forçar branco às três da manhã é hostil. */
+
+:root {
+  color-scheme: light dark;
+
+  --fundo: #f4f5f7;
+  --superficie: #ffffff;
+  --superficie-2: #f0f1f4;
+  --borda: #dcdfe4;
+  --texto: #16181d;
+  --texto-fraco: #61656e;
+
+  --ok: #1a7f52;
+  --ok-fundo: #e4f5ec;
+  --alerta: #9a6300;
+  --alerta-fundo: #fdf3e0;
+  --erro: #b3261e;
+  --erro-fundo: #fdeceb;
+  --acento: #2f5fd0;
+
+  --raio: 10px;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #16181d;
+    --superficie: #1e2127;
+    --superficie-2: #262a32;
+    --borda: #333944;
+    --texto: #e8eaed;
+    --texto-fraco: #9aa0aa;
+
+    --ok: #4ec98a;
+    --ok-fundo: #16301f;
+    --alerta: #e0ad4a;
+    --alerta-fundo: #322614;
+    --erro: #f2837c;
+    --erro-fundo: #3a1e1c;
+    --acento: #6d9bff;
+
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------------ topo */
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+}
+
+header h1 { margin: 0; font-size: 17px; font-weight: 600; }
+header .maquina { color: var(--texto-fraco); font-size: 13px; }
+header .direita { display: flex; align-items: center; gap: 14px; }
+
+main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+
+h2 {
+  margin: 32px 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-fraco);
+}
+h2:first-child { margin-top: 0; }
+
+/* --------------------------------------------------------------- métricas */
+
+.metricas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.metrica {
+  padding: 16px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.metrica .titulo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--texto-fraco);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metrica .valor {
+  margin: 6px 0 4px;
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrica .detalhe { font-size: 12px; color: var(--texto-fraco); }
+
+.barra {
+  height: 6px;
+  margin-top: 10px;
+  background: var(--superficie-2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.barra > div {
+  height: 100%;
+  width: 0;
+  background: var(--ok);
+  border-radius: 3px;
+  transition: width 0.4s ease, background-color 0.4s ease;
+}
+
+.barra.atencao > div { background: var(--alerta); }
+.barra.critico > div { background: var(--erro); }
+
+/* --------------------------------------------------------------- serviços */
+
+.servicos { display: grid; gap: 14px; }
+
+.servico {
+  padding: 18px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-left: 3px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.servico[data-saude="ok"] { border-left-color: var(--ok); }
+.servico[data-saude="alerta"] { border-left-color: var(--alerta); }
+.servico[data-saude="parado"] { border-left-color: var(--erro); }
+
+.servico .cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.servico h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.servico .nome-servico { font-family: var(--mono); font-size: 12px; color: var(--texto-fraco); }
+.servico .descricao { margin: 6px 0 0; font-size: 13px; color: var(--texto-fraco); }
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.selo::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.selo.ok { color: var(--ok); background: var(--ok-fundo); }
+.selo.alerta { color: var(--alerta); background: var(--alerta-fundo); }
+.selo.parado { color: var(--erro); background: var(--erro-fundo); }
+
+.numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--borda);
+}
+
+.numeros div { font-size: 13px; }
+.numeros .rotulo { display: block; font-size: 11px; color: var(--texto-fraco); text-transform: uppercase; letter-spacing: 0.04em; }
+.numeros .dado { font-variant-numeric: tabular-nums; }
+
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+/* ---------------------------------------------------------------- botões */
+
+button {
+  padding: 7px 14px;
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  background: var(--superficie-2);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+button:hover:not(:disabled) { filter: brightness(0.96); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primario { background: var(--acento); border-color: transparent; color: #fff; }
+button.perigo { color: var(--erro); border-color: var(--erro); background: transparent; }
+button.discreto { background: transparent; }
+
+/* ------------------------------------------------------------------ logs */
+
+.logs-topo { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+
+select {
+  padding: 7px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+pre.log {
+  margin: 0;
+  padding: 14px;
+  max-height: 380px;
+  overflow: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ----------------------------------------------------------------- aviso */
+
+#aviso {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: min(90vw, 620px);
+  padding: 12px 18px;
+  border-radius: var(--raio);
+  border: 1px solid var(--borda);
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  font-size: 14px;
+  display: none;
+}
+
+#aviso.visivel { display: block; }
+#aviso.erro { color: var(--erro); border-color: var(--erro); background: var(--erro-fundo); }
+#aviso.ok { color: var(--ok); border-color: var(--ok); background: var(--ok-fundo); }
+
+/* ----------------------------------------------------------------- modal */
+
+dialog {
+  padding: 0;
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--superficie);
+  color: var(--texto);
+  max-width: 460px;
+  width: calc(100vw - 32px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+dialog .corpo { padding: 22px; }
+dialog h3 { margin: 0 0 10px; font-size: 17px; }
+dialog p { margin: 0 0 14px; font-size: 14px; color: var(--texto-fraco); }
+
+dialog input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 7px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+}
+
+dialog .rodape { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ---------------------------------------------------------------- login */
+
+.login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.login form {
+  width: 100%;
+  max-width: 360px;
+  padding: 28px;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.login h1 { margin: 0 0 6px; font-size: 19px; }
+.login p { margin: 0 0 20px; font-size: 13px; color: var(--texto-fraco); }
+.login button { width: 100%; margin-top: 14px; padding: 10px; }
+.login .erro { margin: 14px 0 0; font-size: 13px; color: var(--erro); min-height: 19px; }
+
+.rodape-info { margin-top: 34px; font-size: 12px; color: var(--texto-fraco); text-align: center; }

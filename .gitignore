@@ -27,3 +27,14 @@ yarn-error.log
 .wwebjs_auth/
 # Certificados TLS locais (contem chave privada)
 certs/
+
+# Artefatos da maquina que hospeda a instalacao, nao do projeto: o executavel
+# do NSSM (que registra backend e frontend como servicos do Windows) e a
+# saida dos servicos.
+/bin/
+/logs/
+
+# Painel de operacao: a senha (hash scrypt) e o registro de quem ligou e
+# desligou o que sao desta instalacao, nao do codigo.
+/painel/config.json
+/painel/auditoria.log

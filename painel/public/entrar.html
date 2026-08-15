@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Entrar — Painel Unmess</title>
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <div class="login">
+      <form id="formulario" autocomplete="off">
+        <h1>Painel Unmess</h1>
+        <p>Operação dos serviços em produção.</p>
+
+        <label for="senha" class="rotulo">Senha</label>
+        <input
+          type="password"
+          id="senha"
+          name="senha"
+          required
+          autofocus
+          autocomplete="current-password"
+        />
+
+        <button type="submit" class="primario" id="botao">Entrar</button>
+        <p class="erro" id="erro"></p>
+      </form>
+    </div>
+    <script src="/entrar.js"></script>
+  </body>
+</html>

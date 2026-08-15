@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel Unmess</title>
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Painel Unmess</h1>
+        <div class="maquina" id="maquina">carregando…</div>
+      </div>
+      <div class="direita">
+        <span class="maquina" id="atualizado">—</span>
+        <button class="discreto" id="sair">Sair</button>
+      </div>
+    </header>
+
+    <main>
+      <h2>Máquina</h2>
+      <section class="metricas" id="metricas"></section>
+
+      <h2>Serviços</h2>
+      <section class="servicos" id="servicos"></section>
+
+      <h2>Logs</h2>
+      <div class="logs-topo">
+        <select id="arquivo-log"><option>carregando…</option></select>
+        <button class="discreto" id="atualizar-log">Atualizar</button>
+        <label class="maquina">
+          <input type="checkbox" id="seguir-log" checked /> acompanhar
+        </label>
+      </div>
+      <pre class="log" id="conteudo-log">Selecione um log.</pre>
+
+      <p class="rodape-info" id="rodape"></p>
+    </main>
+
+    <div id="aviso"></div>
+
+    <!-- Confirmação para ações destrutivas. Serviços críticos exigem digitar o
+         nome; o servidor confere de novo, então isto é conveniência, não a
+         única trava. -->
+    <dialog id="modal">
+      <form method="dialog" class="corpo">
+        <h3 id="modal-titulo"></h3>
+        <p id="modal-texto"></p>
+        <input type="text" id="modal-campo" autocomplete="off" />
+        <div class="rodape">
+          <button value="cancelar" class="discreto">Cancelar</button>
+          <button value="confirmar" class="perigo" id="modal-confirmar">Confirmar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

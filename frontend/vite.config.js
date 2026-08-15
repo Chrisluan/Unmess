@@ -78,6 +78,10 @@ export default defineConfig({
     // pelo IP do Tailscale.
     allowedHosts: [
       "localhost",
+      // Nome da máquina que hospeda a instalação. É por ele que os
+      // computadores do escritório acessam, e não pelo IP: o IP muda quando a
+      // máquina troca de rede Wi-Fi, o nome não.
+      "unmess",
       "servidor",
       "192.168.1.200",
       "100.68.128.23",
