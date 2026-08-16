@@ -20,6 +20,18 @@
       content="minimum-scale=1, initial-scale=1, width=device-width"
     />
     <noscript id="env-insertion-point"></noscript>
+    <!-- Endereço público, resolvido em tempo de execução.
+
+         As variáveis VITE_* são gravadas dentro do bundle no build. Isso serve
+         para um domínio definitivo, mas não para o túnel provisório, cujo
+         endereço muda a cada vez que o cloudflared sobe: cada troca exigiria
+         recompilar o frontend inteiro.
+
+         Este arquivo é gerado pelo scripts/tunel-publico.js e servido sem
+         cache; quando não existe endereço público, vem vazio e o frontend
+         volta a deduzir a API sozinho, como no acesso pela rede local. É um
+         script clássico de propósito -- roda antes do módulo do app abaixo. -->
+    <script src="/env.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

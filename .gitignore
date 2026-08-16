@@ -38,3 +38,7 @@ certs/
 # desligou o que sao desta instalacao, nao do codigo.
 /painel/config.json
 /painel/auditoria.log
+
+# Endereco publico do tunel provisorio: e sorteado a cada execucao do
+# cloudflared, entao pertence a execucao, nao ao projeto.
+/frontend/endereco-publico.json
