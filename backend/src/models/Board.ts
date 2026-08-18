@@ -57,7 +57,13 @@ class Board extends Model<Board> {
   @BelongsTo(() => Company)
   company: Company;
 
-  @HasMany(() => PipelineStage)
+  /**
+   * A chave é declarada explicitamente porque PipelineStage aponta para Board
+   * duas vezes — `boardId` (a coluna pertence a este quadro) e `targetBoardId`
+   * (a coluna final manda o card para este quadro). Sem dizer qual usar, o
+   * Sequelize escolhe sozinho e a lista de colunas volta vazia.
+   */
+  @HasMany(() => PipelineStage, "boardId")
   stages: PipelineStage[];
 }
 

@@ -94,7 +94,9 @@ class PipelineStage extends Model<PipelineStage> {
   @Column
   boardId: number;
 
-  @BelongsTo(() => Board)
+  // Chave explícita: há duas ligações com Board (esta e `targetBoardId`), e sem
+  // dizer qual usar o Sequelize associa pela errada.
+  @BelongsTo(() => Board, "boardId")
   board: Board;
 
   @ForeignKey(() => Company)
