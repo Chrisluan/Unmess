@@ -17,12 +17,18 @@ export default defineConfig({
         name: "Unmess",
         short_name: "Unmess",
         description: "Atendimento via WhatsApp",
+        // O padrão do plugin é "en"; a interface é toda em português, e é esta
+        // a língua que o sistema mostra na ficha do app instalado.
+        lang: "pt-BR",
         start_url: "/",
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
         theme_color: "#2576d2",
         background_color: "#f7f8fa",
+        // O 512x512 não é enfeite: sem ele o Chrome não considera o app
+        // instalável e o convite "Instalar aplicativo" simplesmente não
+        // aparece no celular, sem dizer o que falta.
         icons: [
           {
             src: "/android-chrome-192x192.png",
@@ -31,8 +37,17 @@ export default defineConfig({
             purpose: "any"
           },
           {
-            src: "/android-chrome-192x192.png",
-            sizes: "192x192",
+            src: "/android-chrome-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any"
+          },
+          // O maskable é servido à parte, com margem: o Android recorta o
+          // ícone num círculo ou squircle, e a arte cheia perderia as pontas
+          // do avião no corte.
+          {
+            src: "/maskable-512x512.png",
+            sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
           },

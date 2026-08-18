@@ -19,6 +19,7 @@ const https = require("https");
 const path = require("path");
 
 const auth = require("./lib/auth");
+const energia = require("./lib/energia");
 const logs = require("./lib/logs");
 const metricas = require("./lib/metricas");
 const servicos = require("./lib/servicos");
@@ -222,6 +223,7 @@ const rotaEstado = async (req, res) => {
   return responderJson(res, 200, {
     maquina,
     servicos: lista,
+    energia: energia.estado(),
     painel: { https: usandoHttps, elevado }
   });
 };
@@ -287,6 +289,26 @@ const tratar = async (req, res) => {
       return res.end(JSON.stringify({ ok: true }));
     }
 
+    // A tarifa muda (reajuste anual, bandeira, imposto) e a potência real só se
+    // descobre medindo a tomada. Ajustar pela tela evita ter que abrir arquivo
+    // no servidor a cada correção.
+    if (rota === "/api/energia" && req.method === "POST") {
+      if (!temCabecalhoPainel(req)) return responderJson(res, 400, { erro: "Pedido inválido." });
+      try {
+        const resultado = energia.configurar(await lerCorpo(req));
+        auditar(ip, `energia reconfigurada (tarifa ${resultado.tarifaReais})`);
+        return responderJson(res, 200, resultado);
+      } catch (erro) {
+        return responderJson(res, 400, { erro: erro.message });
+      }
+    }
+
+    if (rota === "/api/energia/zerar" && req.method === "POST") {
+      if (!temCabecalhoPainel(req)) return responderJson(res, 400, { erro: "Pedido inválido." });
+      auditar(ip, "acumulado de energia zerado");
+      return responderJson(res, 200, energia.zerar());
+    }
+
     const acaoEmServico = rota.match(/^\/api\/servico\/([a-z0-9_-]+)\/(start|stop|restart)$/);
     if (acaoEmServico && req.method === "POST") {
       if (!temCabecalhoPainel(req)) return responderJson(res, 400, { erro: "Pedido inválido." });
@@ -328,6 +350,11 @@ const subir = () => {
     );
     process.exit(1);
   }
+
+  // A medição roda no servidor, e não no navegador: assim o acumulado continua
+  // crescendo enquanto o painel estiver de pé, mesmo sem ninguém com a tela
+  // aberta.
+  energia.iniciar();
 
   const servidor = criarServidor();
   const protocolo = usandoHttps ? "https" : "http";

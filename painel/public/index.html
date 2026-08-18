@@ -22,6 +22,13 @@
       <h2>Máquina</h2>
       <section class="metricas" id="metricas"></section>
 
+      <h2>
+        Energia
+        <button class="discreto" id="ajustar-energia">Ajustar tarifa</button>
+      </h2>
+      <section class="metricas" id="energia"></section>
+      <p class="nota" id="nota-energia"></p>
+
       <h2>Serviços</h2>
       <section class="servicos" id="servicos"></section>
 
@@ -39,6 +46,41 @@
     </main>
 
     <div id="aviso"></div>
+
+    <!-- Ajuste da conta de luz. A tarifa muda todo ano e as potências só ficam
+         corretas medindo a tomada com um wattímetro. -->
+    <dialog id="modal-energia">
+      <form method="dialog" class="corpo">
+        <h3>Ajustar conta de energia</h3>
+        <p>
+          O consumo é estimado a partir do uso de CPU — esta máquina não tem
+          sensor de energia. Para deixar exato, meça a tomada com um wattímetro
+          em repouso e sob carga.
+        </p>
+
+        <label class="campo">
+          Tarifa (R$ por kWh)
+          <input type="number" id="campo-tarifa" step="0.001" min="0.01" max="10" />
+          <small>Da sua conta: valor total dividido pelo consumo em kWh.</small>
+        </label>
+
+        <label class="campo">
+          Potência em repouso (W)
+          <input type="number" id="campo-ociosa" step="1" min="1" max="2000" />
+        </label>
+
+        <label class="campo">
+          Potência em carga total (W)
+          <input type="number" id="campo-maxima" step="1" min="1" max="2000" />
+        </label>
+
+        <div class="rodape">
+          <button value="zerar" class="discreto" id="btn-zerar">Zerar acumulado</button>
+          <button value="cancelar" class="discreto">Cancelar</button>
+          <button value="salvar" class="primario">Salvar</button>
+        </div>
+      </form>
+    </dialog>
 
     <!-- Confirmação para ações destrutivas. Serviços críticos exigem digitar o
          nome; o servidor confere de novo, então isto é conveniência, não a

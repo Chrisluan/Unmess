@@ -6,16 +6,43 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import * as Sentry from "@sentry/node";
 
+import helmet from "helmet";
+
 import "./database";
 import uploadConfig from "./config/upload";
 import AppError from "./errors/AppError";
 import routes from "./routes";
 import { logger } from "./utils/logger";
 import { isAllowedOrigin } from "./helpers/IsAllowedOrigin";
+import { limitadorGeral, limitadorLogin } from "./middleware/limitarRequisicoes";
 
 Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
+
+/**
+ * O túnel é quem termina o TLS; para o Express, a conexão chega em HTTP puro a
+ * partir de 127.0.0.1. Sem confiar no proxy, `req.ip` seria sempre o loopback
+ * -- e o limitador de requisições contaria o mundo inteiro como um visitante
+ * só, deixando um ataque de força bruta passar como se fosse tráfego normal.
+ *
+ * O valor 1 é deliberado: confia num único salto (o cloudflared/tailscaled
+ * rodando nesta máquina). Confiar em todos deixaria qualquer um forjar
+ * X-Forwarded-For e escapar do limite.
+ */
+app.set("trust proxy", 1);
+
+// Cabeçalhos de segurança. A CSP fica desligada porque quem entrega o HTML é o
+// servidor do frontend, não este; ligá-la aqui só afetaria respostas de API e
+// daria falsa sensação de proteção.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    // Os anexos são consumidos pelo frontend, que está em outro host quando o
+    // acesso vem pela internet; a política padrão bloquearia as imagens.
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 
 app.use(
   cors({
@@ -29,8 +56,16 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json());
+
+// Teto no corpo da requisição: sem isto, um único POST grande o bastante ocupa
+// a memória da máquina inteira, que divide 8 GB com o banco e o WhatsApp.
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+
 app.use(Sentry.Handlers.requestHandler());
+
+app.use(limitadorGeral);
+
 app.use("/public", express.static(uploadConfig.directory));
 app.use(routes);
 

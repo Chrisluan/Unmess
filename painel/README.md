@@ -60,9 +60,50 @@ O selo de estado separa três situações que o Gerenciador de Serviços mistura
   carregando;
 - **parado** — serviço desligado.
 
+**Energia** — consumo em watts, energia acumulada em kWh, quanto já custou e a
+projeção do mês. Ver abaixo o que esses números são de fato.
+
 **Logs** — as últimas linhas do que o backend e o frontend escreveram em
 `C:\unmess\logs`. O log do backend é JSON numa linha só; o painel reescreve como
 `hora NÍVEL mensagem`.
+
+## Sobre os números de energia
+
+**São estimativa, não medição.** Esta máquina é um notebook sem bateria
+instalada, com um i3-3110M: não há sensor de energia acessível. Sem bateria não
+existe taxa de descarga para ler, e os contadores internos da CPU exigem driver
+em modo kernel. O painel calcula a potência a partir do uso de CPU:
+
+```
+potência = repouso + (carga_total - repouso) x uso_da_cpu
+```
+
+Os padrões são `15 W` em repouso e `45 W` em carga total — valores plausíveis
+para este notebook (TDP de 35 W na CPU), mas ainda assim chute informado.
+
+**Duas ressalvas que importam ao ler o total:**
+
+1. O acumulado só conta as horas em que o painel esteve **rodando**. Como ele
+   sobe sob demanda, o total não é a conta de luz do mês — é o consumo do
+   período observado. O cartão mostra quantas horas foram de fato acompanhadas.
+2. A tarifa padrão é **R$ 0,768/kWh** (Copel, residencial B1, reajuste de
+   20,51% vigente desde 24/06/2026). É a tarifa de aplicação: **não** inclui
+   ICMS, PIS/COFINS nem bandeira tarifária, então a conta real sai acima disso.
+
+### Deixando os números reais
+
+Em **Ajustar tarifa**:
+
+- **Tarifa**: pegue de uma fatura sua — valor total dividido pelo consumo em
+  kWh daquele mês. Isso embute impostos e bandeira automaticamente.
+- **Potências**: meça a tomada com um wattímetro, com a máquina parada e depois
+  sob carga, e escreva os dois valores. É o que transforma a estimativa em
+  algo próximo do real.
+
+**Zerar acumulado** recomeça a contagem a partir daquele momento.
+
+O acumulado fica em `painel/energia.json`, junto com a tarifa e as potências —
+é da instalação, não do projeto, e está no `.gitignore`.
 
 ## Segurança
 

@@ -16,6 +16,13 @@ const elementos = {
   maquina: document.getElementById("maquina"),
   atualizado: document.getElementById("atualizado"),
   metricas: document.getElementById("metricas"),
+  energia: document.getElementById("energia"),
+  notaEnergia: document.getElementById("nota-energia"),
+  ajustarEnergia: document.getElementById("ajustar-energia"),
+  modalEnergia: document.getElementById("modal-energia"),
+  campoTarifa: document.getElementById("campo-tarifa"),
+  campoOciosa: document.getElementById("campo-ociosa"),
+  campoMaxima: document.getElementById("campo-maxima"),
   servicos: document.getElementById("servicos"),
   rodape: document.getElementById("rodape"),
   aviso: document.getElementById("aviso"),
@@ -140,10 +147,18 @@ const desenharMetricas = maquina => {
     }
   ];
 
-  // A quantidade de cartões só muda se um disco for montado ou removido —
-  // reconstruir nesse caso é mais simples do que sincronizar a lista.
-  if (elementos.metricas.children.length !== cartoes.length) {
-    elementos.metricas.textContent = "";
+  desenharCards(elementos.metricas, cartoes);
+};
+
+/**
+ * Desenha uma fileira de cartões, criando os nós só quando a quantidade muda.
+ *
+ * Recriar tudo a cada atualização faria o texto selecionado sumir da mão de
+ * quem está lendo um número.
+ */
+const desenharCards = (container, cartoes) => {
+  if (container.children.length !== cartoes.length) {
+    container.textContent = "";
     cartoes.forEach(() => {
       const bloco = criar("div", "metrica");
       bloco.append(
@@ -156,12 +171,12 @@ const desenharMetricas = maquina => {
           return barra;
         })()
       );
-      elementos.metricas.append(bloco);
+      container.append(bloco);
     });
   }
 
   cartoes.forEach((cartao, i) => {
-    const bloco = elementos.metricas.children[i];
+    const bloco = container.children[i];
     bloco.querySelector(".titulo").textContent = cartao.titulo;
     bloco.querySelector(".valor").textContent = cartao.valor;
     bloco.querySelector(".detalhe").textContent = cartao.detalhe;
@@ -175,6 +190,121 @@ const desenharMetricas = maquina => {
       barra.firstElementChild.style.width = `${cartao.percentual}%`;
     }
   });
+};
+
+// --------------------------------------------------------------- energia
+
+const reais = valor =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valor || 0);
+
+/**
+ * A tarifa precisa de três casas: arredondada para duas, R$ 0,768 vira
+ * R$ 0,77 e não bate com o que a pessoa acabou de digitar.
+ */
+const reaisPreciso = valor =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3
+  }).format(valor || 0);
+
+// toFixed devolve ponto decimal; numa tela em português isso fica esquisito ao
+// lado dos valores em reais, que saem com vírgula.
+const numero = (valor, casas = 1) =>
+  new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: casas,
+    maximumFractionDigits: casas
+  }).format(valor || 0);
+
+const dataCurta = iso =>
+  iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—";
+
+let energiaAtual = null;
+
+const desenharEnergia = energia => {
+  energiaAtual = energia;
+
+  const { potenciaOciosaW, potenciaMaximaW } = energia.modelo;
+  const faixa = potenciaMaximaW - potenciaOciosaW;
+
+  // A barra mostra onde a potência está entre repouso e carga total, e não
+  // entre zero e o máximo: a máquina nunca consome menos que o repouso, então
+  // a parte de baixo da escala seria espaço morto.
+  const percentual =
+    energia.potenciaW == null || faixa <= 0
+      ? null
+      : Math.max(0, Math.min(100, ((energia.potenciaW - potenciaOciosaW) / faixa) * 100));
+
+  desenharCards(elementos.energia, [
+    {
+      titulo: "Consumo agora",
+      valor: energia.potenciaW == null ? "—" : `${numero(energia.potenciaW)} W`,
+      detalhe: `entre ${potenciaOciosaW} W parado e ${potenciaMaximaW} W no talo`,
+      percentual
+    },
+    {
+      titulo: "Energia medida",
+      valor: `${numero(energia.kwhAcumulado, 2)} kWh`,
+      detalhe: `${numero(energia.horasObservadas)} h acompanhadas desde ${dataCurta(energia.desde)}`,
+      percentual: null
+    },
+    {
+      titulo: "Custo até agora",
+      valor: reais(energia.custoReais),
+      detalhe: `a ${reaisPreciso(energia.tarifaReais)} por kWh`,
+      percentual: null
+    },
+    {
+      titulo: "Projeção mensal",
+      valor: reais(energia.projecao.custoMes),
+      detalhe: `${numero(energia.projecao.kwhMes)} kWh/mês · ${reais(energia.projecao.custoDia)} por dia`,
+      percentual: null
+    }
+  ]);
+
+  elementos.notaEnergia.textContent =
+    "Estimativa: esta máquina não tem sensor de energia, então o consumo é calculado a partir do uso de CPU. " +
+    "O total só conta as horas em que o painel esteve aberto — não é a conta de luz inteira. " +
+    "Para aproximar do real, meça a tomada com um wattímetro e ajuste em “Ajustar tarifa”.";
+};
+
+const abrirAjusteEnergia = () => {
+  if (!energiaAtual) return;
+
+  elementos.campoTarifa.value = energiaAtual.tarifaReais;
+  elementos.campoOciosa.value = energiaAtual.modelo.potenciaOciosaW;
+  elementos.campoMaxima.value = energiaAtual.modelo.potenciaMaximaW;
+
+  const aoFechar = async () => {
+    elementos.modalEnergia.removeEventListener("close", aoFechar);
+    const escolha = elementos.modalEnergia.returnValue;
+
+    try {
+      if (escolha === "salvar") {
+        await pedir("/api/energia", {
+          method: "POST",
+          body: JSON.stringify({
+            tarifaReais: elementos.campoTarifa.value,
+            potenciaOciosaW: elementos.campoOciosa.value,
+            potenciaMaximaW: elementos.campoMaxima.value
+          })
+        });
+        avisar("Conta de energia atualizada.", "ok");
+      } else if (escolha === "zerar") {
+        await pedir("/api/energia/zerar", { method: "POST" });
+        avisar("Acumulado zerado; a contagem recomeça agora.", "ok");
+      } else {
+        return;
+      }
+      await atualizar();
+    } catch (erro) {
+      avisar(erro.message, "erro");
+    }
+  };
+
+  elementos.modalEnergia.addEventListener("close", aoFechar);
+  elementos.modalEnergia.showModal();
 };
 
 // --------------------------------------------------------------- serviços
@@ -440,7 +570,7 @@ const carregarLog = async () => {
 
 const atualizar = async () => {
   try {
-    const { maquina, servicos, painel } = await pedir("/api/estado");
+    const { maquina, servicos, energia, painel } = await pedir("/api/estado");
 
     // A elevação é lida antes de desenhar: é ela que decide se os botões nascem
     // habilitados. Invertida, a primeira tela vinha com tudo clicável mesmo sem
@@ -448,6 +578,7 @@ const atualizar = async () => {
     semElevacao = painel.elevado === false;
 
     desenharMetricas(maquina);
+    if (energia) desenharEnergia(energia);
     desenharServicos(servicos);
 
     elementos.maquina.textContent = `${maquina.hostname} · ${maquina.modeloCpu}`;
@@ -485,6 +616,7 @@ const iniciar = async () => {
 
   elementos.arquivoLog.addEventListener("change", carregarLog);
   elementos.atualizarLog.addEventListener("click", carregarLog);
+  elementos.ajustarEnergia.addEventListener("click", abrirAjusteEnergia);
 
   await atualizar();
   await carregarListaLogs();

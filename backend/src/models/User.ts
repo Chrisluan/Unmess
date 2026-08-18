@@ -105,7 +105,12 @@ class User extends Model<User> {
   @BeforeCreate
   static hashPassword = async (instance: User): Promise<void> => {
     if (instance.password) {
-      instance.passwordHash = await hash(instance.password, 8);
+      // Custo 12 em vez de 8: cada ponto dobra o trabalho de conferir a senha,
+      // e o que aqui custa alguns décimos de segundo no login multiplica por
+      // bilhões o custo de quem tentar quebrar os hashes com um vazamento do
+      // banco na mão. Senhas já gravadas continuam válidas -- o bcrypt guarda
+      // o custo dentro do próprio hash --, e migram para 12 na próxima troca.
+      instance.passwordHash = await hash(instance.password, 12);
     }
   };
 

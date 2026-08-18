@@ -17,6 +17,7 @@ import NoteIcon from "@mui/icons-material/Assignment";
 import IconButton from "@mui/material/IconButton";
 import MoreVert from "@mui/icons-material/MoreVert";
 import MoodIcon from "@mui/icons-material/Mood";
+import EmojiEmotionsIcon from "@mui/icons-material/EmojiEmotions";
 import SendIcon from "@mui/icons-material/Send";
 import CancelIcon from "@mui/icons-material/Cancel";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -35,6 +36,7 @@ import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import RecordingTimer from "./RecordingTimer";
+import StickerPicker from "../StickerPicker";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
@@ -107,6 +109,15 @@ const useStyles = makeStyles(theme => ({
     bottom: 63,
     width: 40,
     borderTop: "1px solid #e8e8e8",
+  },
+
+  // A gaveta tem largura própria, diferente da caixa de emoji: ela mostra uma
+  // grade de miniaturas e um campo de busca, e precisa de espaço para os dois.
+  // O z-index a mantém acima da lista de mensagens.
+  stickerBox: {
+    position: "absolute",
+    bottom: 63,
+    zIndex: 10,
   },
 
   circleLoading: {
@@ -215,6 +226,7 @@ const MessageInput = ({ ticketStatus }) => {
   const [medias, setMedias] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showStickers, setShowStickers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [quickAnswers, setQuickAnswer] = useState([]);
@@ -529,6 +541,31 @@ const MessageInput = ({ ticketStatus }) => {
                     locale="pt"
                     onEmojiSelect={handleAddEmoji}
                   />
+                </ClickAwayListener>
+              </div>
+            ) : null}
+
+            <Tooltip title="Figurinhas">
+              <span>
+                <IconButton
+                  aria-label="stickerPicker"
+                  component="span"
+                  disabled={loading || recording || ticketStatus !== "open"}
+                  onClick={() => setShowStickers(prev => !prev)}
+                  size="large">
+                  <EmojiEmotionsIcon className={classes.sendMessageIcons} />
+                </IconButton>
+              </span>
+            </Tooltip>
+            {showStickers ? (
+              <div className={classes.stickerBox}>
+                <ClickAwayListener onClickAway={() => setShowStickers(false)}>
+                  <div>
+                    <StickerPicker
+                      ticketId={ticketId}
+                      onEnviada={() => setShowStickers(false)}
+                    />
+                  </div>
                 </ClickAwayListener>
               </div>
             ) : null}

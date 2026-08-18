@@ -78,6 +78,19 @@ export const PERMISSION_MODULES = {
       "quickAnswers:delete": "Excluir",
     },
   },
+  // ── Figurinhas ────────────────────────────────────────────────────────────
+  stickers: {
+    label: "Figurinhas",
+    permissions: {
+      "stickers:access": "Acesso ao módulo",
+      "stickers:view":   "Visualizar",
+      "stickers:create": "Adicionar",
+      "stickers:delete": "Excluir",
+      // Separada das demais de propósito: todo atendente manda figurinha na
+      // conversa, mas mexer no catálogo da empresa é de quem o organiza.
+      "stickers:send":   "Enviar em conversas",
+    },
+  },
   // ── Filas ─────────────────────────────────────────────────────────────────
   queues: {
     label: "Filas",

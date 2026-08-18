@@ -208,6 +208,43 @@ const useStyles = makeStyles((theme) => ({
     borderBottomRightRadius: 8,
   },
 
+  // Figurinha não é foto: no WhatsApp ela aparece solta, com fundo
+  // transparente e sem moldura. Daí não ter borda arredondada nem recorte --
+  // "contain" preserva o desenho inteiro, enquanto "cover" cortaria as pontas.
+  messageSticker: {
+    objectFit: "contain",
+    width: 160,
+    height: 160,
+    backgroundColor: "transparent",
+    display: "block",
+  },
+
+  /**
+   * Desmancha o balão em volta da figurinha.
+   *
+   * As classes messageLeft e messageRight pintam fundo, sombra e largura
+   * mínima -- tudo certo para texto e errado para figurinha, que no WhatsApp
+   * flutua sobre o papel de parede. O minWidth de 100px era o que deixava
+   * aquela faixa vazia ao lado do desenho.
+   */
+  balaoFigurinha: {
+    backgroundColor: "transparent !important",
+    boxShadow: "none !important",
+    minWidth: "0 !important",
+    padding: 0,
+    "&::before": { display: "none" },
+  },
+
+  // Sem o nome do arquivo, sobra só a hora -- que no balão comum fica solta no
+  // canto e aqui precisa de um espaço próprio, embaixo do desenho.
+  rodapeFigurinha: {
+    padding: "0 6px 4px",
+    display: "flex",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 4,
+  },
+
   timestamp: {
     fontSize: 11,
     position: "absolute",
@@ -508,6 +545,15 @@ const MessagesList = ({ ticketId, isGroup }) => {
     setAnchorEl(null);
   };
 
+  /**
+   * O nome do arquivo entra na condição junto com o mediaType porque as
+   * mensagens gravadas antes da correção no backend ficaram como "image";
+   * sem isso, o histórico continuaria aparecendo dentro de balão.
+   */
+  const ehFigurinha = (message) =>
+    message.mediaType === "sticker" ||
+    /(^|\/)sticker-/i.test(message.mediaUrl || "");
+
   const checkMessageMedia = (message) => {
     if (message.mediaType === "location" && message.body.split('|').length >= 2) {
       let locationParts = message.body.split('|')
@@ -566,7 +612,27 @@ const MessagesList = ({ ticketId, isGroup }) => {
         return <>{message.body}</>;
       }
     }
-    else if ( /^.*\.(jpe?g|png|gif)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
+    // Figurinha vem antes da imagem: chega como .webp e caía no botão
+    // "Download", com o atendente vendo um anexo genérico no lugar do desenho.
+    //
+    // O nome do arquivo entra na condição junto com o mediaType porque as
+    // mensagens gravadas antes da correção no backend ficaram com "image"; sem
+    // isso, todo o histórico continuaria aparecendo errado.
+    else if (
+      message.mediaType === "sticker" ||
+      /(^|\/)sticker-/i.test(message.mediaUrl || "")
+    ) {
+      return (
+        <img
+          className={classes.messageSticker}
+          src={mediaUrl(message.mediaUrl)}
+          alt="Figurinha"
+        />
+      );
+    }
+    // webp entrou na lista: é formato comum de imagem hoje, e sem ele uma foto
+    // enviada nesse formato virava botão de download como as figurinhas.
+    else if ( /^.*\.(jpe?g|png|gif|webp)?$/i.exec(message.mediaUrl) && message.mediaType === "image") {
       return <ModalImageCors imageUrl={mediaUrl(message.mediaUrl)} />;
     } else if (message.mediaType === "audio") {
       return <Audio url={mediaUrl(message.mediaUrl)} />
@@ -721,7 +787,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
-              <div className={classes.messageLeft}>
+              <div
+                className={clsx(classes.messageLeft, {
+                  [classes.balaoFigurinha]: ehFigurinha(message),
+                })}
+              >
                 <IconButton
                   variant="contained"
                   size="small"
@@ -742,13 +812,23 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   message.mediaType === "vcard" ||
                   message.mediaType === "multi_vcard") &&
                   checkMessageMedia(message)}
-                <div className={classes.textContentItem}>
-                  {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
-                  <span className={classes.timestamp}>
-                    {format(parseISO(messageDate(message)), "HH:mm")}
-                  </span>
-                </div>
+                {ehFigurinha(message) ? (
+                  // O corpo da mensagem guarda o nome do arquivo, que numa
+                  // figurinha não diz nada a ninguém -- fica só o horário.
+                  <div className={classes.rodapeFigurinha}>
+                    <span className={classes.timestamp}>
+                      {format(parseISO(messageDate(message)), "HH:mm")}
+                    </span>
+                  </div>
+                ) : (
+                  <div className={classes.textContentItem}>
+                    {message.quotedMsg && renderQuotedMessage(message)}
+                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                    <span className={classes.timestamp}>
+                      {format(parseISO(messageDate(message)), "HH:mm")}
+                    </span>
+                  </div>
+                )}
               </div>
             </React.Fragment>
           );
@@ -757,7 +837,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
-              <div className={classes.messageRight}>
+              <div
+                className={clsx(classes.messageRight, {
+                  // Mensagem apagada mantém o balão: o "esta mensagem foi
+                  // apagada" é texto e precisa do fundo para ser legível.
+                  [classes.balaoFigurinha]:
+                    ehFigurinha(message) && !message.isDeleted,
+                })}
+              >
                 <IconButton
                   variant="contained"
                   size="small"
@@ -773,6 +860,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
                   message.mediaType === "vcard" ||
                   message.mediaType === "multi_vcard") &&
                   checkMessageMedia(message)}
+                {ehFigurinha(message) && !message.isDeleted ? (
+                  <div className={classes.rodapeFigurinha}>
+                    <span className={classes.timestamp}>
+                      {format(parseISO(messageDate(message)), "HH:mm")}
+                      {renderMessageAck(message)}
+                    </span>
+                  </div>
+                ) : (
                 <div
                   className={clsx(classes.textContentItem, {
                     [classes.textContentItemDeleted]: message.isDeleted,
@@ -806,6 +901,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     {renderMessageAck(message)}
                   </span>
                 </div>
+                )}
               </div>
             </React.Fragment>
           );

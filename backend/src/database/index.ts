@@ -24,6 +24,7 @@ import PipelineStage from "../models/PipelineStage";
 import Deal from "../models/Deal";
 import DealActivity from "../models/DealActivity";
 import DealTicket from "../models/DealTicket";
+import Sticker from "../models/Sticker";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -56,7 +57,8 @@ const models = [
   PipelineStage,
   Deal,
   DealActivity,
-  DealTicket
+  DealTicket,
+  Sticker
 ];
 
 sequelize.addModels(models);

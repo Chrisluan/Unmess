@@ -10,9 +10,12 @@ import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessa
 import toastError from "../../errors/toastError";
 import ForwardMessageModal from "../ForwardMessageModal";
 import EditMessageModal from "../EditMessageModal";
+import usePermissions from "../../hooks/usePermissions";
+import { toast } from "react-toastify";
 
 const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
   const { setReplyingMessage } = useContext(ReplyMessageContext);
+  const { can } = usePermissions();
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [forwardOpen, setForwardOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -52,6 +55,35 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
     !message.isDeleted &&
     !message.isInternal &&
     !message.mediaUrl;
+
+  /**
+   * Guarda na biblioteca uma figurinha que apareceu na conversa.
+   *
+   * O nome do arquivo entra na condição junto com o mediaType porque as
+   * mensagens recebidas antes da correção no backend ficaram gravadas como
+   * "image" -- sem isso, justamente as figurinhas já recebidas não poderiam
+   * ser salvas.
+   */
+  const ehFigurinha =
+    message.mediaType === "sticker" ||
+    /(^|\/)sticker-/i.test(message.mediaUrl || "");
+
+  const podeSalvarFigurinha =
+    ehFigurinha && !message.isDeleted && can("stickers:create");
+
+  const handleSalvarFigurinha = async () => {
+    handleClose();
+
+    const nome = window.prompt("Nome para guardar esta figurinha:");
+    if (!nome?.trim()) return;
+
+    try {
+      await api.post(`/stickers/from-message/${message.id}`, { name: nome.trim() });
+      toast.success("Figurinha guardada na biblioteca.");
+    } catch (err) {
+      toastError(err);
+    }
+  };
 
   return (
     <>
@@ -100,6 +132,11 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
         <MenuItem onClick={hanldeReplyMessage}>
           {i18n.t("messageOptionsMenu.reply")}
         </MenuItem>
+        {podeSalvarFigurinha && (
+          <MenuItem onClick={handleSalvarFigurinha}>
+            Salvar figurinha
+          </MenuItem>
+        )}
         {/* Nota interna não sai do sistema — não faz sentido encaminhar. */}
         {!message.isInternal && !message.isDeleted && (
           <MenuItem onClick={handleOpenForward}>

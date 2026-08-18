@@ -1,6 +1,7 @@
 import { join } from "path";
 import { promisify } from "util";
 import { writeFile } from "fs";
+import crypto from "crypto";
 import * as Sentry from "@sentry/node";
 
 import { getIO } from "../libs/socket";
@@ -81,18 +82,21 @@ const toMessageDate = (timestamp?: number): Date | undefined => {
   return Number.isNaN(data.getTime()) ? undefined : data;
 };
 
-const makeRandomId = (length: number): string => {
-  let result = "";
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const charactersLength = characters.length;
-  let counter = 0;
-  while (counter < length) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    counter += 1;
-  }
-  return result;
-};
+/**
+ * Sufixo aleatório do nome dos anexos.
+ *
+ * Usa crypto, e não Math.random: o nome é a única coisa que separa o anexo de
+ * uma conversa de quem quiser baixá-lo, porque /public responde sem pedir
+ * login. Math.random é previsível a partir do estado interno do gerador e
+ * oferecia 5 caracteres de proteção; aqui a aleatoriedade é criptográfica e o
+ * comprimento pedido é respeitado.
+ */
+const makeRandomId = (length: number): string =>
+  crypto
+    .randomBytes(Math.ceil((length * 3) / 4))
+    .toString("base64")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(0, length);
 
 const processLocationMessage = (
   messagePayload: MessagePayload
@@ -103,7 +107,11 @@ const processLocationMessage = (
 };
 
 const saveMediaFile = async (mediaPayload: MediaPayload): Promise<string> => {
-  const randomId = makeRandomId(5);
+  // 24 caracteres, e não os 5 de antes: como /public entrega o anexo a quem
+  // souber o nome, sem pedir login, é este trecho aleatório que separa a
+  // conversa de um cliente do resto da internet. Com 5 caracteres a busca era
+  // grande mas alcançável; com 24 deixa de ser.
+  const randomId = makeRandomId(24);
   const { filename: originalFilename } = mediaPayload;
 
   let filename: string;
@@ -378,10 +386,24 @@ export const handleMessage = async (
       // saveMediaFile insere um sufixo aleatório para os arquivos não
       // colidirem em disco. Na conversa deve aparecer o nome original, não o
       // nome de armazenamento.
+      //
+      // Figurinha é a exceção: ela não tem nome que interesse a ninguém, e
+      // guardar o do arquivo fazia a conversa exibir "sticker-1786938287793
+      // .webp" embaixo do desenho -- e esse mesmo texto virava a prévia na
+      // lista de conversas.
       messageData.body =
-        processedMessage.body || mediaPayload.filename || filename;
+        processedMessage.type === "sticker"
+          ? processedMessage.body || ""
+          : processedMessage.body || mediaPayload.filename || filename;
+
       const [mediaType] = mediaPayload.mimetype.split("/");
-      messageData.mediaType = mediaType;
+
+      // Figurinha chega como "image/webp", e derivar o tipo do mimetype
+      // apagava justamente o que a distingue de uma foto: a conversa gravava
+      // "image" e a tela mostrava um botão de download no lugar do desenho.
+      // O tipo que veio do provedor sabe a diferença e tem a palavra final.
+      messageData.mediaType =
+        processedMessage.type === "sticker" ? "sticker" : mediaType;
     }
 
     let lastMessageText = "";

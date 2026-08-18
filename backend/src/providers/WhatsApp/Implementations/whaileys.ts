@@ -1451,6 +1451,16 @@ const sendMedia = async (
       contextInfo
     };
 
+    // Figurinha vem antes da imagem porque o arquivo é um WebP e cairia no
+    // ramo de imagem, chegando ao destinatário como foto dentro de um balão.
+    // Sem legenda: o WhatsApp ignora legenda em figurinha.
+    if (options?.asSticker) {
+      return {
+        message: { sticker: mediaBuffer, contextInfo },
+        type: "sticker" as MessageType
+      };
+    }
+
     if (media.mimetype.startsWith("image/")) {
       return {
         message: { image: mediaBuffer, ...base },
