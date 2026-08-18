@@ -19,6 +19,11 @@ import Customer from "../models/Customer";
 import Tag from "../models/Tag";
 import TicketTag from "../models/TicketTag";
 import Holiday from "../models/Holiday";
+import Board from "../models/Board";
+import PipelineStage from "../models/PipelineStage";
+import Deal from "../models/Deal";
+import DealActivity from "../models/DealActivity";
+import DealTicket from "../models/DealTicket";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -46,7 +51,12 @@ const models = [
   Customer,
   Tag,
   TicketTag,
-  Holiday
+  Holiday,
+  Board,
+  PipelineStage,
+  Deal,
+  DealActivity,
+  DealTicket
 ];
 
 sequelize.addModels(models);

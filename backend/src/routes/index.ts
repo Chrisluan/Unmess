@@ -18,6 +18,7 @@ import businessHourRoutes from "./businessHourRoutes";
 import dashboardRoutes from "./dashboardRoutes";
 import customerRoutes from "./customerRoutes";
 import tagRoutes from "./tagRoutes";
+import crmRoutes from "./crmRoutes";
 
 const routes = Router();
 
@@ -39,5 +40,6 @@ routes.use(businessHourRoutes);
 routes.use(dashboardRoutes);
 routes.use(customerRoutes);
 routes.use(tagRoutes);
+routes.use(crmRoutes);
 
 export default routes;

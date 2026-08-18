@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import Company from "../../models/Company";
 import User from "../../models/User";
+import SeedDefaultBoardsService from "../BoardServices/SeedDefaultBoardsService";
 import sequelize from "../../database";
 
 interface Request {
@@ -65,6 +66,10 @@ const CreateCompanyService = async ({
       },
       { transaction: t }
     );
+
+    // A empresa já nasce com o fluxo montado (Vendas → Produção → Expedição →
+    // Financeiro): um CRM sem quadro não deixa nem criar o primeiro card.
+    await SeedDefaultBoardsService(company.id, t);
 
     return { company, adminUser };
   });

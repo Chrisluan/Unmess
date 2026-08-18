@@ -19,6 +19,7 @@ import QuestionAnswerOutlinedIcon from "@mui/icons-material/QuestionAnswerOutlin
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import SecurityIcon from "@mui/icons-material/Security";
 import GroupWorkOutlinedIcon from "@mui/icons-material/GroupWorkOutlined";
+import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -206,6 +207,15 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
           to="/customers"
           primary={i18n.t("mainDrawer.listItems.customers")}
           icon={<GroupWorkOutlinedIcon />}
+          recolhida={recolhida}
+        />
+      </PermissionedItem>
+
+      <PermissionedItem permission="crm:access">
+        <ListItemLink
+          to="/crm"
+          primary={i18n.t("mainDrawer.listItems.crm")}
+          icon={<ViewKanbanOutlinedIcon />}
           recolhida={recolhida}
         />
       </PermissionedItem>

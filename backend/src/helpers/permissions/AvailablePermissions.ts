@@ -40,6 +40,21 @@ export const PERMISSION_MODULES = {
       "clients:delete": "Excluir",
     },
   },
+  // ── CRM / Funil de vendas ─────────────────────────────────────────────────
+  crm: {
+    label: "CRM (Quadros)",
+    permissions: {
+      "crm:access":       "Acesso ao módulo",
+      "crm:view":         "Visualizar quadros",
+      "crm:create":       "Criar negócio",
+      "crm:edit":         "Editar negócio",
+      "crm:move":         "Mover negócio entre colunas",
+      "crm:delete":       "Excluir negócio",
+      "crm:manageStages": "Configurar colunas do quadro",
+      "crm:manageBoards": "Criar e ordenar quadros",
+      "crm:viewAll":      "Ver negócios de todos os responsáveis",
+    },
+  },
   // ── Etiquetas ─────────────────────────────────────────────────────────────
   tags: {
     label: "Etiquetas",
