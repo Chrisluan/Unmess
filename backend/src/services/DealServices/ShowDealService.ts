@@ -5,6 +5,7 @@ import User from "../../models/User";
 import Board from "../../models/Board";
 import PipelineStage from "../../models/PipelineStage";
 import DealActivity from "../../models/DealActivity";
+import DealItem from "../../models/DealItem";
 import Ticket from "../../models/Ticket";
 import AppError from "../../errors/AppError";
 
@@ -53,11 +54,24 @@ const ShowDealService = async (
         ]
       },
       {
+        // Os itens vêm junto porque a ficha abre direto neles: buscá-los à
+        // parte faria a janela abrir com o total zerado e corrigir depois.
+        model: DealItem,
+        as: "items",
+        required: false,
+        separate: true,
+        order: [["position", "ASC"], ["id", "ASC"]]
+      },
+      {
         model: Ticket,
         as: "tickets",
         attributes: ["id", "status", "protocol", "lastMessage", "updatedAt"],
         required: false,
-        through: { attributes: [] }
+        through: { attributes: [] },
+        include: [
+          { model: Contact, as: "contact", attributes: ["id", "name", "number"], required: false },
+          { model: User, as: "user", attributes: ["id", "name"], required: false }
+        ]
       }
     ],
     order: [[{ model: DealActivity, as: "activities" }, "createdAt", "DESC"]]

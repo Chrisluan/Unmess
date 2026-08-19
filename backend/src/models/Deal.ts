@@ -89,6 +89,49 @@ class Deal extends Model<Deal> {
   @Column(DataType.TEXT)
   notes: string;
 
+  // ---- Proposta comercial -------------------------------------------------
+  //
+  // O que se combina para fechar: prazo de entrega, forma de pagamento e
+  // desconto. Antes vivia no WhatsApp, onde ninguém acha depois.
+
+  @Column
+  deliveryAt: Date;
+
+  /** Sem isto, data vazia significaria tanto "ainda não sei" quanto "não tem prazo". */
+  @Default(false)
+  @Column
+  deliveryToArrange: boolean;
+
+  /** pickup (retirada) | delivery (entrega) */
+  @Default("pickup")
+  @Column(DataType.STRING(12))
+  deliveryMode: string;
+
+  @Column
+  carrier: string;
+
+  @Column
+  paymentCondition: string;
+
+  @Default(1)
+  @Column
+  installments: number;
+
+  @Default(0)
+  @Column(DataType.DECIMAL(15, 2))
+  get discount(): number {
+    const bruto = this.getDataValue("discount");
+    return bruto === null || bruto === undefined ? 0 : Number(bruto);
+  }
+
+  /** value | percent — guardar só o resultado impediria reabrir como foi montada. */
+  @Default("value")
+  @Column(DataType.STRING(8))
+  discountType: string;
+
+  @Column
+  origin: string;
+
   @CreatedAt
   createdAt: Date;
 

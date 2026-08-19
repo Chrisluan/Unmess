@@ -29,7 +29,7 @@ import usePermissions from "../../hooks/usePermissions";
 import KanbanColumn from "../../components/Crm/KanbanColumn";
 import PipelineSummary from "../../components/Crm/PipelineSummary";
 import DealModal from "../../components/DealModal";
-import DealDetailsDrawer from "../../components/DealDetailsDrawer";
+import OrcamentoModal from "../../components/Crm/OrcamentoModal";
 import PipelineStagesModal from "../../components/PipelineStagesModal";
 import BoardsModal from "../../components/BoardsModal";
 import LostReasonModal from "../../components/Crm/LostReasonModal";
@@ -451,12 +451,17 @@ const Crm = () => {
         }}
       />
 
-      <DealDetailsDrawer
+      {/* A ficha do orçamento é uma janela com abas, e não mais um painel
+          lateral: proposta, itens, tarefas e conversa não cabiam na largura de
+          um drawer. */}
+      <OrcamentoModal
         dealId={detailsDealId}
         open={Boolean(detailsDealId)}
         onClose={() => setDetailsDealId(null)}
-        onEdit={handleEditDeal}
-        onDelete={handleDeleteDeal}
+        onSalvo={() => {
+          fetchDeals();
+          fetchSummary();
+        }}
       />
 
       <PipelineStagesModal

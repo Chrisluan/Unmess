@@ -11,6 +11,16 @@ interface DealData {
   contactId?: number;
   responsibleUserId?: number;
   lostReason?: string;
+  // Campos da proposta comercial -- ver o modelo Deal.
+  deliveryAt?: Date | null;
+  deliveryToArrange?: boolean;
+  deliveryMode?: string;
+  carrier?: string;
+  paymentCondition?: string;
+  installments?: number;
+  discount?: number;
+  discountType?: string;
+  origin?: string;
 }
 
 interface Request {
