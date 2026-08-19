@@ -4,6 +4,7 @@ import requiresCompany from "../middleware/requiresCompany";
 import hasPermission from "../middleware/hasPermission";
 import * as DealController from "../controllers/DealController";
 import * as DealActivityController from "../controllers/DealActivityController";
+import * as DealItemController from "../controllers/DealItemController";
 import * as PipelineStageController from "../controllers/PipelineStageController";
 import * as BoardController from "../controllers/BoardController";
 
@@ -38,6 +39,15 @@ crmRoutes.put("/deals/:dealId",        isAuth, requiresCompany, hasPermission("c
 crmRoutes.delete("/deals/:dealId",     isAuth, requiresCompany, hasPermission("crm:delete"), DealController.remove);
 
 // ── Timeline do negócio ─────────────────────────────────────────────────────
+
+// Itens do pedido e emissao da ordem de servico.
+crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.index);
+crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), DealItemController.sync);
+crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.ordemDeServico);
+
+// Visao inversa: os negocios de uma conversa, usada pelo painel do chat.
+crmRoutes.get("/tickets/:ticketId/deals", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.byTicket);
+
 crmRoutes.post("/deals/:dealId/activities",       isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.store);
 crmRoutes.put("/deal-activities/:activityId",     isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.update);
 crmRoutes.delete("/deal-activities/:activityId",  isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.remove);

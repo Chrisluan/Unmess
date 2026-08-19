@@ -43,3 +43,9 @@ certs/
 # Endereco publico do tunel provisorio: e sorteado a cada execucao do
 # cloudflared, entao pertence a execucao, nao ao projeto.
 /frontend/endereco-publico.json
+
+# Reserva do deploy automatico e backups pontuais: sao desta maquina, nao do projeto.
+/.reserva-deploy/
+/backend/.backup-seguranca/
+/backend/.env.antes-da-rotacao
+/backend/.senha-nova-temporaria.txt

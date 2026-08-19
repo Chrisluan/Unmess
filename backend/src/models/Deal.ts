@@ -23,6 +23,7 @@ import PipelineStage from "./PipelineStage";
 import DealActivity from "./DealActivity";
 import Ticket from "./Ticket";
 import DealTicket from "./DealTicket";
+import DealItem from "./DealItem";
 
 /**
  * Negócio — o card do Kanban.
@@ -156,6 +157,13 @@ class Deal extends Model<Deal> {
 
   @HasMany(() => DealActivity)
   activities: DealActivity[];
+
+  /**
+   * As linhas do orçamento. O valor do negócio passa a ser a soma delas assim
+   * que ele ganha itens -- ver SyncDealItemsService.
+   */
+  @HasMany(() => DealItem)
+  items: DealItem[];
 
   @BelongsToMany(() => Ticket, () => DealTicket)
   tickets: Ticket[];
