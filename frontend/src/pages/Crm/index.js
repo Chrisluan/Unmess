@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import openSocket from "../../services/socket-io";
 import { toast } from "react-toastify";
 
 import makeStyles from "@mui/styles/makeStyles";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import InputAdornment from "@mui/material/InputAdornment";
 import Typography from "@mui/material/Typography";
@@ -35,6 +37,7 @@ import BoardsModal from "../../components/BoardsModal";
 import LostReasonModal from "../../components/Crm/LostReasonModal";
 import AvancarQuadroModal from "../../components/Crm/AvancarQuadroModal";
 import useArrastarQuadro from "../../hooks/useArrastarQuadro";
+import useAtualizacaoAutomatica from "../../hooks/useAtualizacaoAutomatica";
 
 const useStyles = makeStyles((theme) => ({
   abas: {
@@ -216,43 +219,19 @@ const Crm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const socket = openSocket();
+  /**
+   * Atualização por HTTP, no lugar do socket.
+   *
+   * O socket entrega mais rápido, mas depende de uma conexão viva o tempo
+   * todo -- e pelo túnel, com a máquina em Wi-Fi, ela cai e volta sem avisar,
+   * deixando o quadro parado no passado sem ninguém perceber.
+   */
+  const recarregarTudo = useCallback(async () => {
+    await Promise.all([fetchDeals(), fetchSummary(), fetchBoards()]);
+  }, [fetchDeals, fetchSummary, fetchBoards]);
 
-    socket.on("deal", (data) => {
-      if (data.action === "create" || data.action === "update") {
-        const deal = data.deal;
+  const atualizacao = useAtualizacaoAutomatica(recarregarTudo);
 
-        setDeals((prev) => {
-          const outros = prev.filter((d) => d.id !== deal.id);
-          // Card que saiu do quadro (avançou) ou que pertence a outro quadro
-          // não deve permanecer na tela atual.
-          if (deal.status === "moved" || deal.boardId !== activeBoardId) {
-            return outros;
-          }
-          return [...outros, deal];
-        });
-      }
-
-      if (data.action === "delete") {
-        setDeals((prev) => prev.filter((d) => d.id !== +data.dealId));
-      }
-
-      fetchSummary();
-    });
-
-    socket.on("board", () => {
-      fetchBoards();
-    });
-
-    socket.on("pipelineStage", () => {
-      fetchBoards();
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [fetchSummary, fetchBoards, activeBoardId]);
 
   // Cards agrupados por coluna, cada grupo já na ordem gravada.
   const dealsPorEtapa = useMemo(() => {
@@ -497,6 +476,46 @@ const Crm = () => {
         <Title>{i18n.t("crm.title")}</Title>
         <MainHeaderButtonsWrapper>
           <div className={classes.filtros}>
+            {/* Atualizacao automatica: quem trabalha o dia inteiro no quadro quer
+                ciclo curto; quem so consulta prefere nao gastar rede. */}
+            <Tooltip
+              title={
+                atualizacao.ligada
+                  ? `Atualizando a cada ${atualizacao.intervalo}s`
+                  : "Atualizacao automatica desligada"
+              }
+              arrow
+            >
+              <FormControlLabel
+                style={{ marginRight: 0 }}
+                control={
+                  <Switch
+                    size="small"
+                    checked={atualizacao.ligada}
+                    onChange={atualizacao.alternar}
+                  />
+                }
+                label={<span style={{ fontSize: 13 }}>Atualizar</span>}
+              />
+            </Tooltip>
+
+            {atualizacao.ligada && (
+              <TextField
+                select
+                size="small"
+                variant="outlined"
+                value={atualizacao.intervalo}
+                onChange={(e) => atualizacao.mudarIntervalo(e.target.value)}
+                SelectProps={{ native: true }}
+                style={{ width: 92 }}
+              >
+                <option value={10}>10s</option>
+                <option value={30}>30s</option>
+                <option value={60}>1 min</option>
+                <option value={300}>5 min</option>
+              </TextField>
+            )}
+
             <TextField
               placeholder={i18n.t("crm.searchPlaceholder")}
               type="search"

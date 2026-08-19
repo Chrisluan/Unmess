@@ -1,4 +1,6 @@
 import AppError from "../../errors/AppError";
+import Board from "../../models/Board";
+import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
 import Deal from "../../models/Deal";
 import DealActivity from "../../models/DealActivity";
 import PipelineStage from "../../models/PipelineStage";
@@ -81,7 +83,15 @@ const CreateDealService = async ({
     where: { stageId: destino.id, companyId, status: "open" }
   });
 
+  // O número de orçamento só existe no funil de vendas: fora dele o card é
+  // trabalho em andamento, identificado pelo número do pedido.
+  const quadro = await Board.findOne({ where: { id: destino.boardId, companyId } });
+  const quoteNumber = quadro?.isSalesFunnel
+    ? await ProximoNumeroService(companyId, "quote")
+    : null;
+
   const deal = await Deal.create({
+    quoteNumber,
     title,
     value,
     expectedCloseAt: expectedCloseAt || null,

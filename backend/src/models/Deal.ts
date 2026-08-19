@@ -132,6 +132,15 @@ class Deal extends Model<Deal> {
   @Column
   origin: string;
 
+  /**
+   * Número do orçamento dentro da empresa.
+   *
+   * Vale enquanto o card está no funil de vendas. Ao sair, o trabalho passa a
+   * ser identificado pelo número do pedido, que vive em Orders.
+   */
+  @Column
+  quoteNumber: number;
+
   @CreatedAt
   createdAt: Date;
 

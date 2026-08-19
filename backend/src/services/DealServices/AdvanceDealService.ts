@@ -5,6 +5,8 @@ import DealActivity from "../../models/DealActivity";
 import PipelineStage from "../../models/PipelineStage";
 import DealTicket from "../../models/DealTicket";
 import sequelize from "../../database";
+import Order from "../../models/Order";
+import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
 
 interface Request {
   deal: Deal;
@@ -212,6 +214,28 @@ const AdvanceDealService = async ({
       { transaction: t }
     );
   });
+
+  /**
+   * Saiu do funil: o que era orçamento passa a ser pedido.
+   *
+   * O pedido ganha numeração própria da empresa e guarda de qual orçamento
+   * nasceu -- são contadores independentes, e por isso tabelas separadas.
+   * Só acontece na saída do funil: entre Produção e Expedição o card continua
+   * sendo o mesmo pedido, e numerar de novo criaria dois números para o mesmo
+   * trabalho.
+   */
+  if (boardAtual?.isSalesFunnel) {
+    const numero = await ProximoNumeroService(companyId, "order");
+
+    await Order.create({
+      number: numero,
+      quoteNumber: deal.quoteNumber || null,
+      dealId: novo.id,
+      value: deal.value,
+      status: "open",
+      companyId
+    });
+  }
 
   // As conversas de WhatsApp seguem o card: quem está na Produção precisa
   // chegar no mesmo atendimento que originou o pedido.
