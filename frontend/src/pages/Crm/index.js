@@ -33,6 +33,8 @@ import DealDetailsDrawer from "../../components/DealDetailsDrawer";
 import PipelineStagesModal from "../../components/PipelineStagesModal";
 import BoardsModal from "../../components/BoardsModal";
 import LostReasonModal from "../../components/Crm/LostReasonModal";
+import AvancarQuadroModal from "../../components/Crm/AvancarQuadroModal";
+import useArrastarQuadro from "../../hooks/useArrastarQuadro";
 
 const useStyles = makeStyles((theme) => ({
   abas: {
@@ -55,6 +57,9 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1),
     overflowX: "auto",
     overflowY: "hidden",
+    // O fundo do quadro é arrastável para navegar entre as colunas; o cursor
+    // é o que faz alguém descobrir isso sem precisar contar.
+    cursor: "grab",
     ...theme.scrollbarStyles,
   },
 
@@ -115,6 +120,11 @@ const Crm = () => {
   const [dragging, setDragging] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [pendenteDePerda, setPendenteDePerda] = useState(null);
+  const [pendenteDeAvanco, setPendenteDeAvanco] = useState(null);
+
+  // Rolagem horizontal do quadro: arrastar o fundo, roda do mouse e rolagem
+  // automática ao levar um card para perto da borda.
+  const refQuadro = useArrastarQuadro(Boolean(dragging));
 
   const podeMover = can("crm:move");
 
@@ -273,12 +283,21 @@ const Crm = () => {
     setDropTarget(null);
   };
 
-  const moverDeal = async (dealId, stageId, order, lostReason) => {
+  const moverDeal = async (
+    dealId,
+    stageId,
+    order,
+    lostReason,
+    gerarProximo,
+    lostReasonDetail
+  ) => {
     try {
       const { data } = await api.put(`/deals/${dealId}/move`, {
         stageId,
         order,
         lostReason,
+        lostReasonDetail,
+        gerarProximo,
       });
 
       // Coluna final: o card mudou de quadro. Avisar é essencial, senão ele
@@ -293,6 +312,16 @@ const Crm = () => {
 
       fetchDeals();
     } catch (err) {
+      // A coluna de destino pode ser de perda em outro quadro -- só o backend
+      // sabe disso, porque é ele que resolve o encaminhamento. Quando ele pede
+      // o motivo, abrimos o mesmo diálogo do arrasto direto para a perda.
+      if (err?.response?.data?.error === "ERR_LOST_REASON_REQUIRED") {
+        const deal = deals.find((d) => d.id === dealId);
+        setPendenteDePerda({ deal, stageId, order, gerarProximo });
+        fetchDeals();
+        return;
+      }
+
       toastError(err);
       // Recarrega para desfazer o movimento otimista na tela.
       fetchDeals();
@@ -324,14 +353,15 @@ const Crm = () => {
       return;
     }
 
-    // Coluna final tira o card do quadro; some da tela na hora e o backend
-    // confirma criando o card no quadro seguinte.
+    // Coluna final conclui o quadro. Antes o avanço era automático e o card
+    // sumia da tela; agora quem arrastou decide se aquilo vira trabalho no
+    // quadro seguinte -- nem todo orçamento aprovado vira pedido.
     if (stageDestino?.isFinal) {
-      setDeals((prev) => prev.filter((d) => d.id !== deal.id));
-    } else {
-      aplicarMovimentoOtimista(deal, stageId, posicaoFinal);
+      setPendenteDeAvanco({ deal, stageId, order: posicaoFinal });
+      return;
     }
 
+    aplicarMovimentoOtimista(deal, stageId, posicaoFinal);
     moverDeal(deal.id, stageId, posicaoFinal);
   };
 
@@ -343,11 +373,32 @@ const Crm = () => {
     );
   };
 
-  const handleConfirmarPerda = async (lostReason) => {
-    const { deal, stageId, order } = pendenteDePerda;
+  const handleConfirmarPerda = async (lostReason, lostReasonDetail) => {
+    const { deal, stageId, order, gerarProximo } = pendenteDePerda;
     setPendenteDePerda(null);
     aplicarMovimentoOtimista(deal, stageId, order);
-    await moverDeal(deal.id, stageId, order, lostReason);
+    await moverDeal(
+      deal.id,
+      stageId,
+      order,
+      lostReason,
+      gerarProximo,
+      lostReasonDetail
+    );
+  };
+
+  /**
+   * Conclusão de quadro: seguir para o próximo ou parar aqui.
+   *
+   * Nos dois casos o card fica visível na coluna final, marcado como
+   * concluído. O que muda é se nasce um card no quadro seguinte referenciando
+   * este número.
+   */
+  const handleConfirmarAvanco = async (gerarProximo) => {
+    const { deal, stageId, order } = pendenteDeAvanco;
+    setPendenteDeAvanco(null);
+    aplicarMovimentoOtimista(deal, stageId, order);
+    await moverDeal(deal.id, stageId, order, undefined, gerarProximo);
   };
 
   const handleNovoDeal = (stageId) => {
@@ -409,6 +460,13 @@ const Crm = () => {
         onClose={() => setBoardsModalOpen(false)}
         boards={boards}
         onChange={fetchBoards}
+      />
+
+      <AvancarQuadroModal
+        open={Boolean(pendenteDeAvanco)}
+        dealTitle={pendenteDeAvanco?.deal?.title}
+        onClose={() => setPendenteDeAvanco(null)}
+        onConfirm={handleConfirmarAvanco}
       />
 
       <LostReasonModal
@@ -527,7 +585,12 @@ const Crm = () => {
         </Tabs>
       )}
 
-      <Paper className={classes.board} variant="outlined" elevation={0}>
+      <Paper
+        ref={refQuadro}
+        className={classes.board}
+        variant="outlined"
+        elevation={0}
+      >
         {loading ? (
           <div className={classes.vazio}>
             <CircularProgress />

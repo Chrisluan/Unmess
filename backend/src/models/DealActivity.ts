@@ -40,6 +40,12 @@ class DealActivity extends Model<DealActivity> {
   body: string;
 
   // Só para type "task": quando vence e quando foi concluída.
+  /**
+   * Categoria da tarefa (contato, arte, produção...). Só vale quando type é
+   * "task"; carimbos do sistema não têm categoria. Ver helpers/TiposDeTarefa.
+   */
+  @Column(DataType.STRING(24))
+  taskKind: string;
   @Column
   dueAt: Date;
 

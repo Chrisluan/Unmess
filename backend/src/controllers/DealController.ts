@@ -7,6 +7,7 @@ import ShowDealService from "../services/DealServices/ShowDealService";
 import CreateDealService from "../services/DealServices/CreateDealService";
 import UpdateDealService from "../services/DealServices/UpdateDealService";
 import MoveDealService from "../services/DealServices/MoveDealService";
+import { descreverMotivo } from "../helpers/MotivosDePerda";
 import DeleteDealService from "../services/DealServices/DeleteDealService";
 import LinkDealTicketService from "../services/DealServices/LinkDealTicketService";
 import ShowPipelineSummaryService from "../services/DealServices/ShowPipelineSummaryService";
@@ -160,7 +161,7 @@ export const update = async (
  */
 export const move = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
-  const { stageId, order, lostReason } = req.body;
+  const { stageId, order, lostReason, lostReasonDetail, gerarProximo } = req.body;
 
   if (!stageId) {
     throw new AppError("ERR_NO_PIPELINE_STAGE_FOUND", 404);
@@ -170,7 +171,12 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
     dealId,
     stageId,
     order,
-    lostReason,
+    // O motivo pode vir da lista, digitado, ou os dois: o texto final grava o
+    // rótulo por extenso para não exigir decodificador na leitura.
+    lostReason: descreverMotivo(lostReason, lostReasonDetail) || undefined,
+    // Quem arrastou decide se abre o card no quadro seguinte. Ausente vira
+    // true para não quebrar chamadas antigas que não mandavam o campo.
+    gerarProximo: gerarProximo !== false,
     companyId: getCompanyId(req),
     userId: Number(req.user.id)
   });

@@ -5,6 +5,8 @@ import hasPermission from "../middleware/hasPermission";
 import * as DealController from "../controllers/DealController";
 import * as DealActivityController from "../controllers/DealActivityController";
 import * as DealItemController from "../controllers/DealItemController";
+import { TIPOS_DE_TAREFA } from "../helpers/TiposDeTarefa";
+import { MOTIVOS_DE_PERDA } from "../helpers/MotivosDePerda";
 import * as PipelineStageController from "../controllers/PipelineStageController";
 import * as BoardController from "../controllers/BoardController";
 
@@ -41,6 +43,16 @@ crmRoutes.delete("/deals/:dealId",     isAuth, requiresCompany, hasPermission("c
 // ── Timeline do negócio ─────────────────────────────────────────────────────
 
 // Itens do pedido e emissao da ordem de servico.
+
+// Catalogo de tipos de tarefa: o seletor da tela le daqui, para nao divergir
+// da validacao do backend.
+crmRoutes.get("/motivos-de-perda", isAuth, requiresCompany, (_req, res) =>
+  res.json({ motivos: MOTIVOS_DE_PERDA })
+);
+
+crmRoutes.get("/tipos-de-tarefa", isAuth, requiresCompany, (_req, res) =>
+  res.json({ tipos: TIPOS_DE_TAREFA })
+);
 crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.index);
 crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), DealItemController.sync);
 crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.ordemDeServico);

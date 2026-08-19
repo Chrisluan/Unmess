@@ -22,9 +22,11 @@ interface Request {
  * coluna corretos, e somar página por página daria número errado. O volume é
  * controlado pelo filtro de quadro.
  *
- * Cards com status "moved" nunca aparecem: eles concluíram o quadro e já
- * viraram outro card adiante, então mostrá-los seria contar o mesmo trabalho
- * duas vezes na tela.
+ * Cards concluídos ("moved") continuam aparecendo, na coluna final onde
+ * pararam. Antes sumiam, e o quadro passava a mentir sobre o que houve ali: um
+ * orçamento aprovado desaparecia de Vendas como se nunca tivesse existido, e
+ * quem procurasse pelo número não achava. Eles vêm marcados como concluídos,
+ * e o relatório continua contando a jornada uma vez só pelo rootDealId.
  */
 const ListDealsService = async ({
   searchParam = "",
@@ -34,8 +36,9 @@ const ListDealsService = async ({
   boardId,
   companyId
 }: Request): Promise<Deal[]> => {
-  // "moved" nunca aparece; "won"/"lost" só quando explicitamente pedidos.
-  const escondidos = includeClosed ? ["moved"] : ["moved", "won", "lost"];
+  // "won"/"lost" só quando explicitamente pedidos; "moved" (concluído no
+  // quadro) sempre aparece, porque é o registro do que passou por ali.
+  const escondidos = includeClosed ? [] : ["won", "lost"];
 
   const whereCondition: any = {
     companyId,

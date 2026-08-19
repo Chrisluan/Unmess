@@ -160,6 +160,20 @@ const useStyles = makeStyles((theme) => ({
     minWidth: 0,
   },
 
+  // Etiqueta da categoria: contorno em vez de fundo cheio, para não competir
+  // com o texto da tarefa, que é o que se lê.
+  categoria: {
+    display: "inline-block",
+    marginRight: 6,
+    padding: "0 5px",
+    border: "1px solid",
+    borderRadius: 4,
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    verticalAlign: "1px",
+  },
   itemTexto: {
     fontSize: "0.82rem",
     wordBreak: "break-word",
@@ -210,6 +224,8 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
   const [texto, setTexto] = useState("");
   const [tarefa, setTarefa] = useState(false);
   const [vencimento, setVencimento] = useState("");
+  const [tipoTarefa, setTipoTarefa] = useState("contato");
+  const [tiposDeTarefa, setTiposDeTarefa] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = useState(false);
 
@@ -238,6 +254,19 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
     }
   }, [open, fetchDeal]);
 
+  // O catálogo vem do backend, que é quem recusa tipo inválido: manter uma
+  // segunda lista aqui garantiria que um dia as duas divergissem.
+  useEffect(() => {
+    let ativo = true;
+    api
+      .get("/tipos-de-tarefa")
+      .then(({ data }) => ativo && setTiposDeTarefa(data.tipos || []))
+      .catch(() => {});
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
   const handleAdicionarAtividade = async () => {
     if (!texto.trim()) return;
 
@@ -247,6 +276,7 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
         type: tarefa ? "task" : "note",
         body: texto.trim(),
         dueAt: tarefa && vencimento ? vencimento : null,
+        taskKind: tarefa ? tipoTarefa : null,
       });
       setTexto("");
       setVencimento("");
@@ -285,6 +315,11 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
     const concluida = Boolean(activity.doneAt);
     const vence = paraData(activity.dueAt);
     const criada = paraData(activity.createdAt);
+    // A categoria distingue "ligar para o cliente" de "imprimir o banner" numa
+    // lista onde as duas seriam só texto.
+    const categoria = activity.taskKind
+      ? tiposDeTarefa.find((t) => t.id === activity.taskKind)
+      : null;
 
     return (
       <div key={activity.id} className={classes.item}>
@@ -303,6 +338,14 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
           <div
             className={`${classes.itemTexto} ${concluida ? classes.concluida : ""}`}
           >
+            {categoria && (
+              <span
+                className={classes.categoria}
+                style={{ color: categoria.cor, borderColor: categoria.cor }}
+              >
+                {categoria.label}
+              </span>
+            )}
             {activity.type === "stage_change" || activity.type === "created"
               ? i18n.t(`crm.activity.${activity.type}`, { body: activity.body })
               : activity.body}
@@ -510,6 +553,26 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
                     >
                       {i18n.t("crm.details.asTask")}
                     </Button>
+
+                    {tarefa && tiposDeTarefa.length > 0 && (
+                      <TextField
+                        select
+                        size="small"
+                        variant="outlined"
+                        label="Tipo"
+                        value={tipoTarefa}
+                        onChange={(e) => setTipoTarefa(e.target.value)}
+                        SelectProps={{ native: true }}
+                        InputLabelProps={{ shrink: true }}
+                        style={{ minWidth: 150 }}
+                      >
+                        {tiposDeTarefa.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.label}
+                          </option>
+                        ))}
+                      </TextField>
+                    )}
 
                     {tarefa && (
                       <TextField

@@ -4,7 +4,9 @@ import Deal from "../../models/Deal";
 import DealActivity from "../../models/DealActivity";
 import PipelineStage from "../../models/PipelineStage";
 import ShowDealService from "./ShowDealService";
-import AdvanceDealService from "./AdvanceDealService";
+import Board from "../../models/Board";
+import { descreverMotivo } from "../../helpers/MotivosDePerda";
+import AdvanceDealService, { resolverDestino } from "./AdvanceDealService";
 import sequelize from "../../database";
 
 interface Request {
@@ -13,6 +15,8 @@ interface Request {
   // Posição desejada dentro da coluna de destino. Sem ela o card vai para o fim.
   order?: number;
   lostReason?: string;
+  /** Se a coluna final deve abrir o card no quadro seguinte. */
+  gerarProximo?: boolean;
   companyId: number;
   userId?: number;
 }
@@ -41,7 +45,8 @@ const MoveDealService = async ({
   order,
   lostReason,
   companyId,
-  userId
+  userId,
+  gerarProximo
 }: Request): Promise<MoveResult> => {
   const deal = await Deal.findOne({ where: { id: dealId, companyId } });
 
@@ -66,6 +71,12 @@ const MoveDealService = async ({
   // pela fila de quadros, não pelo arrasto.
   if (stage.boardId !== deal.boardId) {
     throw new AppError("ERR_DEAL_CROSS_BOARD_MOVE");
+  }
+
+  // Vale para qualquer coluna de perda, em qualquer quadro: sem motivo, não
+  // registra.
+  if (stage.type === "lost" && !lostReason) {
+    throw new AppError("ERR_LOST_REASON_REQUIRED");
   }
 
   const etapaAnterior = await PipelineStage.findByPk(deal.stageId);
@@ -96,11 +107,24 @@ const MoveDealService = async ({
       });
     }
 
+    // O destino pode ser uma coluna de perda em outro quadro -- é o caso de
+    // "Encerrado" no Financeiro, que devolve o card para "Perdido" em Vendas.
+    // Perder sem motivo registrado deixa o relatório sem resposta para a única
+    // pergunta que importa ali: por que perdemos.
+    const boardDaVez = await Board.findOne({ where: { id: deal.boardId, companyId } });
+    const destinoPrevisto = await resolverDestino(stage, boardDaVez, companyId);
+
+    if (destinoPrevisto?.coluna?.type === "lost" && !lostReason) {
+      throw new AppError("ERR_LOST_REASON_REQUIRED");
+    }
+
     const { destino, nextBoard } = await AdvanceDealService({
       deal,
       stage,
       companyId,
-      userId
+      userId,
+      gerarProximo,
+      lostReason
     });
 
     return {

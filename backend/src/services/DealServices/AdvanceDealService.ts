@@ -11,6 +11,16 @@ interface Request {
   stage: PipelineStage;
   companyId: number;
   userId?: number;
+  /**
+   * Se o card deve seguir para o quadro seguinte.
+   *
+   * Quem decide é quem arrastou: nem todo orçamento aprovado vira pedido, e
+   * antes o avanço era automático -- bastava soltar na coluna final para o
+   * trabalho aparecer na Produção sem ninguém ter confirmado.
+   */
+  gerarProximo?: boolean;
+  /** Motivo, quando o destino for uma coluna de perda. */
+  lostReason?: string;
 }
 
 export interface AdvanceResult {
@@ -30,7 +40,7 @@ export interface AdvanceResult {
  *
  * Devolver nulo significa fim da linha — não há para onde ir, e a venda fatura.
  */
-const resolverDestino = async (
+export const resolverDestino = async (
   stage: PipelineStage,
   boardAtual: Board | null,
   companyId: number
@@ -87,9 +97,12 @@ const resolverDestino = async (
  * Conclusão de quadro.
  *
  * Chegar numa coluna final significa que o trabalho daquele quadro acabou. O
- * card então some do quadro atual e renasce na porta de entrada do destino,
- * com id próprio e os dados do cliente junto — é assim que Produção enxerga só
- * o que Vendas já fechou, sem herdar o histórico de negociação na mesma ficha.
+ * card fica onde está, marcado como concluído, e uma cópia nasce na porta de
+ * entrada do quadro seguinte -- referenciando o número do card de origem.
+ *
+ * O card de origem permanece visível de propósito. Antes ele sumia, e o quadro
+ * passava a mentir sobre o que aconteceu: um orçamento aprovado desaparecia de
+ * Vendas, e quem procurasse pelo número não achava mais nada.
  *
  * Os cards da jornada ficam amarrados pelo `rootDealId`. Sem isso o relatório
  * contaria a mesma venda uma vez por quadro percorrido.
@@ -100,7 +113,9 @@ const AdvanceDealService = async ({
   deal,
   stage,
   companyId,
-  userId
+  userId,
+  gerarProximo = true,
+  lostReason
 }: Request): Promise<AdvanceResult> => {
   const boardAtual = await Board.findOne({
     where: { id: deal.boardId, companyId }
@@ -121,6 +136,26 @@ const AdvanceDealService = async ({
 
     await DealActivity.create({
       type: "won",
+      body: boardAtual ? boardAtual.name : stage.name,
+      dealId: deal.id,
+      userId: userId || null,
+      companyId
+    });
+
+    return { origem: deal, destino: null, nextBoard: null };
+  }
+
+  // Concluir sem seguir adiante: o trabalho deste quadro acabou, mas ninguém
+  // pediu para abrir pedido no próximo. O card fica marcado como concluído.
+  if (!gerarProximo) {
+    await deal.update({
+      stageId: stage.id,
+      status: "moved",
+      archivedAt: new Date()
+    });
+
+    await DealActivity.create({
+      type: "board_done",
       body: boardAtual ? boardAtual.name : stage.name,
       dealId: deal.id,
       userId: userId || null,
@@ -152,6 +187,8 @@ const AdvanceDealService = async ({
 
     return Deal.create(
       {
+        // O número do card de origem viaja junto: em Produção, saber que aquilo
+        // veio do orçamento 128 é o que liga o trabalho ao que foi vendido.
         title: deal.title,
         value: deal.value,
         expectedCloseAt: deal.expectedCloseAt,
@@ -163,7 +200,12 @@ const AdvanceDealService = async ({
         boardId: nextBoard.id,
         rootDealId,
         previousDealId: deal.id,
-        status: "open",
+        // Destino pode ser uma coluna de perda (o quadro Financeiro manda o
+        // encerrado de volta para "Perdido" em Vendas). Nesse caso o card não
+        // nasce aberto: nasce perdido, com o motivo junto.
+        status: colunaDestino.type === "lost" ? "lost" : "open",
+        lostReason: colunaDestino.type === "lost" ? lostReason || null : null,
+        closedAt: colunaDestino.type === "lost" ? new Date() : null,
         order: 0,
         companyId
       },

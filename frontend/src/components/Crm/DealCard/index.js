@@ -36,6 +36,33 @@ const useStyles = makeStyles((theme) => ({
     borderLeftColor: theme.palette.error.main,
   },
 
+  faixa: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 4,
+  },
+
+  concluido: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    padding: "1px 5px",
+    borderRadius: 3,
+    background: "rgba(26,122,85,.14)",
+    color: "#1a7a55",
+  },
+
+  // Referência ao card de origem: discreta, porque é rastreio e não conteúdo.
+  origem: {
+    fontSize: 9.5,
+    fontWeight: 600,
+    padding: "1px 5px",
+    borderRadius: 3,
+    background: "rgba(0,0,0,.06)",
+    opacity: 0.8,
+  },
   titulo: {
     fontWeight: 600,
     fontSize: "0.875rem",
@@ -112,6 +139,18 @@ const DealCard = ({ deal, arrastavel, arrastando, onDragStart, onDragEnd, onClic
         .filter(Boolean)
         .join(" ")}
     >
+      {/* O card concluído continua no quadro (antes sumia), então precisa dizer
+          que já passou. E o card gerado adiante mostra de onde veio -- é o elo
+          entre o orçamento e o trabalho que ele originou. */}
+      {(deal.status === "moved" || deal.previousDealId) && (
+        <div className={classes.faixa}>
+          {deal.status === "moved" && <span className={classes.concluido}>Concluído</span>}
+          {deal.previousDealId && (
+            <span className={classes.origem}>Orçamento nº {deal.previousDealId}</span>
+          )}
+        </div>
+      )}
+
       <Typography className={classes.titulo}>{deal.title}</Typography>
 
       {cliente && (

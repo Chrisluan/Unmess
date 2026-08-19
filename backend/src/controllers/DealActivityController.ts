@@ -10,7 +10,7 @@ import getCompanyId from "../helpers/GetCompanyId";
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
-  const { type, body, dueAt } = req.body;
+  const { type, body, dueAt, taskKind } = req.body;
 
   const schema = Yup.object().shape({
     body: Yup.string().required(),
@@ -28,6 +28,7 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     type,
     body,
     dueAt,
+    taskKind,
     companyId: getCompanyId(req),
     userId: Number(req.user.id)
   });
