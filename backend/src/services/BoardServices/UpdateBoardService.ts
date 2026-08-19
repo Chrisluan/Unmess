@@ -5,6 +5,7 @@ import Board from "../../models/Board";
 interface BoardData {
   name?: string;
   color?: string;
+  isSalesFunnel?: boolean;
 }
 
 interface Request {
@@ -34,6 +35,15 @@ const UpdateBoardService = async ({
     if (nameExists) {
       throw new AppError("ERR_DUPLICATED_BOARD");
     }
+  }
+
+  // O funil de vendas é um só: marcar outro desmarca o anterior, senão a
+  // pergunta "gerar pedido?" apareceria em dois lugares do processo.
+  if (boardData.isSalesFunnel) {
+    await Board.update(
+      { isSalesFunnel: false },
+      { where: { companyId, id: { [Op.ne]: board.id } } }
+    );
   }
 
   await board.update(boardData);

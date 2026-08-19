@@ -167,7 +167,7 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
     throw new AppError("ERR_NO_PIPELINE_STAGE_FOUND", 404);
   }
 
-  const { deal, advancedTo, nextBoardName } = await MoveDealService({
+  const { deal, advancedTo, nextBoardName, avisoCopia } = await MoveDealService({
     dealId,
     stageId,
     order,
@@ -198,7 +198,7 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
     });
   }
 
-  return res.status(200).json({ deal, advancedTo, nextBoardName });
+  return res.status(200).json({ deal, advancedTo, nextBoardName, avisoCopia });
 };
 
 export const linkTicket = async (

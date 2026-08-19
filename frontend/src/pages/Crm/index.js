@@ -302,6 +302,15 @@ const Crm = () => {
 
       // Coluna final: o card mudou de quadro. Avisar é essencial, senão ele
       // simplesmente some da tela e parece que foi apagado.
+      // Voltar um card concluído é permitido; o aviso diz onde ficou a cópia,
+      // para ninguém achar que o trabalho adiante sumiu junto.
+      if (data.avisoCopia) {
+        toast.info(
+          `Este card já tem uma cópia em ${data.avisoCopia.boardName} (nº ${data.avisoCopia.dealId}).`,
+          { autoClose: 8000 }
+        );
+      }
+
       if (data.advancedTo) {
         toast.success(
           i18n.t("crm.toasts.advanced", { board: data.nextBoardName })
@@ -356,7 +365,10 @@ const Crm = () => {
     // Coluna final conclui o quadro. Antes o avanço era automático e o card
     // sumia da tela; agora quem arrastou decide se aquilo vira trabalho no
     // quadro seguinte -- nem todo orçamento aprovado vira pedido.
-    if (stageDestino?.isFinal) {
+    // A pergunta "gerar pedido?" só cabe saindo da venda: é ali que se decide
+    // se um orçamento aprovado vira trabalho. Nos demais quadros a passagem é
+    // a continuação do processo, e perguntar viraria só mais um clique.
+    if (stageDestino?.isFinal && activeBoard?.isSalesFunnel) {
       setPendenteDeAvanco({ deal, stageId, order: posicaoFinal });
       return;
     }

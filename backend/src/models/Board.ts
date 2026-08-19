@@ -40,6 +40,13 @@ class Board extends Model<Board> {
   color: string;
 
   // Posição do quadro na fila (0 = primeiro).
+  /**
+   * Só o funil de vendas pergunta "gerar pedido?" ao concluir. Nos demais
+   * quadros a passagem é a continuação natural do processo.
+   */
+  @Default(false)
+  @Column
+  isSalesFunnel: boolean;
   @Default(0)
   @Column
   order: number;

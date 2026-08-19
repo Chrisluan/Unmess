@@ -15,6 +15,7 @@ import Typography from "@mui/material/Typography";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import SellIcon from "@mui/icons-material/Sell";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -195,6 +196,30 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
                 }
               }}
             />
+
+            {/* Só um quadro é o funil de vendas: é dele que sai a pergunta
+                "gerar pedido?". Marcar outro desmarca este, e quem cuida disso
+                é o backend. */}
+            <Tooltip
+              title={
+                board.isSalesFunnel
+                  ? "Este é o funil de vendas"
+                  : "Marcar como funil de vendas"
+              }
+              arrow
+            >
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={() =>
+                    !board.isSalesFunnel && handleSalvar(board, { isSalesFunnel: true })
+                  }
+                  style={{ color: board.isSalesFunnel ? "#1a7a55" : undefined }}
+                >
+                  <SellIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
 
             <Tooltip
               title={(board.stages || []).map((s) => s.name).join(" · ")}

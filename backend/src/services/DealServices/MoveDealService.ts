@@ -22,6 +22,11 @@ interface Request {
 }
 
 export interface MoveResult {
+  /**
+   * Preenchido quando um card concluído voltou atrás e já existe uma cópia
+   * adiante. Não impede nada -- serve para a tela dizer onde ela está.
+   */
+  avisoCopia?: { boardName: string; dealId: number } | null;
   deal: Deal;
   // Card criado no quadro seguinte, quando o movimento concluiu o quadro.
   advancedTo: Deal | null;
@@ -54,10 +59,20 @@ const MoveDealService = async ({
     throw new AppError("ERR_NO_DEAL_FOUND", 404);
   }
 
-  // Card arquivado é histórico: ele já virou outro card no quadro seguinte.
-  if (deal.status === "moved") {
-    throw new AppError("ERR_DEAL_ALREADY_ADVANCED");
-  }
+  /**
+   * Card concluído pode voltar atrás.
+   *
+   * Antes era proibido, e isso travava a correção do erro mais comum: concluir
+   * o quadro sem querer. Agora volta, e quem volta é avisado de que já existe
+   * uma cópia adiante -- proibir não desfazia a cópia, só impedia o conserto.
+   */
+  const copiaAdiante =
+    deal.status === "moved"
+      ? await Deal.findOne({
+          where: { previousDealId: deal.id, companyId },
+          include: [{ model: Board, as: "board", attributes: ["id", "name"] }]
+        })
+      : null;
 
   const stage = await PipelineStage.findOne({
     where: { id: stageId, companyId }
@@ -77,6 +92,12 @@ const MoveDealService = async ({
   // registra.
   if (stage.type === "lost" && !lostReason) {
     throw new AppError("ERR_LOST_REASON_REQUIRED");
+  }
+
+  // Voltar reabre o card: ele estava concluído e vai ocupar uma coluna de
+  // trabalho de novo.
+  if (deal.status === "moved" && !stage.isFinal) {
+    await deal.update({ status: "open", archivedAt: null });
   }
 
   const etapaAnterior = await PipelineStage.findByPk(deal.stageId);
@@ -219,6 +240,9 @@ const MoveDealService = async ({
 
   return {
     deal: await ShowDealService(deal.id, companyId),
+    avisoCopia: copiaAdiante
+      ? { boardName: copiaAdiante.board?.name || "outro quadro", dealId: copiaAdiante.id }
+      : null,
     advancedTo: null,
     nextBoardName: null
   };
