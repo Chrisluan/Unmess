@@ -17,6 +17,7 @@ import ContactModal from "../ContactModal";
 import ContactDrawerSkeleton from "../ContactDrawerSkeleton";
 import MarkdownWrapper from "../MarkdownWrapper";
 import CustomerPanel from "./CustomerPanel";
+import TicketDeals from "../TicketDeals";
 
 const drawerWidth = 320;
 
@@ -158,6 +159,9 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 						))}
 					</Paper>
 					{contact?.id && <CustomerPanel contact={contact} />}
+					{/* Pedidos da conversa: a pergunta "o que ja foi orcado?" nasce aqui,
+					    no atendimento, e nao no CRM. */}
+					<TicketDeals />
 				</div>
 			)}
         </Drawer>
