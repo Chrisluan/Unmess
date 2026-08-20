@@ -1,6 +1,7 @@
 // Servidor de producao do frontend: entrega os arquivos do build e devolve o
 // index.html para qualquer rota que nao seja arquivo, porque o roteamento e
 // do lado do cliente -- sem isso, recarregar a pagina em /tickets/42 daria 404.
+const compression = require("compression");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -9,6 +10,16 @@ const build = path.join(__dirname, "build");
 const porta = Number(process.env.FRONTEND_PORT) || 3333;
 
 const app = express();
+
+/**
+ * Comprime o que sai daqui.
+ *
+ * A Cloudflare já entrega comprimido ao navegador, mas o trecho entre esta
+ * máquina e ela passava sem compressão -- 1,7 MB de bundle subindo por um
+ * Wi-Fi de 72 Mbps a cada revalidação de cache. Comprimir aqui corta isso
+ * para perto de 400 KB.
+ */
+app.use(compression());
 
 // Endereço público em tempo de execução.
 //
@@ -55,6 +66,20 @@ app.use(
       // pedindo um bundle que ja nao existe.
       if (arquivo.endsWith("index.html")) {
         res.setHeader("Cache-Control", "no-cache");
+        return;
+      }
+
+      /**
+       * Arquivo com hash no nome nunca muda de conteudo.
+       *
+       * O padrao do express.static e max-age=0, o que fazia o navegador e a
+       * Cloudflare voltarem aqui a cada carga so para ouvir que nada mudou --
+       * era o cf-cache-status REVALIDATED em toda visita, com o bundle inteiro
+       * subindo pelo Wi-Fi. Com "immutable" eles nem perguntam, e um build novo
+       * gera nomes novos, entao nao ha como servir versao velha por engano.
+       */
+      if (/[.-][0-9a-f]{8,}.[a-z0-9]+$/i.test(arquivo)) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       }
     }
   })
@@ -65,6 +90,16 @@ app.use(
 // funciona igual nas duas versoes.
 app.use((req, res, next) => {
   if (req.method !== "GET" && req.method !== "HEAD") return next();
+
+  /**
+   * O HTML nunca pode ser cacheado, aqui tambem.
+   *
+   * Este caminho nao passa pelo setHeaders do static, entao saia com o padrao
+   * max-age=0 -- e a Cloudflare, vendo isso, aplicava cache proprio de quatro
+   * horas. Depois de publicar uma versao nova, quem recebesse o HTML velho
+   * pediria bundles que ja nao existem, e veria tela branca ate o cache expirar.
+   */
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.sendFile(path.join(build, "index.html"));
 });
 

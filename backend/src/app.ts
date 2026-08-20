@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import * as Sentry from "@sentry/node";
 
 import helmet from "helmet";
+import compression from "compression";
 
 import "./database";
 import uploadConfig from "./config/upload";
@@ -31,6 +32,19 @@ const app = express();
  * X-Forwarded-For e escapar do limite.
  */
 app.set("trust proxy", 1);
+
+/**
+ * Comprime as respostas.
+ *
+ * Listas de conversas e de oportunidades sao JSON repetitivo, que encolhe
+ * muito -- e o trecho entre esta maquina e a Cloudflare passa por um Wi-Fi
+ * compartilhado com o atendimento. O ganho aparece justamente nas telas que
+ * carregam muita coisa de uma vez.
+ *
+ * Respostas pequenas passam direto: abaixo de 1 KB, comprimir custa mais CPU
+ * do que economiza em rede, e esta maquina tem dois nucleos.
+ */
+app.use(compression({ threshold: 1024 }));
 
 // Cabeçalhos de segurança. A CSP fica desligada porque quem entrega o HTML é o
 // servidor do frontend, não este; ligá-la aqui só afetaria respostas de API e
