@@ -212,7 +212,19 @@ if (-not (aguardarServicoSumir "Cloudflared")) {
   o servico passa a rodar exatamente o mesmo comando que funciona na mao.
 #>
 $comando = '"' + $cf + '" --config "' + $configFile + '" --no-autoupdate tunnel run ' + $NomeTunel
-& sc.exe config Cloudflared binPath= $comando | Out-Null
+
+# Change do WMI em vez de sc.exe: o caminho tem parenteses (Program Files
+# (x86)) e aspas internas, e passar isso pelo sc.exe exige um escape que o
+# PowerShell desfaz pelo caminho -- ele acaba tentando executar 'x86' como
+# comando. Aqui o valor vai como argumento nomeado, sem passar por parser
+# nenhum.
+$servico = Get-CimInstance Win32_Service -Filter "Name='Cloudflared'"
+$resultado = Invoke-CimMethod -InputObject $servico -MethodName Change -Arguments @{ PathName = $comando }
+
+if ($resultado.ReturnValue -ne 0) {
+    Escrever "  Nao consegui ajustar o comando do servico (codigo $($resultado.ReturnValue))." "Red"
+    exit 1
+}
 Escrever "  Comando do servico ajustado." "Green"
 
 # Reinicio automatico: uma queda de rede nao pode deixar o site fora do ar
