@@ -12,6 +12,7 @@ import Contacts from "../pages/Contacts/";
 import Customers from "../pages/Customers/";
 import Crm from "../pages/Crm/";
 import QuickAnswers from "../pages/QuickAnswers/";
+import Products from "../pages/Products/";
 import Queues from "../pages/Queues/";
 import Companies from "../pages/Companies/";
 import PermissionGroups from "../pages/PermissionGroups/";
@@ -54,6 +55,8 @@ const Routes = () => {
                   <Route exact path="/crm"                component={Crm}              isPrivate permission="crm:access" />
                   <Route exact path="/users"              component={Users}            isPrivate permission="users:access" />
                   <Route exact path="/quickAnswers"       component={QuickAnswers}     isPrivate permission="quickAnswers:access" />
+
+                  <Route exact path="/products"             component={Products}         isPrivate permission="products:access" />
                   <Route exact path="/Settings"           component={Settings}         isPrivate permission="settings:access" />
                   <Route exact path="/Queues"             component={Queues}           isPrivate permission="queues:access" />
                   <Route exact path="/companies"          component={Companies}        isPrivate />
