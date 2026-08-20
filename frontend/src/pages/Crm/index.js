@@ -36,6 +36,8 @@ import PipelineStagesModal from "../../components/PipelineStagesModal";
 import BoardsModal from "../../components/BoardsModal";
 import LostReasonModal from "../../components/Crm/LostReasonModal";
 import AvancarQuadroModal from "../../components/Crm/AvancarQuadroModal";
+import IndicadoresFunil from "../../components/Crm/IndicadoresFunil";
+import FiltrosFunil from "../../components/Crm/FiltrosFunil";
 import useArrastarQuadro from "../../hooks/useArrastarQuadro";
 import useAtualizacaoAutomatica from "../../hooks/useAtualizacaoAutomatica";
 
@@ -124,6 +126,7 @@ const Crm = () => {
   const [dropTarget, setDropTarget] = useState(null);
   const [pendenteDePerda, setPendenteDePerda] = useState(null);
   const [pendenteDeAvanco, setPendenteDeAvanco] = useState(null);
+  const [filtrosAvancados, setFiltrosAvancados] = useState({ ordenacao: "posicao" });
 
   // Rolagem horizontal do quadro: arrastar o fundo, roda do mouse e rolagem
   // automática ao levar um card para perto da borda.
@@ -160,23 +163,34 @@ const Crm = () => {
     }
   }, []);
 
+  /**
+   * Busca as oportunidades com os filtros combinados.
+   *
+   * Usa o endpoint de busca, que resolve tudo em SQL: filtrar no navegador
+   * exigiria trazer a base inteira para descartar quase tudo.
+   */
   const fetchDeals = useCallback(async () => {
     if (!activeBoardId) return;
 
     try {
-      const { data } = await api.get("/deals", {
+      const { data } = await api.get("/deals/buscar", {
         params: {
+          ...filtrosAvancados,
           searchParam,
           boardId: activeBoardId,
-          responsibleUserId: responsibleFilter || undefined,
+          responsibleUserId:
+            filtrosAvancados.responsibleUserId || responsibleFilter || undefined,
           includeClosed: showClosed ? "true" : undefined,
+          tagIds: filtrosAvancados.tagIds?.length
+            ? filtrosAvancados.tagIds.join(",")
+            : undefined,
         },
       });
-      setDeals(data);
+      setDeals(data.deals || []);
     } catch (err) {
       toastError(err);
     }
-  }, [activeBoardId, searchParam, responsibleFilter, showClosed]);
+  }, [activeBoardId, searchParam, responsibleFilter, showClosed, filtrosAvancados]);
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -476,6 +490,34 @@ const Crm = () => {
         <Title>{i18n.t("crm.title")}</Title>
         <MainHeaderButtonsWrapper>
           <div className={classes.filtros}>
+            <FiltrosFunil
+              filtros={filtrosAvancados}
+              onAplicar={setFiltrosAvancados}
+            />
+
+            <TextField
+              select
+              size="small"
+              variant="outlined"
+              label="Ordenar"
+              InputLabelProps={{ shrink: true }}
+              SelectProps={{ native: true }}
+              value={filtrosAvancados.ordenacao || "posicao"}
+              onChange={(e) =>
+                setFiltrosAvancados((a) => ({ ...a, ordenacao: e.target.value }))
+              }
+              style={{ width: 150 }}
+            >
+              <option value="posicao">Ordem do quadro</option>
+              <option value="prioridade">Prioridade</option>
+              <option value="followup">Próximo follow-up</option>
+              <option value="interacao">Última interação</option>
+              <option value="maior_valor">Maior valor</option>
+              <option value="menor_valor">Menor valor</option>
+              <option value="recentes">Mais recentes</option>
+              <option value="antigas">Mais antigas</option>
+            </TextField>
+
             {/* Atualizacao automatica: quem trabalha o dia inteiro no quadro quer
                 ciclo curto; quem so consulta prefere nao gastar rede. */}
             <Tooltip
@@ -621,6 +663,9 @@ const Crm = () => {
         </Tabs>
       )}
 
+      {/* Indicadores antes das colunas: respondem antes de qualquer card --
+          quanto tem no funil, quanto disso e realista, e o que pede atencao. */}
+      <IndicadoresFunil boardId={activeBoardId} recarregar={deals.length} />
       <Paper
         ref={refQuadro}
         className={classes.board}

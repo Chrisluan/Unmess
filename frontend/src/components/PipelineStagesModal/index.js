@@ -315,6 +315,56 @@ const PipelineStagesModal = ({ open, onClose, board, boards, onChange }) => {
                 </div>
               </Tooltip>
 
+              {/* Probabilidade alimenta a previsao do funil: 10 mil numa etapa de
+                  70% valem 7 mil no que se espera fechar. */}
+              <Tooltip title="Chance de fechamento nesta etapa (%)" arrow>
+                <TextField
+                  size="small"
+                  type="number"
+                  label="%"
+                  variant="outlined"
+                  InputLabelProps={{ shrink: true }}
+                  value={stage.probability ?? 0}
+                  onChange={(e) =>
+                    alterarLocal(stage.id, { probability: e.target.value })
+                  }
+                  onBlur={(e) =>
+                    salvar(stage, {
+                      probability: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
+                    })
+                  }
+                  inputProps={{ min: 0, max: 100 }}
+                  style={{ width: 74 }}
+                />
+              </Tooltip>
+
+              {/* Ganho explicito: antes so era possivel faturar chegando ao fim
+                  do ultimo quadro, o que impedia uma coluna de ganho no meio. */}
+              <Tooltip title="Nesta etapa a venda e considerada ganha" arrow>
+                <div className={classes.marcador}>
+                  <span className={classes.marcadorRotulo}>GANHO</span>
+                  <Checkbox
+                    size="small"
+                    checked={Boolean(stage.isWon)}
+                    disabled={stage.type === "lost"}
+                    onChange={(e) => salvar(stage, { isWon: e.target.checked })}
+                  />
+                </div>
+              </Tooltip>
+
+              {/* Desativar em vez de excluir: a coluna some do quadro mas quem
+                  passou por ela mantem o historico coerente. */}
+              <Tooltip title="Coluna ativa no quadro" arrow>
+                <div className={classes.marcador}>
+                  <span className={classes.marcadorRotulo}>ATIVA</span>
+                  <Checkbox
+                    size="small"
+                    checked={stage.active !== false}
+                    onChange={(e) => salvar(stage, { active: e.target.checked })}
+                  />
+                </div>
+              </Tooltip>
+
               <Tooltip title={i18n.t("crm.stagesModal.moveUp")} arrow>
                 <span>
                   <IconButton

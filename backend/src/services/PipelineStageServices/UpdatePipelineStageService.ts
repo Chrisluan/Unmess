@@ -12,6 +12,12 @@ interface StageData {
   isInitial?: boolean;
   targetBoardId?: number | null;
   targetStageId?: number | null;
+  /** Chance de fechamento nesta etapa, usada no valor ponderado do funil. */
+  probability?: number;
+  /** Ganho explicito, em vez de deduzido de "acabou o funil". */
+  isWon?: boolean;
+  /** Desativar preserva o historico de quem passou pela coluna. */
+  active?: boolean;
 }
 
 interface Request {
