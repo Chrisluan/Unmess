@@ -30,6 +30,23 @@ $configFile = "$configDir\config.yml"
 
 function Escrever($t, $c = "Gray") { Write-Host $t -ForegroundColor $c }
 
+<#
+  Espera o Windows terminar de remover um servico.
+
+  O 'uninstall' devolve sucesso assim que marca o servico para exclusao, mas
+  a remocao so acontece quando o ultimo handle aberto fecha. Instalar nesse
+  intervalo falha com 'service is already installed', e o servico fica num
+  estado em que nem inicia nem existe direito.
+#>
+function aguardarServicoSumir([string]$nome, [int]$segundos = 20) {
+    foreach ($tentativa in 1..$segundos) {
+        $existe = Get-Service $nome -ErrorAction SilentlyContinue
+        if (-not $existe) { return $true }
+        Start-Sleep -Seconds 1
+    }
+    return $false
+}
+
 $app = "app.$Dominio"
 $api = "api.$Dominio"
 
@@ -171,12 +188,38 @@ Copy-Item $configFile $perfilSistema -Force
 Copy-Item "$configDir\$idTunel.json" $perfilSistema -Force -ErrorAction SilentlyContinue
 Escrever "  Configuracao copiada para o perfil do servico." "Green"
 
+# Parar antes de desinstalar: servico rodando demora mais para liberar os
+# handles, e e justamente essa demora que causa a corrida.
+try { Stop-Service Cloudflared -Force -ErrorAction SilentlyContinue } catch {}
 try { & $cf service uninstall | Out-Null } catch {}
+
+if (-not (aguardarServicoSumir "Cloudflared")) {
+    Escrever "  O servico anterior nao foi removido a tempo." "Red"
+    Escrever "  Isso costuma acontecer com o Gerenciador de Servicos aberto." "Gray"
+    Escrever "  Feche-o, ou reinicie a maquina, e rode este script de novo." "Gray"
+    exit 1
+}
+
 & $cf --config $configFile service install
 Start-Sleep -Seconds 4
 
+Start-Sleep -Seconds 2
 $svc = Get-Service Cloudflared -ErrorAction SilentlyContinue
-if ($svc -and $svc.Status -ne "Running") { Start-Service Cloudflared }
+
+if (-not $svc) {
+    Escrever "  O servico nao foi criado. Rode o script de novo." "Red"
+    exit 1
+}
+
+if ($svc.Status -ne "Running") {
+    try {
+        Start-Service Cloudflared -ErrorAction Stop
+    } catch {
+        Escrever "  Nao consegui iniciar o servico: $($_.Exception.Message)" "Red"
+        Escrever "  Log: Get-EventLog -LogName Application -Source cloudflared -Newest 20" "Gray"
+        exit 1
+    }
+}
 
 Escrever "  Servico: $((Get-Service Cloudflared -ErrorAction SilentlyContinue).Status)" "Green"
 
