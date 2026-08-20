@@ -25,7 +25,7 @@ const useStyles = makeStyles((theme) => ({
 
   cabecalho: {
     display: "grid",
-    gridTemplateColumns: "1fr 74px 58px 104px 96px 104px 34px",
+    gridTemplateColumns: "1fr 92px 74px 58px 104px 96px 104px 34px",
     gap: 8,
     padding: "0 4px 6px",
     fontSize: 10.5,
@@ -37,11 +37,33 @@ const useStyles = makeStyles((theme) => ({
 
   linha: {
     display: "grid",
-    gridTemplateColumns: "1fr 74px 58px 104px 96px 104px 34px",
+    gridTemplateColumns: "1fr 92px 74px 58px 104px 96px 104px 34px",
     gap: 8,
     alignItems: "center",
     padding: "5px 4px",
     borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+
+  // Segunda linha, recuada: as medidas pertencem ao item de cima e nao
+  // podem competir com ele por atencao.
+  medidas: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "2px 4px 8px 12px",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
+
+  resultadoMedida: {
+    fontSize: 12,
+    color: theme.palette.text.secondary,
+    fontVariantNumeric: "tabular-nums",
+  },
+
+  avisoMinimo: {
+    fontSize: 11,
+    fontWeight: 700,
+    color: "#96690a",
   },
 
   total: {
@@ -72,12 +94,39 @@ const moeda = (valor) =>
     currency: "BRL",
   });
 
-const totalDaLinha = (item) =>
-  Math.max(
-    0,
-    Number(item.quantity || 0) * Number(item.unitPrice || 0) -
-      Number(item.discount || 0)
-  );
+/**
+ * Mesmo cálculo do backend, para a linha somar enquanto se digita.
+ *
+ * A conta que vale é a do servidor; esta existe só para a tela responder na
+ * hora. Por isso é uma tradução fiel de helpers/CalcularItem -- se as duas
+ * divergirem, o total muda ao salvar e ninguém entende por quê.
+ */
+const calcularLinha = (item) => {
+  const modo = item.pricingMode || "unit";
+  const pecas = Number(item.quantity) || 0;
+  const preco = Number(item.unitPrice) || 0;
+  const desconto = Number(item.discount) || 0;
+  const minimo = Number(item.minMeasure) || 0;
+  const largura = Number(item.width) || 0;
+  const altura = Number(item.height) || 0;
+
+  let medida;
+  if (modo === "area") medida = largura * altura;
+  else if (modo === "linear") medida = largura;
+  else medida = 1;
+
+  // O mínimo vale por peça: dez adesivos pequenos custam dez mínimos.
+  const cobrada = modo !== "unit" && minimo > 0 && medida > 0 && medida < minimo ? minimo : medida;
+  const bruto = modo === "unit" ? pecas * preco : cobrada * pecas * preco;
+
+  return {
+    medida: Number(medida.toFixed(3)),
+    total: Math.max(0, bruto - desconto),
+    aplicouMinimo: modo !== "unit" && minimo > 0 && medida > 0 && medida < minimo,
+  };
+};
+
+const totalDaLinha = (item) => calcularLinha(item).total;
 
 /**
  * Itens do orçamento.
@@ -104,6 +153,10 @@ const AbaItens = ({ deal, onSalvo }) => {
         unitPrice: i.unitPrice,
         discount: i.discount || 0,
         productId: i.productId || null,
+        width: i.width || 0,
+        height: i.height || 0,
+        pricingMode: i.pricingMode || "unit",
+        minMeasure: i.minMeasure || 0,
       }))
     );
   }, [deal]);
@@ -130,6 +183,8 @@ const AbaItens = ({ deal, onSalvo }) => {
               description: produto.name,
               unit: produto.unit || "un",
               unitPrice: produto.price,
+              pricingMode: produto.pricingMode || "unit",
+              minMeasure: produto.minMeasure || 0,
             }
           : item
       )
@@ -138,7 +193,17 @@ const AbaItens = ({ deal, onSalvo }) => {
   const adicionar = () =>
     setItens((atual) => [
       ...atual,
-      { description: "", quantity: 1, unit: "un", unitPrice: 0, discount: 0 },
+      {
+        description: "",
+        quantity: 1,
+        unit: "un",
+        unitPrice: 0,
+        discount: 0,
+        pricingMode: "unit",
+        minMeasure: 0,
+        width: 0,
+        height: 0,
+      },
     ]);
 
   const remover = (indice) =>
@@ -193,6 +258,7 @@ const AbaItens = ({ deal, onSalvo }) => {
         <>
           <div className={classes.cabecalho}>
             <span>Descrição</span>
+            <span>Cobrança</span>
             <span>Qtd.</span>
             <span>Un.</span>
             <span>Unitário</span>
@@ -202,13 +268,27 @@ const AbaItens = ({ deal, onSalvo }) => {
           </div>
 
           {itens.map((item, i) => (
-            <div key={item.id || `novo-${i}`} className={classes.linha}>
+            <React.Fragment key={item.id || `novo-${i}`}>
+            <div className={classes.linha}>
               <SeletorProduto
                 valor={item.description}
                 disabled={!podeEditar}
                 onChange={(v) => mudar(i, "description", v)}
                 onEscolherProduto={(produto) => escolherProduto(i, produto)}
               />
+              <TextField
+                select
+                size="small"
+                variant="standard"
+                value={item.pricingMode || "unit"}
+                disabled={!podeEditar}
+                onChange={(e) => mudar(i, "pricingMode", e.target.value)}
+                SelectProps={{ native: true }}
+              >
+                <option value="unit">Unidade</option>
+                <option value="area">m²</option>
+                <option value="linear">Metro</option>
+              </TextField>
               <TextField
                 size="small"
                 variant="standard"
@@ -252,6 +332,66 @@ const AbaItens = ({ deal, onSalvo }) => {
                 <span />
               )}
             </div>
+
+            {/* Medidas só aparecem quando a cobrança as usa: pedir largura de
+                uma letra caixa vendida por peça seria campo morto na tela. */}
+            {item.pricingMode !== "unit" && (
+              <div className={classes.medidas}>
+                <TextField
+                  size="small"
+                  variant="standard"
+                  type="number"
+                  label={item.pricingMode === "linear" ? "Comprimento (m)" : "Largura (m)"}
+                  InputLabelProps={{ shrink: true }}
+                  value={item.width || 0}
+                  disabled={!podeEditar}
+                  onChange={(e) => mudar(i, "width", e.target.value)}
+                  inputProps={{ min: 0, step: "0.001" }}
+                  style={{ width: 130 }}
+                />
+
+                {item.pricingMode === "area" && (
+                  <TextField
+                    size="small"
+                    variant="standard"
+                    type="number"
+                    label="Altura (m)"
+                    InputLabelProps={{ shrink: true }}
+                    value={item.height || 0}
+                    disabled={!podeEditar}
+                    onChange={(e) => mudar(i, "height", e.target.value)}
+                    inputProps={{ min: 0, step: "0.001" }}
+                    style={{ width: 110 }}
+                  />
+                )}
+
+                <TextField
+                  size="small"
+                  variant="standard"
+                  type="number"
+                  label="Mínimo"
+                  InputLabelProps={{ shrink: true }}
+                  value={item.minMeasure || 0}
+                  disabled={!podeEditar}
+                  onChange={(e) => mudar(i, "minMeasure", e.target.value)}
+                  inputProps={{ min: 0, step: "0.001" }}
+                  style={{ width: 90 }}
+                />
+
+                <span className={classes.resultadoMedida}>
+                  {item.pricingMode === "area"
+                    ? `${calcularLinha(item).medida.toLocaleString("pt-BR")} m² por peça`
+                    : `${calcularLinha(item).medida.toLocaleString("pt-BR")} m por peça`}
+                </span>
+
+                {calcularLinha(item).aplicouMinimo && (
+                  <span className={classes.avisoMinimo}>
+                    cobrando o mínimo
+                  </span>
+                )}
+              </div>
+            )}
+            </React.Fragment>
           ))}
         </>
       )}

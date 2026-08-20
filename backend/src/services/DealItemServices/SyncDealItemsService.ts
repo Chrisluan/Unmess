@@ -12,6 +12,10 @@ interface ItemEntrada {
   discount?: number | string;
   notes?: string;
   productId?: number | null;
+  width?: number | string;
+  height?: number | string;
+  pricingMode?: string;
+  minMeasure?: number | string;
 }
 
 interface Request {
@@ -59,6 +63,14 @@ const SyncDealItemsService = async ({
       discount: numero(item.discount, 0),
       notes: item.notes?.trim() || null,
       productId: item.productId || null,
+      width: numero(item.width, 0),
+      height: numero(item.height, 0),
+      // Modo desconhecido cai em unidade: melhor cobrar por peça do que
+      // multiplicar por uma medida que ninguém preencheu.
+      pricingMode: ["area", "linear"].includes(String(item.pricingMode))
+        ? String(item.pricingMode)
+        : "unit",
+      minMeasure: numero(item.minMeasure, 0),
       position: indice,
       dealId: deal.id,
       companyId

@@ -62,6 +62,25 @@ class Product extends Model<Product> {
     return bruto === null || bruto === undefined ? 0 : Number(bruto);
   }
 
+  /**
+   * unit | area | linear — como este produto é cobrado.
+   *
+   * Banner sai por metro quadrado, faixa por metro linear, letra caixa por
+   * peça. Os três convivem no mesmo orçamento porque é assim que o
+   * trabalho chega.
+   */
+  @Default("unit")
+  @Column(DataType.STRING(10))
+  pricingMode: string;
+
+  /** Mínimo cobrado por peça: sem piso, um adesivo pequeno sai por centavos. */
+  @Default(0)
+  @Column(DataType.DECIMAL(10, 3))
+  get minMeasure(): number {
+    const bruto = this.getDataValue("minMeasure");
+    return bruto === null || bruto === undefined ? 0 : Number(bruto);
+  }
+
   @Column(DataType.STRING(60))
   category: string;
 

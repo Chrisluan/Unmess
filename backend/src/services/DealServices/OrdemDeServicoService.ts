@@ -5,6 +5,7 @@ import Contact from "../../models/Contact";
 import Company from "../../models/Company";
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
+import { descreverMedida } from "../../helpers/CalcularItem";
 
 interface Request {
   dealId: number | string;
@@ -77,6 +78,12 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
           <td class="num">${i + 1}</td>
           <td>
             ${escapar(item.description)}
+            ${(() => {
+              // Sem as dimensões, quem produz precisa perguntar o tamanho --
+              // e é a informação mais importante do papel na oficina.
+              const medida = descreverMedida(item);
+              return medida ? `<div class="medida">${escapar(medida)}</div>` : "";
+            })()}
             ${item.notes ? `<div class="obs">${escapar(item.notes)}</div>` : ""}
           </td>
           <td class="num">${quantidade(item.quantity)} ${escapar(item.unit)}</td>
@@ -169,6 +176,8 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
   td.num:first-child { text-align: center; color: #777; }
   .forte { font-weight: 700; }
   .obs { font-size: 9pt; color: #555; margin-top: 1mm; }
+  /* A medida é o que se procura primeiro na oficina; vem em destaque. */
+  .medida { font-size: 9.5pt; font-weight: 700; margin-top: 0.8mm; }
   .vazio { text-align: center; color: #777; padding: 8mm 0; }
 
   .totais { display: flex; justify-content: flex-end; margin-top: 4mm; }

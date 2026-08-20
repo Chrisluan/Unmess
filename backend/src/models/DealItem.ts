@@ -15,6 +15,7 @@ import {
 import Company from "./Company";
 import Deal from "./Deal";
 import Product from "./Product";
+import { calcularItem } from "../helpers/CalcularItem";
 
 /**
  * Item de um negócio: uma linha do orçamento ou da ordem de serviço.
@@ -65,6 +66,39 @@ class DealItem extends Model<DealItem> {
     return bruto === null || bruto === undefined ? 0 : Number(bruto);
   }
 
+  /**
+   * Medidas da peça, em metros.
+   *
+   * No modo linear a largura guarda o comprimento: é o campo que se
+   * preenche ao orçar uma faixa de 8 metros, e pedir altura ali confundiria.
+   */
+  @Default(0)
+  @Column(DataType.DECIMAL(10, 3))
+  get width(): number {
+    const bruto = this.getDataValue("width");
+    return bruto === null || bruto === undefined ? 0 : Number(bruto);
+  }
+
+  @Default(0)
+  @Column(DataType.DECIMAL(10, 3))
+  get height(): number {
+    const bruto = this.getDataValue("height");
+    return bruto === null || bruto === undefined ? 0 : Number(bruto);
+  }
+
+  /** unit | area | linear — copiado do produto ao orçar. */
+  @Default("unit")
+  @Column(DataType.STRING(10))
+  pricingMode: string;
+
+  /** Mínimo cobrado por peça, na unidade do modo. */
+  @Default(0)
+  @Column(DataType.DECIMAL(10, 3))
+  get minMeasure(): number {
+    const bruto = this.getDataValue("minMeasure");
+    return bruto === null || bruto === undefined ? 0 : Number(bruto);
+  }
+
   @Column(DataType.TEXT)
   notes: string;
 
@@ -80,8 +114,15 @@ class DealItem extends Model<DealItem> {
    * que não se explicam.
    */
   get total(): number {
-    const bruto = this.quantity * this.unitPrice - this.discount;
-    return Number(Math.max(0, bruto).toFixed(2));
+    return calcularItem({
+      quantity: this.quantity,
+      width: this.width,
+      height: this.height,
+      unitPrice: this.unitPrice,
+      discount: this.discount,
+      pricingMode: this.pricingMode,
+      minMeasure: this.minMeasure
+    }).total;
   }
 
   @CreatedAt
