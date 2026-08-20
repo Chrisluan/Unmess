@@ -68,6 +68,21 @@ class PipelineStage extends Model<PipelineStage> {
   @Column
   isFinal: boolean;
 
+  /** Chance de fechamento nesta etapa; alimenta o valor ponderado do funil. */
+  @Default(0)
+  @Column
+  probability: number;
+
+  /** Ganho explicito, em vez de deduzido de "acabou o funil". */
+  @Default(false)
+  @Column
+  isWon: boolean;
+
+  /** Desativar em vez de excluir preserva o historico de quem passou por aqui. */
+  @Default(true)
+  @Column
+  active: boolean;
+
   /**
    * Destino desta coluna final. `targetStageId` manda para uma coluna exata;
    * `targetBoardId` sozinho manda para a coluna inicial daquele quadro. Ambos

@@ -24,6 +24,8 @@ import DealActivity from "./DealActivity";
 import Ticket from "./Ticket";
 import DealTicket from "./DealTicket";
 import DealItem from "./DealItem";
+import Tag from "./Tag";
+import DealTag from "./DealTag";
 
 /**
  * Negócio — o card do Kanban.
@@ -141,6 +143,41 @@ class Deal extends Model<Deal> {
   @Column
   quoteNumber: number;
 
+  // ---- Operacao do dia a dia ---------------------------------------------
+
+  /** low | normal | high | urgent */
+  @Default("normal")
+  @Column(DataType.STRING(10))
+  priority: string;
+
+  /**
+   * Status do atendimento, separado do estagio comercial.
+   *
+   * "Em que pe esta a venda" e "de quem e a bola agora" sao perguntas
+   * diferentes: uma oportunidade pode estar em Negociacao e parada esperando o
+   * cliente. Misturar as duas numa coluna so esconde o que trava o funil.
+   *
+   * open | waiting_customer | waiting_team | closed
+   */
+  @Default("open")
+  @Column(DataType.STRING(20))
+  serviceStatus: string;
+
+  /** Ultima mensagem ou acao: responde "faz quanto tempo ninguem toca nisto". */
+  @Column
+  lastInteractionAt: Date;
+
+  /** Quando falar com o cliente de novo. Passou sem interacao = atrasado. */
+  @Column
+  nextFollowUpAt: Date;
+
+  /** Id do motivo de perda: o texto serve para ler, o id para agrupar. */
+  @Column(DataType.STRING(24))
+  lossReasonId: string;
+
+  @Column
+  reopenedAt: Date;
+
   @CreatedAt
   createdAt: Date;
 
@@ -214,6 +251,8 @@ class Deal extends Model<Deal> {
    * As linhas do orçamento. O valor do negócio passa a ser a soma delas assim
    * que ele ganha itens -- ver SyncDealItemsService.
    */
+  @BelongsToMany(() => Tag, () => DealTag)
+  tags: Tag[];
   @HasMany(() => DealItem)
   items: DealItem[];
 

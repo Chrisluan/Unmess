@@ -7,6 +7,8 @@ import ShowDealService from "../services/DealServices/ShowDealService";
 import CreateDealService from "../services/DealServices/CreateDealService";
 import UpdateDealService from "../services/DealServices/UpdateDealService";
 import MoveDealService from "../services/DealServices/MoveDealService";
+import FiltrarOportunidadesService from "../services/DealServices/FiltrarOportunidadesService";
+import IndicadoresFunilService from "../services/DealServices/IndicadoresFunilService";
 import { descreverMotivo } from "../helpers/MotivosDePerda";
 import DeleteDealService from "../services/DealServices/DeleteDealService";
 import LinkDealTicketService from "../services/DealServices/LinkDealTicketService";
@@ -239,4 +241,61 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Deal deleted" });
+};
+
+/**
+ * Busca de oportunidades com os filtros do funil.
+ *
+ * Separada do index antigo, que o Kanban usa hoje: trocar aquele endpoint
+ * quebraria a tela em produção enquanto esta parte ainda está sendo montada.
+ */
+export const buscar = async (req: Request, res: Response): Promise<Response> => {
+  const q = req.query as Record<string, string>;
+
+  const lista = (valor?: string) =>
+    valor ? valor.split(",").map(Number).filter(Number.isFinite) : undefined;
+
+  const bool = (valor?: string) => valor === "true" || valor === "1";
+
+  const resultado = await FiltrarOportunidadesService({
+    companyId: getCompanyId(req),
+    boardId: q.boardId,
+    searchParam: q.searchParam,
+    responsibleUserId: q.responsibleUserId,
+    semResponsavel: bool(q.semResponsavel),
+    stageId: q.stageId,
+    customerId: q.customerId,
+    origin: q.origin,
+    priority: q.priority,
+    serviceStatus: q.serviceStatus,
+    tagIds: lista(q.tagIds),
+    valorMinimo: q.valorMinimo ? Number(q.valorMinimo) : undefined,
+    valorMaximo: q.valorMaximo ? Number(q.valorMaximo) : undefined,
+    criadoDe: q.criadoDe,
+    criadoAte: q.criadoAte,
+    atrasadas: bool(q.atrasadas),
+    followUpHoje: bool(q.followUpHoje),
+    semInteracaoDias: q.semInteracaoDias ? Number(q.semInteracaoDias) : undefined,
+    includeClosed: bool(q.includeClosed),
+    ordenacao: q.ordenacao,
+    pagina: q.pagina ? Number(q.pagina) : undefined,
+    porPagina: q.porPagina ? Number(q.porPagina) : undefined
+  });
+
+  return res.json(resultado);
+};
+
+/** Indicadores do topo do funil. */
+export const indicadores = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { boardId } = req.query as Record<string, string>;
+
+  const dados = await IndicadoresFunilService({
+    companyId: getCompanyId(req),
+    boardId
+  });
+
+  return res.json(dados);
 };

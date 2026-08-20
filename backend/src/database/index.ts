@@ -25,6 +25,7 @@ import Deal from "../models/Deal";
 import DealActivity from "../models/DealActivity";
 import DealTicket from "../models/DealTicket";
 import DealItem from "../models/DealItem";
+import DealTag from "../models/DealTag";
 import Sticker from "../models/Sticker";
 import Order from "../models/Order";
 
@@ -61,6 +62,7 @@ const models = [
   DealActivity,
   DealTicket,
   DealItem,
+  DealTag,
   Order,
   Sticker
 ];

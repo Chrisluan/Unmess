@@ -32,6 +32,8 @@ crmRoutes.delete("/pipeline-stages/:stageId", isAuth, requiresCompany, hasPermis
 
 // ── Negócios ────────────────────────────────────────────────────────────────
 crmRoutes.get("/deals",                isAuth, requiresCompany, hasPermission("crm:view"),   DealController.index);
+crmRoutes.get("/deals/buscar",     isAuth, requiresCompany, hasPermission("crm:view"), DealController.buscar);
+crmRoutes.get("/deals/indicadores", isAuth, requiresCompany, hasPermission("crm:view"), DealController.indicadores);
 crmRoutes.get("/deals/summary",        isAuth, requiresCompany, hasPermission("crm:view"),   DealController.summary);
 crmRoutes.get("/deals/:dealId",        isAuth, requiresCompany, hasPermission("crm:view"),   DealController.show);
 crmRoutes.post("/deals",               isAuth, requiresCompany, hasPermission("crm:create"), DealController.store);
