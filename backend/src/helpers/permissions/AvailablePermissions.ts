@@ -78,6 +78,17 @@ export const PERMISSION_MODULES = {
       "quickAnswers:delete": "Excluir",
     },
   },
+  // ── Produtos ──────────────────────────────────────────────────────────────
+  products: {
+    label: "Produtos",
+    permissions: {
+      "products:access": "Acesso ao módulo",
+      // Ver o catálogo vai junto com ver o CRM: quem orça precisa escolher
+      // produtos. Mexer no catálogo é à parte -- preço errado aqui contamina
+      // todo orçamento feito daqui para a frente.
+      "products:manage": "Cadastrar e editar produtos",
+    },
+  },
   // ── Figurinhas ────────────────────────────────────────────────────────────
   stickers: {
     label: "Figurinhas",

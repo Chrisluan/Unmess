@@ -13,6 +13,7 @@ import api from "../../../services/api";
 import toastError from "../../../errors/toastError";
 import usePermissions from "../../../hooks/usePermissions";
 import { getBackendUrl } from "../../../config";
+import SeletorProduto from "../SeletorProduto";
 
 const useStyles = makeStyles((theme) => ({
   barra: {
@@ -102,6 +103,7 @@ const AbaItens = ({ deal, onSalvo }) => {
         unit: i.unit || "un",
         unitPrice: i.unitPrice,
         discount: i.discount || 0,
+        productId: i.productId || null,
       }))
     );
   }, [deal]);
@@ -109,6 +111,28 @@ const AbaItens = ({ deal, onSalvo }) => {
   const mudar = (indice, campo, valor) =>
     setItens((atual) =>
       atual.map((item, i) => (i === indice ? { ...item, [campo]: valor } : item))
+    );
+
+  /**
+   * Produto escolhido preenche a linha.
+   *
+   * O preço é copiado, e não referenciado: o que o cliente aprova é o valor
+   * daquele dia, e um reajuste no catálogo não pode reescrever orçamento já
+   * fechado. O productId fica guardado só para saber o que foi vendido.
+   */
+  const escolherProduto = (indice, produto) =>
+    setItens((atual) =>
+      atual.map((item, i) =>
+        i === indice
+          ? {
+              ...item,
+              productId: produto.id,
+              description: produto.name,
+              unit: produto.unit || "un",
+              unitPrice: produto.price,
+            }
+          : item
+      )
     );
 
   const adicionar = () =>
@@ -179,13 +203,11 @@ const AbaItens = ({ deal, onSalvo }) => {
 
           {itens.map((item, i) => (
             <div key={item.id || `novo-${i}`} className={classes.linha}>
-              <TextField
-                size="small"
-                variant="standard"
-                placeholder="Descrição do item"
-                value={item.description}
+              <SeletorProduto
+                valor={item.description}
                 disabled={!podeEditar}
-                onChange={(e) => mudar(i, "description", e.target.value)}
+                onChange={(v) => mudar(i, "description", v)}
+                onEscolherProduto={(produto) => escolherProduto(i, produto)}
               />
               <TextField
                 size="small"

@@ -14,6 +14,7 @@ import {
 } from "sequelize-typescript";
 import Company from "./Company";
 import Deal from "./Deal";
+import Product from "./Product";
 
 /**
  * Item de um negócio: uma linha do orçamento ou da ordem de serviço.
@@ -95,6 +96,20 @@ class DealItem extends Model<DealItem> {
 
   @BelongsTo(() => Deal)
   deal: Deal;
+
+  /**
+   * Produto do catálogo, quando o item veio de lá.
+   *
+   * Descrição e preço continuam gravados no item, e não lidos do produto:
+   * o que o cliente aprovou foi o preço daquele dia, e um reajuste no
+   * catálogo não pode reescrever orçamento fechado.
+   */
+  @ForeignKey(() => Product)
+  @Column
+  productId: number;
+
+  @BelongsTo(() => Product)
+  product: Product;
 
   @ForeignKey(() => Company)
   @Column

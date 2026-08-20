@@ -28,6 +28,7 @@ import DealItem from "../models/DealItem";
 import DealTag from "../models/DealTag";
 import Sticker from "../models/Sticker";
 import Order from "../models/Order";
+import Product from "../models/Product";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -64,6 +65,7 @@ const models = [
   DealItem,
   DealTag,
   Order,
+  Product,
   Sticker
 ];
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import makeStyles from "@mui/styles/makeStyles";
@@ -127,6 +128,27 @@ const Crm = () => {
   const [pendenteDePerda, setPendenteDePerda] = useState(null);
   const [pendenteDeAvanco, setPendenteDeAvanco] = useState(null);
   const [filtrosAvancados, setFiltrosAvancados] = useState({ ordenacao: "posicao" });
+
+  /**
+   * Abre a oportunidade indicada na URL.
+   *
+   * É como o chat manda alguém para cá: o atendente clica em "Ver no CRM" na
+   * conversa e cai com o card já aberto, em vez de ter que procurá-lo no
+   * meio das colunas.
+   *
+   * O parâmetro é limpo depois de usado: sem isso, fechar o card e recarregar
+   * a página o abriria de novo, e voltar pelo histórico ficaria preso nele.
+   */
+  const location = useLocation();
+  const navegacao = useHistory();
+
+  useEffect(() => {
+    const alvo = new URLSearchParams(location.search).get("deal");
+    if (!alvo) return;
+
+    setDetailsDealId(Number(alvo));
+    navegacao.replace("/crm");
+  }, [location.search, navegacao]);
 
   // Rolagem horizontal do quadro: arrastar o fundo, roda do mouse e rolagem
   // automática ao levar um card para perto da borda.

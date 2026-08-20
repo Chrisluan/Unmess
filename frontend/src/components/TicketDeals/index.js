@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 
 import makeStyles from "@mui/styles/makeStyles";
 import Paper from "@mui/material/Paper";
@@ -12,6 +12,7 @@ import Chip from "@mui/material/Chip";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/DeleteOutline";
 import PrintIcon from "@mui/icons-material/Print";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
 import api from "../../services/api";
@@ -92,6 +93,7 @@ const totalDaLinha = item =>
 const TicketDeals = () => {
   const classes = useStyles();
   const { ticketId } = useParams();
+  const history = useHistory();
   const { can } = usePermissions();
 
   const [deals, setDeals] = useState([]);
@@ -313,6 +315,15 @@ const TicketDeals = () => {
                       </Button>
                     </>
                   )}
+                  {/* Leva ao card no funil sem obrigar a procurar por ele: o CRM
+                      abre ja com esta oportunidade aberta. */}
+                  <Button
+                    size="small"
+                    startIcon={<OpenInNewIcon />}
+                    onClick={() => history.push(`/crm?deal=${deal.id}`)}
+                  >
+                    Ver no CRM
+                  </Button>
                   <Button
                     size="small"
                     startIcon={<PrintIcon />}

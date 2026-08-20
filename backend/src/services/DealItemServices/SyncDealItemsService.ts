@@ -11,6 +11,7 @@ interface ItemEntrada {
   unitPrice?: number | string;
   discount?: number | string;
   notes?: string;
+  productId?: number | null;
 }
 
 interface Request {
@@ -57,6 +58,7 @@ const SyncDealItemsService = async ({
       unitPrice: numero(item.unitPrice, 0),
       discount: numero(item.discount, 0),
       notes: item.notes?.trim() || null,
+      productId: item.productId || null,
       position: indice,
       dealId: deal.id,
       companyId

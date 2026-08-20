@@ -20,6 +20,7 @@ import customerRoutes from "./customerRoutes";
 import tagRoutes from "./tagRoutes";
 import crmRoutes from "./crmRoutes";
 import stickerRoutes from "./stickerRoutes";
+import productRoutes from "./productRoutes";
 
 const routes = Router();
 
@@ -43,5 +44,6 @@ routes.use(customerRoutes);
 routes.use(tagRoutes);
 routes.use(crmRoutes);
 routes.use(stickerRoutes);
+routes.use(productRoutes);
 
 export default routes;
