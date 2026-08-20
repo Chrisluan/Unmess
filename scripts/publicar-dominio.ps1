@@ -157,14 +157,45 @@ Escrever "  DNS configurado." "Green"
 # --- 6. servico --------------------------------------------------------------
 
 Escrever "  Instalando o tunel como servico do Windows..." "Yellow"
+
+# O servico roda como LocalSystem e procura a configuracao no perfil DELE,
+# nao no do usuario que rodou este script. Sem esta copia o cloudflared sobe,
+# nao encontra tunel para rodar e fica ocioso -- o servico aparece como
+# "Running" enquanto o site responde erro 1033 por falta de conector.
+$perfilSistema = "C:\Windows\System32\config\systemprofile\.cloudflared"
+New-Item -ItemType Directory -Force -Path $perfilSistema | Out-Null
+Copy-Item $configFile $perfilSistema -Force
+
+# As credenciais do tunel vao junto: sem elas o cloudflared nao consegue
+# provar que pode atender por este tunel.
+Copy-Item "$configDir\$idTunel.json" $perfilSistema -Force -ErrorAction SilentlyContinue
+Escrever "  Configuracao copiada para o perfil do servico." "Green"
+
 try { & $cf service uninstall | Out-Null } catch {}
-& $cf service install
+& $cf --config $configFile service install
 Start-Sleep -Seconds 4
 
 $svc = Get-Service Cloudflared -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -ne "Running") { Start-Service Cloudflared }
 
 Escrever "  Servico: $((Get-Service Cloudflared -ErrorAction SilentlyContinue).Status)" "Green"
+
+# Servico no ar nao e o mesmo que tunel conectado. So a presenca de uma
+# conexao ativa prova que a Cloudflare tem por onde entregar o trafego.
+Escrever "  Aguardando o tunel conectar..." "Yellow"
+$conectou = $false
+foreach ($tentativa in 1..10) {
+    Start-Sleep -Seconds 3
+    $info = & $cf tunnel info $NomeTunel
+    if ($info -notmatch "does not have any active connection") { $conectou = $true; break }
+}
+
+if ($conectou) {
+    Escrever "  Tunel conectado." "Green"
+} else {
+    Escrever "  O tunel subiu mas nao conectou." "Red"
+    Escrever "  Veja o log em: Get-EventLog -LogName Application -Source cloudflared -Newest 20" "Gray"
+}
 
 # --- 7. aplicacao ------------------------------------------------------------
 #
