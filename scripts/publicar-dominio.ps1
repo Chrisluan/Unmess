@@ -201,6 +201,23 @@ if (-not (aguardarServicoSumir "Cloudflared")) {
 }
 
 & $cf --config $configFile service install
+
+<#
+  O 'service install' registra apenas o executavel, sem argumentos, e conta
+  que o cloudflared ache a configuracao no perfil do LocalSystem. Quando nao
+  acha, ele sobe, nao sabe qual tunel rodar e sai -- e o Windows reporta isso
+  como 'falha ao iniciar', sem dizer o motivo em lugar nenhum.
+
+  Escrever o comando completo no registro do servico elimina a adivinhacao:
+  o servico passa a rodar exatamente o mesmo comando que funciona na mao.
+#>
+$comando = '"' + $cf + '" --config "' + $configFile + '" --no-autoupdate tunnel run ' + $NomeTunel
+& sc.exe config Cloudflared binPath= $comando | Out-Null
+Escrever "  Comando do servico ajustado." "Green"
+
+# Reinicio automatico: uma queda de rede nao pode deixar o site fora do ar
+# ate alguem perceber e reiniciar o servico a mao.
+& sc.exe failure Cloudflared reset= 86400 actions= restart/5000/restart/10000/restart/30000 | Out-Null
 Start-Sleep -Seconds 4
 
 Start-Sleep -Seconds 2
