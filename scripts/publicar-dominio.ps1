@@ -18,6 +18,12 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# O cloudflared escreve o progresso no stderr mesmo quando da certo. No
+# PowerShell 5.1, redirecionar stderr de executavel nativo (2>&1) embrulha
+# cada linha num erro e, com ErrorActionPreference Stop, aborta o script no
+# meio -- foi o que interrompeu a publicacao logo apos criar o primeiro
+# CNAME. Por isso nenhuma chamada ao cloudflared usa 2>&1 aqui.
 $cf = "C:\Program Files (x86)\cloudflared\cloudflared.exe"
 $configDir = "$env:USERPROFILE\.cloudflared"
 $configFile = "$configDir\config.yml"
@@ -39,8 +45,8 @@ if (-not $admin) { Escrever "  Precisa rodar como Administrador (o tunel vira se
 
 if ($Remover) {
     Escrever "  Removendo o servico e o tunel..." "Yellow"
-    try { & $cf service uninstall 2>&1 | Out-Null } catch {}
-    try { & $cf tunnel delete -f $NomeTunel 2>&1 | Out-Null } catch {}
+    try { & $cf service uninstall | Out-Null } catch {}
+    try { & $cf tunnel delete -f $NomeTunel | Out-Null } catch {}
     Escrever "  Removido. O acesso pelo Tailscale continua valendo." "Green"
     exit 0
 }
@@ -95,7 +101,7 @@ if (-not (Get-ChildItem $configDir -Filter *.pem -ErrorAction SilentlyContinue))
 
 # --- 3. tunel ----------------------------------------------------------------
 
-$existente = & $cf tunnel list 2>&1 | Select-String -Pattern "\s$NomeTunel\s"
+$existente = & $cf tunnel list | Select-String -Pattern "\s$NomeTunel\s"
 
 if (-not $existente) {
     Escrever "  Criando o tunel '$NomeTunel'..." "Yellow"
@@ -105,7 +111,7 @@ if (-not $existente) {
     Escrever "  Tunel '$NomeTunel' ja existe." "Gray"
 }
 
-$idTunel = ((& $cf tunnel list 2>&1 | Select-String -Pattern "\s$NomeTunel\s") -split '\s+')[0]
+$idTunel = ((& $cf tunnel list | Select-String -Pattern "\s$NomeTunel\s") -split '\s+')[0]
 $credencial = "$configDir\$idTunel.json"
 
 # --- 4. configuracao ---------------------------------------------------------
@@ -129,20 +135,29 @@ ingress:
   - service: http_status:404
 "@
 
-Set-Content -Path $configFile -Value $config -Encoding utf8
+# WriteAllText grava sem BOM; Set-Content -Encoding utf8 no PS 5.1 sempre
+# adiciona, e um YAML com BOM depende da boa vontade do parser.
+[IO.File]::WriteAllText($configFile, $config)
 Escrever "  Configuracao gravada em $configFile" "Green"
 
 # --- 5. DNS ------------------------------------------------------------------
 
 Escrever "  Apontando $app e $api para o tunel..." "Yellow"
-& $cf tunnel route dns --overwrite-dns $NomeTunel $app 2>&1 | Out-Null
-& $cf tunnel route dns --overwrite-dns $NomeTunel $api 2>&1 | Out-Null
+# Cada CNAME num try proprio: se um ja existir, o outro ainda e criado.
+foreach ($nome in @($app, $api)) {
+    try {
+        & $cf tunnel route dns --overwrite-dns $NomeTunel $nome | Out-Null
+        Escrever "  DNS de $nome apontado." "Green"
+    } catch {
+        Escrever "  DNS de ${nome}: $($_.Exception.Message)" "Yellow"
+    }
+}
 Escrever "  DNS configurado." "Green"
 
 # --- 6. servico --------------------------------------------------------------
 
 Escrever "  Instalando o tunel como servico do Windows..." "Yellow"
-try { & $cf service uninstall 2>&1 | Out-Null } catch {}
+try { & $cf service uninstall | Out-Null } catch {}
 & $cf service install
 Start-Sleep -Seconds 4
 
