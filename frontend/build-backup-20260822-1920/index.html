@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Unmess</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <!-- O manifest é injetado pelo vite-plugin-pwa; declarar aqui também
+         criaria duas fontes divergentes. -->
+    <meta name="theme-color" content="#2576d2" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Unmess" />
+    <meta
+      name="viewport"
+      content="minimum-scale=1, initial-scale=1, width=device-width"
+    />
+    <noscript id="env-insertion-point"></noscript>
+    <!-- Endereço público, resolvido em tempo de execução.
+
+         As variáveis VITE_* são gravadas dentro do bundle no build. Isso serve
+         para um domínio definitivo, mas não para o túnel provisório, cujo
+         endereço muda a cada vez que o cloudflared sobe: cada troca exigiria
+         recompilar o frontend inteiro.
+
+         Este arquivo é gerado pelo scripts/tunel-publico.js e servido sem
+         cache; quando não existe endereço público, vem vazio e o frontend
+         volta a deduzir a API sozinho, como no acesso pela rede local. É um
+         script clássico de propósito -- roda antes do módulo do app abaixo. -->
+    <script src="/env.js"></script>
+    <script type="module" crossorigin src="/assets/index-e3216000.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/material-ui-0db508d3.js">
+    <link rel="stylesheet" href="/assets/index-b330f611.css">
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    
+  </body>
+</html>

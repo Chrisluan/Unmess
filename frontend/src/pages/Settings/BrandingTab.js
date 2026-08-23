@@ -31,7 +31,7 @@ const useStyles = makeStyles(theme => ({
   preview: {
     width: 64,
     height: 64,
-    borderRadius: 12,
+    borderRadius: 0,
     objectFit: "contain",
     border: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.default
@@ -39,7 +39,7 @@ const useStyles = makeStyles(theme => ({
   semLogo: {
     width: 64,
     height: 64,
-    borderRadius: 12,
+    borderRadius: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

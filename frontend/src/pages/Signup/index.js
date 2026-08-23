@@ -7,20 +7,18 @@ import { toast } from "react-toastify";
 import { Formik, Form, Field } from "formik";
 
 import {
-	Avatar,
 	Button,
 	CssBaseline,
 	TextField,
 	Grid,
-	Box,
 	Typography,
-	Container,
 	InputAdornment,
 	IconButton,
-	Link
+	Link,
+	CircularProgress
 } from '@mui/material';
 
-import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 import makeStyles from '@mui/styles/makeStyles';
 
@@ -43,22 +41,41 @@ import toastError from "../../errors/toastError";
 // };
 
 const useStyles = makeStyles(theme => ({
-	paper: {
-		marginTop: theme.spacing(8),
+	/**
+	 * Mesmo cartão da tela de entrada.
+	 *
+	 * Entrar e cadastrar-se são a mesma porta vista de dois lados; molduras
+	 * diferentes fariam parecer que uma delas é de outro sistema.
+	 */
+	tela: {
+		minHeight: "100vh",
 		display: "flex",
-		flexDirection: "column",
 		alignItems: "center",
+		justifyContent: "center",
+		padding: theme.spacing(3),
+		backgroundColor: theme.palette.background.default,
 	},
-	avatar: {
-		margin: theme.spacing(1),
-		backgroundColor: theme.palette.secondary.main,
-	},
-	form: {
+	paper: {
 		width: "100%",
-		marginTop: theme.spacing(3),
+		maxWidth: 380,
+		padding: theme.spacing(4),
+		backgroundColor: theme.palette.background.paper,
+		border: `1px solid ${theme.palette.divider}`,
+	},
+	titulo: {
+		fontWeight: 700,
+		letterSpacing: "-0.02em",
+		marginBottom: theme.spacing(3),
 	},
 	submit: {
-		margin: theme.spacing(3, 0, 2),
+		margin: theme.spacing(3, 0, 0),
+		minHeight: 42,
+	},
+	rodape: {
+		marginTop: theme.spacing(3),
+		paddingTop: theme.spacing(2),
+		borderTop: `1px solid ${theme.palette.divider}`,
+		textAlign: "center",
 	},
 }));
 
@@ -90,13 +107,10 @@ const SignUp = () => {
 	};
 
 	return (
-        <Container component="main" maxWidth="xs">
+        <div className={classes.tela}>
             <CssBaseline />
             <div className={classes.paper}>
-				<Avatar className={classes.avatar}>
-					<LockOutlined />
-				</Avatar>
-				<Typography component="h1" variant="h5">
+				<Typography component="h1" variant="h5" className={classes.titulo}>
 					{i18n.t("signup.title")}
 				</Typography>
 				{/* <form className={classes.form} noValidate onSubmit={handleSignUp}> */}
@@ -149,7 +163,7 @@ const SignUp = () => {
 										fullWidth
 										name="password"
 										id="password"
-										autoComplete="current-password"
+										autoComplete="new-password"
 										error={touched.password && Boolean(errors.password)}
 										helperText={touched.password && errors.password}
 										label={i18n.t("signup.form.password")}
@@ -158,7 +172,11 @@ const SignUp = () => {
 											endAdornment: (
 												<InputAdornment position="end">
 													<IconButton
-                                                        aria-label="toggle password visibility"
+                                                        aria-label={
+                                                            showPassword
+                                                                ? i18n.t("userModal.form.hidePassword")
+                                                                : i18n.t("userModal.form.showPassword")
+                                                        }
                                                         onClick={() => setShowPassword((e) => !e)}
                                                         size="large">
 														{showPassword ? <VisibilityOff /> : <Visibility />}
@@ -175,27 +193,29 @@ const SignUp = () => {
 								variant="contained"
 								color="primary"
 								className={classes.submit}
+								disabled={isSubmitting}
+								startIcon={
+									isSubmitting ? (
+										<CircularProgress size={16} color="inherit" />
+									) : null
+								}
 							>
 								{i18n.t("signup.buttons.submit")}
 							</Button>
-							<Grid container justifyContent="flex-end">
-								<Grid item>
-									<Link
-										href="#"
-										variant="body2"
-										component={RouterLink}
-										to="/login"
-									>
-										{i18n.t("signup.buttons.login")}
-									</Link>
-								</Grid>
-							</Grid>
+							<div className={classes.rodape}>
+								<Link
+									variant="body2"
+									component={RouterLink}
+									to="/login"
+								>
+									{i18n.t("signup.buttons.login")}
+								</Link>
+							</div>
 						</Form>
 					)}
 				</Formik>
 			</div>
-            <Box mt={5}>{/* <Copyright /> */}</Box>
-        </Container>
+        </div>
     );
 };
 

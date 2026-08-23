@@ -11,9 +11,6 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import SearchIcon from "@mui/icons-material/Search";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
 
 import IconButton from "@mui/material/IconButton";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -21,6 +18,12 @@ import EditIcon from "@mui/icons-material/Edit";
 
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import TableEmpty from "../../components/EmptyState/TableEmpty";
+import SearchField from "../../components/SearchField";
+import Tooltip from "@mui/material/Tooltip";
+import AddIcon from "@mui/icons-material/Add";
+import GroupWorkOutlinedIcon from "@mui/icons-material/GroupWorkOutlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import CustomerModal from "../../components/CustomerModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
 
@@ -77,10 +80,23 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  /**
+   * Painel de conteúdo das telas de listagem.
+   *
+   * Ganhou borda e margem: o Paper deixou de ter sombra no tema novo, e sem
+   * nenhuma das duas a tabela ficava solta no meio da página, encostada nas
+   * bordas da janela sem nada dizendo onde ela começa.
+   */
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    margin: theme.spacing(0, 2, 2),
+    padding: theme.spacing(0.5),
+    // "auto" e não "scroll": a barra vazia desenhava uma faixa cinza fixa na
+    // direita de toda listagem, inclusive nas que cabem na tela.
+    overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
+    border: `1px solid ${theme.palette.divider}`,
     ...theme.scrollbarStyles,
   },
 }));
@@ -208,6 +224,8 @@ const Customers = () => {
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
+        danger
+        confirmLabel={i18n.t("customers.confirmationModal.confirmDelete")}
         onConfirm={() =>
           deletingCustomer && handleDeleteCustomer(deletingCustomer.id)
         }
@@ -217,23 +235,17 @@ const Customers = () => {
       <MainHeader>
         <Title>{i18n.t("customers.title")}</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("customers.searchPlaceholder")}
-            type="search"
+          <SearchField
             value={searchParam}
             onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
+            onClear={() => setSearchParam("")}
+            placeholder={i18n.t("customers.searchPlaceholder")}
           />
           <Can permission="clients:create">
             <Button
               variant="contained"
               color="primary"
+              startIcon={<AddIcon />}
               onClick={handleOpenCustomerModal}
             >
               {i18n.t("customers.buttons.add")}
@@ -250,15 +262,9 @@ const Customers = () => {
           <TableHead>
             <TableRow>
               <TableCell>{i18n.t("customers.table.name")}</TableCell>
-              <TableCell align="center">
-                {i18n.t("customers.table.document")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("customers.table.phone")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("customers.table.segment")}
-              </TableCell>
+              <TableCell>{i18n.t("customers.table.document")}</TableCell>
+              <TableCell>{i18n.t("customers.table.phone")}</TableCell>
+              <TableCell>{i18n.t("customers.table.segment")}</TableCell>
               <TableCell align="center">
                 {i18n.t("customers.table.status")}
               </TableCell>
@@ -274,11 +280,11 @@ const Customers = () => {
                   <TableCell>
                     {customer.tradeName || customer.name}
                   </TableCell>
-                  <TableCell align="center">{customer.document}</TableCell>
-                  <TableCell align="center">
+                  <TableCell>{customer.document}</TableCell>
+                  <TableCell>
                     {customer.whatsapp || customer.phone}
                   </TableCell>
-                  <TableCell align="center">{customer.segment}</TableCell>
+                  <TableCell>{customer.segment}</TableCell>
                   <TableCell align="center">
                     <Chip
                       size="small"
@@ -288,27 +294,63 @@ const Customers = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Can permission="clients:edit">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditCustomer(customer.id)}
-                      >
-                        <EditIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("customers.actions.edit")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("customers.actions.edit")}
+                          onClick={() => handleEditCustomer(customer.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Can>
                     <Can permission="clients:delete">
-                      <IconButton
-                        size="small"
-                        onClick={() => {
-                          setConfirmOpen(true);
-                          setDeletingCustomer(customer);
-                        }}
-                      >
-                        <DeleteOutlineIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("customers.actions.delete")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("customers.actions.delete")}
+                          onClick={() => {
+                            setConfirmOpen(true);
+                            setDeletingCustomer(customer);
+                          }}
+                        >
+                          <DeleteOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
                     </Can>
                   </TableCell>
                 </TableRow>
               ))}
+              {!loading && customers.length === 0 && (
+                <TableEmpty
+                  colSpan={6}
+                  icon={searchParam ? SearchOffIcon : GroupWorkOutlinedIcon}
+                  title={
+                    searchParam
+                      ? i18n.t("customers.empty.searchTitle")
+                      : i18n.t("customers.empty.title")
+                  }
+                  description={
+                    searchParam
+                      ? i18n.t("customers.empty.searchMessage")
+                      : i18n.t("customers.empty.message")
+                  }
+                  action={
+                    !searchParam && (
+                      <Can permission="clients:create">
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleOpenCustomerModal}
+                        >
+                          {i18n.t("customers.buttons.add")}
+                        </Button>
+                      </Can>
+                    )
+                  }
+                />
+              )}
               {loading && <TableRowSkeleton columns={6} />}
             </>
           </TableBody>

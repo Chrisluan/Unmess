@@ -17,11 +17,21 @@ interface Request {
 
 const CreateContactService = async ({
   name,
-  number,
+  number: rawNumber,
   email = "",
   extraInfo = [],
   companyId
 }: Request): Promise<Contact> => {
+  /**
+   * Só dígitos, sempre.
+   *
+   * Quem chama pode entregar um JID inteiro ("5544xxxxxxxxx@s.whatsapp.net"),
+   * e o domínio gravado aqui torna o contato invisível para o atendimento --
+   * que procura pelo número normalizado. O resultado era um segundo cadastro,
+   * e um atendimento duplicado, na primeira mensagem recebida.
+   */
+  const number = rawNumber.replace(/[^0-9]/g, "");
+
   const numberExists = await Contact.findOne({
     where: { number, companyId }
   });

@@ -8,16 +8,23 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
-import InputAdornment from "@mui/material/InputAdornment";
 import Typography from "@mui/material/Typography";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import CircularProgress from "@mui/material/CircularProgress";
-import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
 import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
+import CheckIcon from "@mui/icons-material/Check";
+import AddIcon from "@mui/icons-material/Add";
+import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Divider from "@mui/material/Divider";
+import SearchField from "../../components/SearchField";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -30,7 +37,6 @@ import { Can } from "../../components/Can";
 import usePermissions from "../../hooks/usePermissions";
 
 import KanbanColumn from "../../components/Crm/KanbanColumn";
-import PipelineSummary from "../../components/Crm/PipelineSummary";
 import DealModal from "../../components/DealModal";
 import OrcamentoModal from "../../components/Crm/OrcamentoModal";
 import PipelineStagesModal from "../../components/PipelineStagesModal";
@@ -41,6 +47,17 @@ import IndicadoresFunil from "../../components/Crm/IndicadoresFunil";
 import FiltrosFunil from "../../components/Crm/FiltrosFunil";
 import useArrastarQuadro from "../../hooks/useArrastarQuadro";
 import useAtualizacaoAutomatica from "../../hooks/useAtualizacaoAutomatica";
+
+// Intervalos oferecidos para a atualização automática do quadro.
+const INTERVALOS = [
+  { valor: 10, rotulo: "A cada 10 segundos" },
+  { valor: 30, rotulo: "A cada 30 segundos" },
+  { valor: 60, rotulo: "A cada 1 minuto" },
+  { valor: 300, rotulo: "A cada 5 minutos" },
+];
+
+const rotuloIntervalo = (segundos) =>
+  segundos >= 60 ? `${Math.round(segundos / 60)} min` : `${segundos}s`;
 
 const useStyles = makeStyles((theme) => ({
   abas: {
@@ -122,6 +139,7 @@ const Crm = () => {
   const [detailsDealId, setDetailsDealId] = useState(null);
   const [stagesModalOpen, setStagesModalOpen] = useState(false);
   const [boardsModalOpen, setBoardsModalOpen] = useState(false);
+  const [menuConfig, setMenuConfig] = useState(null);
 
   const [dragging, setDragging] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
@@ -306,6 +324,11 @@ const Crm = () => {
     gerarProximo,
     lostReasonDetail
   ) => {
+    // Guardado antes do movimento: um card já ganho continua sendo arrastado
+    // dentro da coluna, e sem esta comparação o aviso de venda faturada
+    // reapareceria a cada arrasto.
+    const jaEraGanho = Boolean(deals.find((d) => d.id === dealId)?.wonAt);
+
     try {
       const { data } = await api.put(`/deals/${dealId}/move`, {
         stageId,
@@ -330,11 +353,15 @@ const Crm = () => {
         toast.success(
           i18n.t("crm.toasts.advanced", { board: data.nextBoardName })
         );
-      } else if (data.deal?.status === "won") {
+      } else if (!jaEraGanho && (data.deal?.wonAt || data.deal?.status === "won")) {
         toast.success(i18n.t("crm.toasts.billed"));
       }
 
       fetchDeals();
+      // O faturamento muda no mesmo movimento que move o card. Recarregar só
+      // os cards deixava o "Faturado" do cabeçalho parado no número antigo até
+      // alguém recarregar a página.
+      fetchSummary();
     } catch (err) {
       // A coluna de destino pode ser de perda em outro quadro -- só o backend
       // sabe disso, porque é ele que resolve o encaminhamento. Quando ele pede
@@ -540,59 +567,11 @@ const Crm = () => {
               <option value="antigas">Mais antigas</option>
             </TextField>
 
-            {/* Atualizacao automatica: quem trabalha o dia inteiro no quadro quer
-                ciclo curto; quem so consulta prefere nao gastar rede. */}
-            <Tooltip
-              title={
-                atualizacao.ligada
-                  ? `Atualizando a cada ${atualizacao.intervalo}s`
-                  : "Atualizacao automatica desligada"
-              }
-              arrow
-            >
-              <FormControlLabel
-                style={{ marginRight: 0 }}
-                control={
-                  <Switch
-                    size="small"
-                    checked={atualizacao.ligada}
-                    onChange={atualizacao.alternar}
-                  />
-                }
-                label={<span style={{ fontSize: 13 }}>Atualizar</span>}
-              />
-            </Tooltip>
-
-            {atualizacao.ligada && (
-              <TextField
-                select
-                size="small"
-                variant="outlined"
-                value={atualizacao.intervalo}
-                onChange={(e) => atualizacao.mudarIntervalo(e.target.value)}
-                SelectProps={{ native: true }}
-                style={{ width: 92 }}
-              >
-                <option value={10}>10s</option>
-                <option value={30}>30s</option>
-                <option value={60}>1 min</option>
-                <option value={300}>5 min</option>
-              </TextField>
-            )}
-
-            <TextField
-              placeholder={i18n.t("crm.searchPlaceholder")}
-              type="search"
-              size="small"
+            <SearchField
               value={searchParam}
               onChange={(e) => setSearchParam(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon style={{ color: "gray" }} />
-                  </InputAdornment>
-                ),
-              }}
+              onClear={() => setSearchParam("")}
+              placeholder={i18n.t("crm.searchPlaceholder")}
             />
 
             {can("crm:viewAll") && users.length > 0 && (
@@ -625,33 +604,107 @@ const Crm = () => {
               <MenuItem value="all">{i18n.t("crm.filters.withClosed")}</MenuItem>
             </TextField>
 
-            <Can permission="crm:manageBoards">
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<ViewKanbanOutlinedIcon />}
-                onClick={() => setBoardsModalOpen(true)}
+            {/* Um menu só para o que configura o quadro e para a preferência
+                de atualização: seis controles a menos disputando a faixa com
+                os filtros que se usam a cada minuto. */}
+            <Tooltip title="Configurar o quadro" arrow>
+              <IconButton
+                size="small"
+                aria-label="Configurar o quadro"
+                onClick={(e) => setMenuConfig(e.currentTarget)}
               >
-                {i18n.t("crm.buttons.boards")}
-              </Button>
-            </Can>
+                <MoreVertIcon />
+              </IconButton>
+            </Tooltip>
 
-            <Can permission="crm:manageStages">
-              <Button
-                variant="outlined"
-                color="primary"
-                startIcon={<TuneIcon />}
-                disabled={!activeBoard}
-                onClick={() => setStagesModalOpen(true)}
-              >
-                {i18n.t("crm.buttons.stages")}
-              </Button>
-            </Can>
+            <Menu
+              anchorEl={menuConfig}
+              open={Boolean(menuConfig)}
+              onClose={() => setMenuConfig(null)}
+            >
+              <Can permission="crm:manageBoards">
+                <MenuItem
+                  onClick={() => {
+                    setMenuConfig(null);
+                    setBoardsModalOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <ViewKanbanOutlinedIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={i18n.t("crm.buttons.boards")} />
+                </MenuItem>
+              </Can>
+
+              <Can permission="crm:manageStages">
+                <MenuItem
+                  disabled={!activeBoard}
+                  onClick={() => {
+                    setMenuConfig(null);
+                    setStagesModalOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <TuneIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={i18n.t("crm.buttons.stages")} />
+                </MenuItem>
+              </Can>
+
+              <Divider />
+
+              {/* O clique é sempre do item inteiro: o Switch é indicador, e
+                  não um segundo alvo. Com onChange próprio, clicar nele
+                  disparava a troca duas vezes — a dele e a do item por
+                  propagação — e o estado voltava ao que era. */}
+              <MenuItem onClick={atualizacao.alternar}>
+                <ListItemIcon>
+                  <AutorenewIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Atualizar sozinho"
+                  secondary={
+                    atualizacao.ligada
+                      ? `A cada ${rotuloIntervalo(atualizacao.intervalo)}`
+                      : "Desligado"
+                  }
+                />
+                <Switch
+                  edge="end"
+                  size="small"
+                  checked={atualizacao.ligada}
+                  tabIndex={-1}
+                  readOnly
+                  inputProps={{ "aria-hidden": true }}
+                  style={{ pointerEvents: "none" }}
+                />
+              </MenuItem>
+
+              {/* Um item por intervalo, e não um select dentro do menu: o
+                  Menu do MUI captura as setas do teclado para navegar entre
+                  os itens, e um <select> nativo aqui dentro ficaria sem elas. */}
+              {atualizacao.ligada &&
+                INTERVALOS.map((op) => (
+                  <MenuItem
+                    key={op.valor}
+                    selected={Number(atualizacao.intervalo) === op.valor}
+                    onClick={() => atualizacao.mudarIntervalo(op.valor)}
+                  >
+                    <ListItemIcon>
+                      {Number(atualizacao.intervalo) === op.valor && (
+                        <CheckIcon fontSize="small" />
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={op.rotulo} />
+                  </MenuItem>
+                ))}
+            </Menu>
 
             <Can permission="crm:create">
               <Button
                 variant="contained"
                 color="primary"
+                startIcon={<AddIcon />}
                 disabled={!activeBoard}
                 onClick={() => handleNovoDeal(null)}
               >
@@ -661,8 +714,6 @@ const Crm = () => {
           </div>
         </MainHeaderButtonsWrapper>
       </MainHeader>
-
-      <PipelineSummary summary={summary} />
 
       {boards.length > 0 && (
         <Tabs
@@ -687,7 +738,14 @@ const Crm = () => {
 
       {/* Indicadores antes das colunas: respondem antes de qualquer card --
           quanto tem no funil, quanto disso e realista, e o que pede atencao. */}
-      <IndicadoresFunil boardId={activeBoardId} recarregar={deals.length} />
+      {/* Amarrado ao resumo, e não à quantidade de cards: mover um card para a
+          coluna de ganho muda o faturamento sem mudar quantos cards existem, e
+          os indicadores ficavam no número antigo. */}
+      <IndicadoresFunil
+        boardId={activeBoardId}
+        recarregar={summary}
+        resumo={summary}
+      />
       <Paper
         ref={refQuadro}
         className={classes.board}
@@ -718,6 +776,7 @@ const Crm = () => {
               key={stage.id}
               stage={stage}
               deals={dealsPorEtapa[stage.id] || []}
+              noFunil={Boolean(activeBoard?.isSalesFunnel)}
               dragging={dragging}
               dropTarget={dropTarget}
               podeMover={podeMover}

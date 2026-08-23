@@ -79,7 +79,7 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
 
   const [lista, setLista] = useState([]);
   const [novoNome, setNovoNome] = useState("");
-  const [novaCor, setNovaCor] = useState("#2576d2");
+  const [novaCor, setNovaCor] = useState("#0b5cff");
   const [excluindo, setExcluindo] = useState(null);
 
   useEffect(() => {
@@ -92,7 +92,7 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
     try {
       await api.post("/boards", { name: novoNome.trim(), color: novaCor });
       setNovoNome("");
-      setNovaCor("#2576d2");
+      setNovaCor("#0b5cff");
       toast.success(i18n.t("crm.toasts.boardCreated"));
       onChange();
     } catch (err) {
@@ -158,6 +158,8 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
         title={i18n.t("crm.boardsModal.deleteTitle")}
         open={Boolean(excluindo)}
         onClose={() => setExcluindo(null)}
+        danger
+        confirmLabel="Excluir quadro"
         onConfirm={() => handleExcluir(excluindo.id)}
       >
         {i18n.t("crm.boardsModal.deleteMessage")}
@@ -177,7 +179,7 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
             <input
               type="color"
               className={classes.cor}
-              value={board.color || "#2576d2"}
+              value={board.color || "#0b5cff"}
               onChange={(e) => alterarLocal(board.id, { color: e.target.value })}
               onBlur={(e) => handleSalvar(board, { color: e.target.value })}
             />
@@ -214,7 +216,7 @@ const BoardsModal = ({ open, onClose, boards, onChange }) => {
                   onClick={() =>
                     !board.isSalesFunnel && handleSalvar(board, { isSalesFunnel: true })
                   }
-                  style={{ color: board.isSalesFunnel ? "#1a7a55" : undefined }}
+                  style={{ color: board.isSalesFunnel ? "#15803d" : undefined }}
                 >
                   <SellIcon fontSize="small" />
                 </IconButton>

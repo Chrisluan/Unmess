@@ -20,12 +20,13 @@ import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
-import { Can } from "../Can";
+import usePermissions from "../../hooks/usePermissions";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
 import TicketsTagSelect from "../TicketsTagSelect";
 import TicketsUserSelect from "../TicketsUserSelect";
-import { Button } from "@mui/material";
+import { Button, IconButton, Tooltip } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -42,6 +43,7 @@ const useStyles = makeStyles((theme) => ({
   tabsHeader: {
     flex: "none",
     backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   settingsIcon: {
     alignSelf: "center",
@@ -67,9 +69,18 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1),
     background: theme.palette.background.paper,
     padding: theme.spacing(1),
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
-  espacador: {
-    flex: 1,
+  faixaBusca: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1),
+    padding: theme.spacing(0.5, 1, 0.5, 1.5),
+    fontSize: "0.8rem",
+    color: theme.palette.text.secondary,
+    background: theme.palette.action.hover,
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
   painelFiltros: {
     width: 280,
@@ -86,14 +97,18 @@ const useStyles = makeStyles((theme) => ({
   },
   serachInputWrapper: {
     flex: 1,
-    background: theme.palette.background.default,
+    minWidth: 0,
+    background: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
     display: "flex",
-    borderRadius: 40,
-    padding: 4,
-    marginRight: theme.spacing(1),
+    borderRadius: 0,
+    padding: 3,
+    "&:focus-within": {
+      borderColor: theme.palette.primary.main,
+    },
   },
   searchIcon: {
-    color: "grey",
+    color: theme.palette.text.secondary,
     marginLeft: 6,
     marginRight: 6,
     alignSelf: "center",
@@ -101,9 +116,12 @@ const useStyles = makeStyles((theme) => ({
   searchInput: {
     flex: 1,
     border: "none",
-    borderRadius: 30,
-    color: theme.palette.text.primary, 
-    backgroundColor: theme.palette.background.default,
+    borderRadius: 0,
+    color: theme.palette.text.primary,
+    backgroundColor: "transparent",
+    // O contorno do campo já marca o foco; o anel do navegador aqui dentro
+    // desenharia uma moldura dentro da outra.
+    "&:focus": { outline: "none" },
   },
   badge: {
     right: "-10px",
@@ -118,6 +136,9 @@ const useStyles = makeStyles((theme) => ({
 
 const TicketsManager = () => {
   const classes = useStyles();
+  // Dois estados: o que está digitado (controla o campo, responde na hora) e
+  // o que já foi consultado (dispara a requisição depois da pausa).
+  const [termoBusca, setTermoBusca] = useState("");
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
   const [tabOpen, setTabOpen] = useState("myTickets");
@@ -125,6 +146,7 @@ const TicketsManager = () => {
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
   const { user } = useContext(AuthContext);
+  const { can } = usePermissions();
   const { isEnabled } = useContext(AttendanceSettingsContext);
   const [myTicketsCount, setMyTicketsCount] = useState(0);
   const [attendingCount, setAttendingCount] = useState(0);
@@ -171,36 +193,44 @@ const TicketsManager = () => {
     );
   }, [selectedWhatsappIds]);
 
+  // Quem supervisiona abre a tela já vendo tudo -- era o comportamento de
+  // quem tinha profile "admin", agora amarrado à permissão que de fato
+  // controla isso no servidor.
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
+    if (can("tickets:viewAll")) {
       setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (tab === "search") {
-      searchInputRef.current.focus();
-      setSearchParam("");
-    }
-  }, [tab]);
+  // O timeout precisa sobreviver entre renders: como variável local ele era
+  // recriado a cada digitação, e o clearTimeout nunca limpava nada — toda
+  // tecla acabava virando uma consulta 500ms depois.
+  const searchTimeout = useRef();
 
-  let searchTimeout;
+  useEffect(() => () => clearTimeout(searchTimeout.current), []);
 
   const handleSearch = (e) => {
-    const searchedTerm = e.target.value.toLowerCase();
+    const digitado = e.target.value;
+    setTermoBusca(digitado);
 
-    clearTimeout(searchTimeout);
+    clearTimeout(searchTimeout.current);
 
-    if (searchedTerm === "") {
-      setSearchParam(searchedTerm);
-      setTab("open");
+    if (digitado === "") {
+      setSearchParam("");
       return;
     }
 
-    searchTimeout = setTimeout(() => {
-      setSearchParam(searchedTerm);
+    searchTimeout.current = setTimeout(() => {
+      setSearchParam(digitado.toLowerCase());
     }, 500);
+  };
+
+  const limparBusca = () => {
+    clearTimeout(searchTimeout.current);
+    setTermoBusca("");
+    setSearchParam("");
+    searchInputRef.current?.focus();
   };
 
   const handleChangeTab = (e, newValue) => {
@@ -221,7 +251,7 @@ const TicketsManager = () => {
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
-        onClose={(e) => setNewTicketModalOpen(false)}
+        onClose={() => setNewTicketModalOpen(false)}
       />
       <Paper elevation={0} square className={classes.tabsHeader}>
         <Tabs
@@ -230,7 +260,7 @@ const TicketsManager = () => {
           variant="fullWidth"
           indicatorColor="primary"
           textColor="primary"
-          aria-label="icon label tabs example"
+          aria-label={i18n.t("tickets.tabs.ariaLabel")}
         >
           <Tab
             value={"open"}
@@ -258,60 +288,59 @@ const TicketsManager = () => {
             label={i18n.t("tickets.tabs.groups.title")}
             classes={{ root: classes.tab }}
           />
-          <Tab
-            value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
-          />
         </Tabs>
       </Paper>
       {/* Uma faixa só: ação principal à esquerda, filtros recolhidos à direita.
           Antes os três seletores dividiam a largura da lista com o botão e o
           switch, cada um espremido em 150px e truncando o próprio rótulo. */}
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
-        {tab === "search" ? (
-          <div className={classes.serachInputWrapper}>
-            <SearchIcon className={classes.searchIcon} />
-            <InputBase
-              className={classes.searchInput}
-              inputRef={searchInputRef}
-              placeholder={i18n.t("tickets.search.placeholder")}
-              type="search"
-              onChange={handleSearch}
-            />
-          </div>
-        ) : (
-          <>
-            <Button
-              variant="contained"
-              color="primary"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={() => setNewTicketModalOpen(true)}
-            >
-              {i18n.t("ticketsManager.buttons.newTicket")}
-            </Button>
-
-            <div className={classes.espacador} />
-
-            <Badge
-              badgeContent={filtrosAtivos}
-              color="primary"
-              overlap="circular"
-            >
-              <Button
-                size="small"
-                variant={filtrosAtivos ? "contained" : "outlined"}
-                color={filtrosAtivos ? "primary" : "inherit"}
-                startIcon={<FilterListIcon />}
-                onClick={(e) => setFiltrosAnchor(e.currentTarget)}
-              >
-                {i18n.t("ticketsManager.buttons.filters")}
-              </Button>
-            </Badge>
-          </>
+        {can("tickets:create") && (
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setNewTicketModalOpen(true)}
+          >
+            {i18n.t("ticketsManager.buttons.newTicket")}
+          </Button>
         )}
+
+        <div className={classes.serachInputWrapper}>
+          <SearchIcon className={classes.searchIcon} />
+          <InputBase
+            className={classes.searchInput}
+            inputRef={searchInputRef}
+            value={termoBusca}
+            placeholder={i18n.t("tickets.search.placeholder")}
+            inputProps={{ "aria-label": i18n.t("tickets.search.placeholder") }}
+            onChange={handleSearch}
+          />
+          {termoBusca && (
+            <Tooltip title={i18n.t("ticketsManager.buttons.clearSearch")} arrow>
+              <IconButton
+                size="small"
+                aria-label={i18n.t("ticketsManager.buttons.clearSearch")}
+                onClick={limparBusca}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </div>
+
+        <Badge badgeContent={filtrosAtivos} color="primary" overlap="circular">
+          <Tooltip title={i18n.t("ticketsManager.buttons.filters")} arrow>
+            <IconButton
+              size="small"
+              aria-label={i18n.t("ticketsManager.buttons.filters")}
+              color={filtrosAtivos ? "primary" : "default"}
+              onClick={(e) => setFiltrosAnchor(e.currentTarget)}
+            >
+              <FilterListIcon />
+            </IconButton>
+          </Tooltip>
+        </Badge>
       </Paper>
 
       <Popover
@@ -344,52 +373,33 @@ const TicketsManager = () => {
         {/* Filtro por atendente: ferramenta de supervisão, só aparece para
             quem enxerga o atendimento inteiro. O backend valida a mesma
             permissão, então esconder aqui é conveniência, não a trava. */}
-        <Can permission="tickets:viewAll">
+        {can("tickets:viewAll") && (
           <TicketsUserSelect
             style={{ width: "100%", marginTop: 0 }}
             selectedUserIds={selectedUserIds}
             onChange={(values) => setSelectedUserIds(values)}
           />
-        </Can>
+        )}
 
-        {/* O switch "Todos" fica disponível para admin ou, se a empresa
-            liberou, para qualquer atendente. */}
-        <Can
-          role={user.profile}
-          perform="tickets-manager:showall"
-          yes={() => (
-            <FormControlLabel
-              className={classes.switchFiltro}
-              label={i18n.t("tickets.buttons.showAll")}
-              control={
-                <Switch
-                  size="small"
-                  checked={showAllTickets}
-                  onChange={() => setShowAllTickets((prevState) => !prevState)}
-                  name="showAllTickets"
-                  color="primary"
-                />
-              }
-            />
-          )}
-          no={() =>
-            isEnabled("allowAgentSeeAllTickets") ? (
-              <FormControlLabel
-                className={classes.switchFiltro}
-                label={i18n.t("tickets.buttons.showAll")}
-                control={
-                  <Switch
-                    size="small"
-                    checked={showAllTickets}
-                    onChange={() => setShowAllTickets((prevState) => !prevState)}
-                    name="showAllTickets"
-                    color="primary"
-                  />
-                }
+        {/* O switch "Todos" aparece para quem tem a permissão de ver o
+            atendimento inteiro ou, se a empresa liberou no ajuste, para
+            qualquer atendente. São dois caminhos para a mesma caixa, e por
+            isso ela é montada uma vez só. */}
+        {(can("tickets:viewAll") || isEnabled("allowAgentSeeAllTickets")) && (
+          <FormControlLabel
+            className={classes.switchFiltro}
+            label={i18n.t("tickets.buttons.showAll")}
+            control={
+              <Switch
+                size="small"
+                checked={showAllTickets}
+                onChange={() => setShowAllTickets((prevState) => !prevState)}
+                name="showAllTickets"
+                color="primary"
               />
-            ) : null
-          }
-        />
+            }
+          />
+        )}
 
         {filtrosAtivos > 0 && (
           <Button
@@ -401,6 +411,27 @@ const TicketsManager = () => {
           </Button>
         )}
       </Popover>
+      {searchParam ? (
+        <Paper elevation={0} square className={classes.ticketsWrapper}>
+          <div className={classes.faixaBusca}>
+            <span>
+              {i18n.t("tickets.search.resultsFor")} <strong>{termoBusca}</strong>
+            </span>
+            <Button size="small" onClick={limparBusca}>
+              {i18n.t("ticketsManager.buttons.clearSearch")}
+            </Button>
+          </div>
+          <TicketsList
+            searchParam={searchParam}
+            showAll={true}
+            selectedQueueIds={selectedQueueIds}
+            selectedWhatsappIds={selectedWhatsappIds}
+            selectedTagIds={selectedTagIds}
+            selectedUserIds={selectedUserIds}
+          />
+        </Paper>
+      ) : (
+      <>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
         <Tabs
           value={tabOpen}
@@ -411,54 +442,64 @@ const TicketsManager = () => {
         >
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={myTicketsCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.myTicketsHeader")}
-              </Badge>
+              <Tooltip title={i18n.t("ticketsList.tabTooltips.myTickets")} arrow>
+                <Badge
+                  className={classes.badge}
+                  badgeContent={myTicketsCount}
+                  color="primary"
+                >
+                  {i18n.t("ticketsList.myTicketsHeader")}
+                </Badge>
+              </Tooltip>
             }
             className={classes.abaCompacta}
             value={"myTickets"}
           />
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={attendingCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.attendingHeader")}
-              </Badge>
+              <Tooltip title={i18n.t("ticketsList.tabTooltips.attending")} arrow>
+                <Badge
+                  className={classes.badge}
+                  badgeContent={attendingCount}
+                  color="primary"
+                >
+                  {i18n.t("ticketsList.attendingHeader")}
+                </Badge>
+              </Tooltip>
             }
             className={classes.abaCompacta}
             value={"attending"}
           />
+          {/* Cor de alerta: cliente esperando é a única contagem da faixa que
+              piora sozinha com o tempo. */}
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={waitingCount}
-                color="secondary"
-              >
-                {i18n.t("ticketsList.waitingHeader")}
-              </Badge>
+              <Tooltip title={i18n.t("ticketsList.tabTooltips.waiting")} arrow>
+                <Badge
+                  className={classes.badge}
+                  badgeContent={waitingCount}
+                  color="error"
+                >
+                  {i18n.t("ticketsList.waitingHeader")}
+                </Badge>
+              </Tooltip>
             }
             className={classes.abaCompacta}
             value={"waiting"}
           />
-          {/* Conversas de pessoas conhecidas: já abertas, sem passar por fila
+          {/* Conversas de pessoas conhecidas: já abertas, sem passar por setor
               nem exigir aceite. */}
           <Tab
             label={
-              <Badge
-                className={classes.badge}
-                badgeContent={knownCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.knownHeader")}
-              </Badge>
+              <Tooltip title={i18n.t("ticketsList.tabTooltips.known")} arrow>
+                <Badge
+                  className={classes.badge}
+                  badgeContent={knownCount}
+                  color="primary"
+                >
+                  {i18n.t("ticketsList.knownHeader")}
+                </Badge>
+              </Tooltip>
             }
             className={classes.abaCompacta}
             value={"known"}
@@ -532,16 +573,8 @@ const TicketsManager = () => {
           selectedUserIds={selectedUserIds}
         />
       </TabPanel>
-      <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
-        <TicketsList
-          searchParam={searchParam}
-          showAll={true}
-          selectedQueueIds={selectedQueueIds}
-          selectedWhatsappIds={selectedWhatsappIds}
-          selectedTagIds={selectedTagIds}
-          selectedUserIds={selectedUserIds}
-        />
-      </TabPanel>
+      </>
+      )}
     </Paper>
   );
 };

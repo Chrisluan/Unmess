@@ -10,7 +10,7 @@ import Tooltip from "@mui/material/Tooltip";
 import { Badge } from "@mui/material";
 import makeStyles from "@mui/styles/makeStyles";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
@@ -21,47 +21,55 @@ import SecurityIcon from "@mui/icons-material/Security";
 import GroupWorkOutlinedIcon from "@mui/icons-material/GroupWorkOutlined";
 import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
-import { Can } from "../components/Can";
 import usePermissions from "../hooks/usePermissions";
 
 const useStyles = makeStyles(theme => ({
+  /**
+   * Item de navegação.
+   *
+   * Ocupa a largura inteira da barra, sem margem lateral nem canto: a lista
+   * lida como uma coluna contínua, e não como uma pilha de pastilhas soltas.
+   * A barra de 3px à esquerda fica transparente aqui e ganha cor no item
+   * ativo -- reservar o espaço desde já evita que o texto ande um pouco para
+   * o lado toda vez que se troca de tela.
+   */
   item: {
-    borderRadius: 10,
-    margin: theme.spacing(0.25, 1),
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 13,
     color: theme.palette.text.secondary,
+    borderLeft: "3px solid transparent",
     "&:hover": {
-      backgroundColor:
-        theme.palette.mode === "dark"
-          ? "rgba(255,255,255,0.06)"
-          : "rgba(37,118,210,0.06)"
+      backgroundColor: theme.palette.action.hover,
+      color: theme.palette.text.primary
     }
   },
 
-  // O item ativo ganha fundo e cor da marca: sem isso não havia nenhuma
-  // indicação de onde a pessoa está dentro do sistema.
+  /**
+   * Onde a pessoa está.
+   *
+   * A marcação é a barra azul na borda, e não um bloco de fundo colorido: com
+   * canto reto, o bloco encostaria nas divisórias e viraria mais uma faixa
+   * entre outras. A barra na margem é inequívoca e não disputa com o texto.
+   */
   ativo: {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? "rgba(37,118,210,0.22)"
-        : "rgba(37,118,210,0.10)",
+    backgroundColor: theme.palette.action.selected,
+    borderLeftColor: theme.palette.primary.main,
     color: theme.palette.primary.main,
     "& $icone": { color: theme.palette.primary.main },
     "&:hover": {
-      backgroundColor:
-        theme.palette.mode === "dark"
-          ? "rgba(37,118,210,0.30)"
-          : "rgba(37,118,210,0.16)"
+      backgroundColor: theme.palette.action.focus,
+      color: theme.palette.primary.main
     }
   },
 
   icone: {
-    minWidth: 40,
+    minWidth: 38,
     color: "inherit"
   },
 
@@ -77,17 +85,20 @@ const useStyles = makeStyles(theme => ({
   },
 
   subheader: {
-    lineHeight: "32px",
-    fontSize: "0.7rem",
+    lineHeight: "28px",
+    paddingLeft: 16,
+    fontSize: "0.68rem",
     fontWeight: 700,
-    letterSpacing: 0.6,
+    letterSpacing: "0.1em",
     textTransform: "uppercase",
-    color: theme.palette.text.disabled,
+    color: theme.palette.text.secondary,
     backgroundColor: "transparent"
   },
 
+  // A divisória atravessa a barra inteira: recuada, ela desenharia um degrau
+  // contra a borda reta da lateral.
   divisor: {
-    margin: theme.spacing(1, 2)
+    margin: theme.spacing(1, 0, 0.5)
   }
 }));
 
@@ -109,13 +120,15 @@ function ListItemLink({ icon, primary, to, recolhida }) {
   const ativo =
     to === "/" ? pathname === "/" : pathname.toLowerCase().startsWith(to.toLowerCase());
 
-  const renderLink = React.useMemo(
-    () =>
-      React.forwardRef((itemProps, ref) => (
-        <RouterLink to={to} ref={ref} {...itemProps} />
-      )),
-    [to]
-  );
+  const renderLink = React.useMemo(() => {
+    const Link = React.forwardRef((itemProps, ref) => (
+      <RouterLink to={to} ref={ref} {...itemProps} />
+    ));
+    // Sem displayName o componente aparece como "ForwardRef" no React
+    // DevTools e no aviso do lint — e são doze deles na barra.
+    Link.displayName = `NavLink(${to})`;
+    return Link;
+  }, [to]);
 
   const item = (
     <ListItemButton
@@ -144,7 +157,7 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
   const classes = useStyles();
   const { whatsApps } = useContext(WhatsAppsContext);
   const { user } = useContext(AuthContext);
-  const { can, isAdmin } = usePermissions();
+  const { can, canAny } = usePermissions();
   const [connectionWarning, setConnectionWarning] = useState(false);
 
   useEffect(() => {
@@ -159,113 +172,195 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
     return () => clearTimeout(timer);
   }, [whatsApps]);
 
-  // Helper para renderizar item condicionalmente (admin sempre vê, demais verificam permissão)
+  /**
+   * Item da barra que só aparece para quem tem a permissão.
+   *
+   * Não existe mais exceção para administrador: o cargo de Administrador tem
+   * todas as permissões, então ele passa por aqui pelo caminho normal, como
+   * todo mundo. Enquanto havia um atalho, um cargo com `queues:view` não fazia
+   * o item Filas aparecer — a seção inteira de administração era mostrada por
+   * "é admin?", e quem não fosse admin simplesmente não a via, por mais
+   * permissões que tivesse.
+   */
   const PermissionedItem = ({ permission, children }) => {
-    if (!permission || isAdmin || can(permission)) return children;
+    if (foraDeEmpresa) return null;
+    if (!permission || can(permission)) return children;
     return null;
   };
 
   // Com a barra recolhida o título de seção não cabe; a linha divisória
   // sozinha já separa os grupos.
-  const Secao = ({ children }) =>
-    recolhida ? (
-      <Divider className={classes.divisor} />
-    ) : (
+  const Secao = ({ children, primeira = false }) => {
+    if (recolhida) return primeira ? null : <Divider className={classes.divisor} />;
+    return (
       <>
-        <Divider className={classes.divisor} />
+        {!primeira && <Divider className={classes.divisor} />}
         <ListSubheader disableSticky className={classes.subheader}>
           {children}
         </ListSubheader>
       </>
     );
+  };
+
+  // Um bloco inteiro sem nenhum item permitido não pode deixar o título e a
+  // divisória sozinhos na barra.
+  // O super só passa a ver a operação depois de entrar em alguma empresa.
+  const foraDeEmpresa = user?.profile === "super" && !user?.companyId;
+
+  const podeComercial =
+    !foraDeEmpresa &&
+    canAny([
+      "crm:view",
+      "clients:view",
+      "contacts:view",
+      "products:view",
+      "finance:view",
+    ]);
+
+  const podeAdministrar =
+    !foraDeEmpresa &&
+    canAny([
+      "users:view",
+      "roles:view",
+      "queues:view",
+      "quickAnswers:view",
+      "tags:view",
+      "settings:view",
+      "connections:view",
+    ]);
+
+  const ehSuper = user?.profile === "super";
 
   return (
     <div onClick={drawerClose}>
-      <PermissionedItem permission="dashboard:access">
-        <ListItemLink to="/" primary="Dashboard" icon={<DashboardOutlinedIcon />} recolhida={recolhida} />
+      {!foraDeEmpresa && (
+        <Secao primeira>{i18n.t("mainDrawer.sections.operation")}</Secao>
+      )}
+
+      <PermissionedItem permission="dashboard:view">
+        <ListItemLink
+          to="/"
+          primary={i18n.t("mainDrawer.listItems.dashboard")}
+          icon={<DashboardOutlinedIcon />}
+          recolhida={recolhida}
+        />
       </PermissionedItem>
 
-      <PermissionedItem permission="tickets:access">
+      <PermissionedItem permission="tickets:view">
         <ListItemLink
           to="/tickets"
           primary={i18n.t("mainDrawer.listItems.tickets")}
-          icon={<WhatsAppIcon />}
+          icon={<ForumOutlinedIcon />}
           recolhida={recolhida}
         />
       </PermissionedItem>
 
-      <PermissionedItem permission="contacts:access">
-        <ListItemLink
-          to="/contacts"
-          primary={i18n.t("mainDrawer.listItems.contacts")}
-          icon={<ContactPhoneOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
+      {podeComercial && (
+        <>
+          <Secao>{i18n.t("mainDrawer.sections.commercial")}</Secao>
 
-      <PermissionedItem permission="clients:access">
-        <ListItemLink
-          to="/customers"
-          primary={i18n.t("mainDrawer.listItems.customers")}
-          icon={<GroupWorkOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
+          <PermissionedItem permission="crm:view">
+            <ListItemLink
+              to="/crm"
+              primary={i18n.t("mainDrawer.listItems.crm")}
+              icon={<ViewKanbanOutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
 
-      <PermissionedItem permission="crm:access">
-        <ListItemLink
-          to="/crm"
-          primary={i18n.t("mainDrawer.listItems.crm")}
-          icon={<ViewKanbanOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
+          <PermissionedItem permission="clients:view">
+            <ListItemLink
+              to="/customers"
+              primary={i18n.t("mainDrawer.listItems.customers")}
+              icon={<GroupWorkOutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
 
-      <PermissionedItem permission="products:access">
-        <ListItemLink
-          to="/products"
-          primary="Produtos"
-          icon={<Inventory2OutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
+          <PermissionedItem permission="contacts:view">
+            <ListItemLink
+              to="/contacts"
+              primary={i18n.t("mainDrawer.listItems.contacts")}
+              icon={<ContactPhoneOutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
 
-      <PermissionedItem permission="quickAnswers:access">
-        <ListItemLink
-          to="/quickAnswers"
-          primary={i18n.t("mainDrawer.listItems.quickAnswers")}
-          icon={<QuestionAnswerOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
+          <PermissionedItem permission="products:view">
+            <ListItemLink
+              to="/products"
+              primary={i18n.t("mainDrawer.listItems.products")}
+              icon={<Inventory2OutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
 
-      {/* Seção de administração — admin/super OU permissões específicas */}
-      <Can
-        role={user.profile}
-        perform="drawer-admin-items:view"
-        yes={() => (
-          <>
-            <Secao>{i18n.t("mainDrawer.listItems.administration")}</Secao>
+          <PermissionedItem permission="finance:view">
+            <ListItemLink
+              to="/finance"
+              primary={i18n.t("mainDrawer.listItems.finance")}
+              icon={<PaymentsOutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
+        </>
+      )}
+
+      {/*
+        Administração, item a item.
+
+        Antes o bloco inteiro era um "é admin?": quem não fosse admin não via
+        nada aqui, por mais permissões que tivesse — com uma única exceção
+        costurada à mão para Respostas Rápidas. Era o sintoma mais visível do
+        profile decidindo o que o cargo deveria decidir. Agora cada linha
+        pergunta pela sua própria permissão, e a seção só aparece se sobrar ao
+        menos uma.
+      */}
+      {podeAdministrar && (
+        <>
+          <Secao>{i18n.t("mainDrawer.sections.administration")}</Secao>
+
+          <PermissionedItem permission="users:view">
             <ListItemLink
               to="/users"
               primary={i18n.t("mainDrawer.listItems.users")}
               icon={<PeopleAltOutlinedIcon />}
               recolhida={recolhida}
             />
+          </PermissionedItem>
+
+          <PermissionedItem permission="roles:view">
             <ListItemLink
-              to="/permission-groups"
-              primary={i18n.t("mainDrawer.listItems.permissionGroups")}
+              to="/roles"
+              primary={i18n.t("mainDrawer.listItems.roles")}
               icon={<SecurityIcon />}
               recolhida={recolhida}
             />
+          </PermissionedItem>
+
+          <PermissionedItem permission="queues:view">
             <ListItemLink
               to="/Queues"
               primary={i18n.t("mainDrawer.listItems.queues")}
               icon={<AccountTreeOutlinedIcon />}
               recolhida={recolhida}
             />
-            {/* Conexões agora vive dentro de Configurações. O badge de alerta
-                subiu para cá para o admin continuar vendo número caído. */}
+          </PermissionedItem>
+
+          <PermissionedItem permission="quickAnswers:view">
+            <ListItemLink
+              to="/quickAnswers"
+              primary={i18n.t("mainDrawer.listItems.quickAnswers")}
+              icon={<QuestionAnswerOutlinedIcon />}
+              recolhida={recolhida}
+            />
+          </PermissionedItem>
+
+          {/* Conexões e Etiquetas vivem dentro de Configurações, cada uma com
+              permissão própria — por isso a entrada aceita as três. O badge de
+              alerta subiu para cá para quem cuida das conexões continuar vendo
+              número caído sem abrir a tela. */}
+          {canAny(["settings:view", "connections:view", "tags:view"]) && (
             <ListItemLink
               to="/Settings"
               primary={i18n.t("mainDrawer.listItems.settings")}
@@ -276,25 +371,23 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
               }
               recolhida={recolhida}
             />
-          </>
-        )}
-      />
+          )}
+        </>
+      )}
 
-      <Can
-        role={user.profile}
-        perform="drawer-super-items:view"
-        yes={() => (
-          <>
-            <Secao>{i18n.t("mainDrawer.listItems.superAdmin")}</Secao>
-            <ListItemLink
-              to="/companies"
-              primary={i18n.t("mainDrawer.listItems.companies")}
-              icon={<BusinessOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </>
-        )}
-      />
+      {ehSuper && (
+        <>
+          <Secao primeira={foraDeEmpresa}>
+            {i18n.t("mainDrawer.sections.platform")}
+          </Secao>
+          <ListItemLink
+            to="/companies"
+            primary={i18n.t("mainDrawer.listItems.companies")}
+            icon={<BusinessOutlinedIcon />}
+            recolhida={recolhida}
+          />
+        </>
+      )}
     </div>
   );
 };

@@ -5,13 +5,13 @@ import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 
 import { i18n } from "../../translate/i18n";
 import { formatWaitingTime, waitingLevel } from "../../helpers/waitingTime";
@@ -37,6 +37,14 @@ const useStyles = makeStyles(theme => ({
 		paddingRight: 10,
 		paddingTop: 8,
 		paddingBottom: 8,
+		// A conversa aberta é marcada como o item de menu ativo: mesma
+		// gramática visual nos dois lugares, uma coisa a menos para aprender.
+		"&.Mui-selected": {
+			backgroundColor: theme.palette.action.selected,
+		},
+		"&.Mui-selected $nome": {
+			color: theme.palette.primary.main,
+		},
 	},
 
 	pendingTicket: {
@@ -78,9 +86,9 @@ const useStyles = makeStyles(theme => ({
 		minWidth: 18,
 		height: 18,
 		padding: "0 5px",
-		borderRadius: 9,
-		backgroundColor: green[500],
-		color: "#fff",
+		borderRadius: 0,
+		backgroundColor: theme.palette.primary.main,
+		color: theme.palette.primary.contrastText,
 		fontSize: "0.68rem",
 		fontWeight: 700,
 		display: "inline-flex",
@@ -114,7 +122,7 @@ const useStyles = makeStyles(theme => ({
 
 	noTicketsText: {
 		textAlign: "center",
-		color: "rgb(104, 121, 146)",
+		color: theme.palette.text.secondary,
 		fontSize: "14px",
 		lineHeight: "1.4",
 	},
@@ -134,22 +142,24 @@ const useStyles = makeStyles(theme => ({
 		gap: 3,
 		marginLeft: 6,
 		padding: "1px 7px",
-		borderRadius: 8,
+		borderRadius: 0,
 		fontSize: "0.68rem",
 		fontWeight: 700,
 		whiteSpace: "nowrap",
 	},
+	// Contorno em vez de fundo translúcido: o fundo claro somia no modo escuro,
+	// e era justamente o dado mais urgente da linha.
 	waitOk: {
-		backgroundColor: "rgba(46,158,91,0.14)",
-		color: "#2e9e5b",
+		color: theme.palette.text.secondary,
+		border: "1px solid currentColor",
 	},
 	waitAtencao: {
-		backgroundColor: "rgba(199,119,0,0.16)",
-		color: "#c77700",
+		color: theme.palette.warning.main,
+		border: "1px solid currentColor",
 	},
 	waitCritico: {
-		backgroundColor: "rgba(214,69,69,0.16)",
-		color: "#d64545",
+		color: theme.palette.error.contrastText || "#fff",
+		backgroundColor: theme.palette.error.main,
 	},
 	waitIcon: {
 		fontSize: "0.82rem",
@@ -164,7 +174,7 @@ const useStyles = makeStyles(theme => ({
 
 	ticketQueueColor: {
 		flex: "none",
-		width: "8px",
+		width: "4px",
 		height: "100%",
 		position: "absolute",
 		top: "0%",
@@ -181,7 +191,7 @@ const useStyles = makeStyles(theme => ({
 
 	tagChip: {
 		color: "#fff",
-		borderRadius: 8,
+		borderRadius: 0,
 		padding: "0 6px",
 		fontSize: "0.68rem",
 		lineHeight: "16px",
@@ -200,17 +210,47 @@ const useStyles = makeStyles(theme => ({
 		color: theme.palette.text.secondary,
 	},
 
-	userTag: {
+	/**
+	 * Etiqueta discreta do trilho da direita.
+	 *
+	 * A conexão vinha num bloco azul cheio -- a cor que no sistema significa
+	 * "clicável / ativo" -- repetido em toda linha da lista. Era o elemento
+	 * mais forte da tela para o dado que menos ajuda a decidir qual conversa
+	 * abrir. Contorno neutro devolve a cor cheia para quem precisa dela: o
+	 * contador de não lidas e o botão de aceitar.
+	 */
+	etiquetaTrilho: {
 		maxWidth: "100%",
-		background: "#2576D2",
-		color: "#ffffff",
-		padding: "1px 8px",
-		borderRadius: 8,
+		color: theme.palette.text.secondary,
+		border: `1px solid ${theme.palette.divider}`,
+		padding: "0 6px",
+		borderRadius: 0,
+		fontSize: "0.68rem",
+		fontWeight: 600,
+		lineHeight: "16px",
+		whiteSpace: "nowrap",
+		overflow: "hidden",
+		textOverflow: "ellipsis",
+	},
+
+	// Quem está com a conversa. Ausente da lista até agora: dava para ver a
+	// conexão de cada linha, mas não de quem era o atendimento -- que é a
+	// pergunta que se faz ao olhar a aba "Em atendimento".
+	responsavel: {
+		maxWidth: "100%",
+		display: "inline-flex",
+		alignItems: "center",
+		gap: 3,
+		color: theme.palette.text.secondary,
 		fontSize: "0.68rem",
 		fontWeight: 600,
 		whiteSpace: "nowrap",
 		overflow: "hidden",
 		textOverflow: "ellipsis",
+	},
+
+	iconeResponsavel: {
+		fontSize: "0.85rem",
 	},
 }));
 
@@ -376,9 +416,21 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 						)}
 					</div>
 
+					{/* Só quando não é meu: repetir o próprio nome em toda linha da
+					    aba "Minhas" não informa nada. */}
+					{ticket.user?.name && ticket.user.id !== user?.id && (
+						<span
+							className={classes.responsavel}
+							title={`${i18n.t("messagesList.header.assignedTo")} ${ticket.user.name}`}
+						>
+							<PersonOutlineIcon className={classes.iconeResponsavel} />
+							{ticket.user.name}
+						</span>
+					)}
+
 					{ticket.whatsappId && ticket.whatsapp?.name && (
 						<span
-							className={classes.userTag}
+							className={classes.etiquetaTrilho}
 							title={i18n.t("ticketsList.connectionTitle")}
 						>
 							{ticket.whatsapp.name}

@@ -15,7 +15,7 @@ import LinkDealTicketService from "../services/DealServices/LinkDealTicketServic
 import ShowPipelineSummaryService from "../services/DealServices/ShowPipelineSummaryService";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
-import { userHasPermission } from "../helpers/permissions/GetUserPermissions";
+import { usuarioPode } from "../helpers/permissions/resolve";
 
 type IndexQuery = {
   searchParam: string;
@@ -46,7 +46,7 @@ const resolveResponsavel = async (
   req: Request,
   responsibleUserId?: string
 ): Promise<string | undefined> => {
-  const podeVerTodos = await userHasPermission(
+  const podeVerTodos = await usuarioPode(
     Number(req.user.id),
     "crm:viewAll"
   );

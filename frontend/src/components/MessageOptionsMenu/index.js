@@ -101,13 +101,14 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
         title={i18n.t("messageOptionsMenu.confirmationModal.title")}
         open={confirmationOpen}
         onClose={setConfirmationOpen}
+        danger
+        confirmLabel={i18n.t("messageOptionsMenu.delete")}
         onConfirm={handleDeleteMessage}
       >
         {i18n.t("messageOptionsMenu.confirmationModal.message")}
       </ConfirmationModal>
       <Menu
         anchorEl={anchorEl}
-        getContentAnchorEl={null}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "right",
@@ -125,7 +126,10 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorEl }) => {
           </MenuItem>
         )}
         {message.fromMe && (
-          <MenuItem onClick={handleOpenConfirmationModal}>
+          <MenuItem
+            onClick={handleOpenConfirmationModal}
+            sx={{ color: "error.main" }}
+          >
             {i18n.t("messageOptionsMenu.delete")}
           </MenuItem>
         )}

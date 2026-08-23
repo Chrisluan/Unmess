@@ -1587,6 +1587,19 @@ const deleteMessage = async (
   await wbot.sendMessage(normalizedChatId, { delete: key });
 };
 
+/**
+ * Confere se o número existe no WhatsApp e devolve o número **sem domínio**.
+ *
+ * O Baileys responde com o JID completo ("5544xxxxxxxxx@s.whatsapp.net"), mas
+ * quem chama grava o retorno em `Contact.number` -- e o domínio ia junto para
+ * o banco. Um contato gravado assim nunca é reencontrado quando a mensagem
+ * chega, porque a busca do atendimento normaliza para só dígitos: nascia um
+ * segundo cadastro e, com ele, um segundo atendimento para a mesma pessoa.
+ *
+ * O número da resposta é o que vale, e não o digitado: o WhatsApp corrige o
+ * nono dígito de celulares brasileiros antigos, e é o corrigido que identifica
+ * a conversa.
+ */
 const checkNumber = async (
   sessionId: number,
   number: string
@@ -1601,7 +1614,7 @@ const checkNumber = async (
     throw new AppError("ERR_NUMBER_NOT_ON_WHATSAPP", 404);
   }
 
-  return result.jid;
+  return jidDecode(result.jid)?.user || cleanNumber;
 };
 
 const getProfilePicUrl = async (

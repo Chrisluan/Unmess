@@ -60,12 +60,27 @@ const useAuth = () => {
     }
   );
 
-  const loadUserPermissions = async (userId) => {
+  /**
+   * O que esta pessoa pode fazer, perguntado ao servidor.
+   *
+   * A resposta vem da mesma conta que as rotas fazem antes de deixar passar —
+   * cargo + exceções individuais —, então a tela nunca mostra um botão que a
+   * API vai recusar, nem esconde um que ela aceitaria.
+   *
+   * Em caso de erro, devolve lista vazia. A pessoa vê o menu recolhido e
+   * recarrega a página; o contrário — assumir acesso quando a consulta falha —
+   * mostraria portas que se abrem em 403.
+   */
+  const carregarAcesso = async () => {
     try {
-      const { data } = await api.get(`/permission-groups/user/${userId}`);
-      return data.permissions || [];
+      const { data } = await api.get("/access/me");
+      return {
+        permissions: data.permissions || [],
+        role: data.role || null,
+        isSuper: !!data.isSuper,
+      };
     } catch {
-      return [];
+      return { permissions: [], role: null, isSuper: false };
     }
   };
 
@@ -76,8 +91,10 @@ const useAuth = () => {
     const { data: refreshData } = await api.post("/auth/refresh_token");
     const userData = refreshData.user;
 
-    const permissions = skipPermissions ? [] : await loadUserPermissions(userData.id);
-    setUser({ ...userData, permissions });
+    const acesso = skipPermissions
+      ? { permissions: [], role: null, isSuper: false }
+      : await carregarAcesso();
+    setUser({ ...userData, ...acesso });
     setIsAuth(true);
     return userData;
   };
@@ -103,12 +120,38 @@ const useAuth = () => {
 
   useEffect(() => {
     const socket = openSocket();
+
     socket.on("user", async (data) => {
       if (data.action === "update" && data.user.id === user.id) {
-        const permissions = await loadUserPermissions(data.user.id);
-        setUser({ ...data.user, permissions });
+        const acesso = await carregarAcesso();
+        setUser({ ...data.user, ...acesso });
       }
     });
+
+    /**
+     * Mudança de acesso chega na hora, sem relogar.
+     *
+     * A API já negava a ação imediatamente — ela consulta o banco a cada
+     * requisição —, mas o menu continuava mostrando as portas antigas até o
+     * próximo login, e a pessoa levava um 403 sem entender o motivo.
+     *
+     * O evento não traz permissão nenhuma: só avisa que vale a pena perguntar
+     * de novo. Quem responde é `/access/me`, com as mesmas conferências de
+     * sempre.
+     */
+    socket.on("access", async (data) => {
+      const mexeuNestaPessoa =
+        data.action === "userAccessChanged" && data.userId === user?.id;
+      const mexeuNoCargoDela =
+        data.action === "roleUpdated" && data.roleId === user?.role?.id;
+      const cargoSumiu = data.action === "roleDeleted";
+
+      if (!mexeuNestaPessoa && !mexeuNoCargoDela && !cargoSumiu) return;
+
+      const acesso = await carregarAcesso();
+      setUser((atual) => ({ ...atual, ...acesso }));
+    });
+
     return () => socket.disconnect();
   }, [user]);
 
@@ -119,9 +162,8 @@ const useAuth = () => {
       localStorage.setItem("token", JSON.stringify(data.token));
       api.defaults.headers.Authorization = `Bearer ${data.token}`;
 
-      const permissions = await loadUserPermissions(data.user.id);
-      const enrichedUser = { ...data.user, permissions };
-      setUser(enrichedUser);
+      const acesso = await carregarAcesso();
+      setUser({ ...data.user, ...acesso });
       setIsAuth(true);
 
       toast.success(i18n.t("auth.toasts.success"));
@@ -155,8 +197,8 @@ const useAuth = () => {
     api.defaults.headers.Authorization = `Bearer ${data.token}`;
 
     const { data: refreshData } = await api.post("/auth/refresh_token");
-    const permissions = await loadUserPermissions(refreshData.user.id);
-    setUser({ ...refreshData.user, permissions, isSuperInCompany: true });
+    const acesso = await carregarAcesso();
+    setUser({ ...refreshData.user, ...acesso, isSuperInCompany: true });
   };
 
   /**
@@ -175,7 +217,9 @@ const useAuth = () => {
       api.defaults.headers.Authorization = `Bearer ${JSON.parse(superToken)}`;
 
       const { data } = await api.post("/auth/refresh_token");
-      setUser({ ...data.user, permissions: [] });
+      // O super fora de qualquer empresa não opera nada: ele só escolhe em
+      // qual entrar. Sem permissões até escolher.
+      setUser({ ...data.user, permissions: [], role: null, isSuper: true });
       history.push("/select-company");
     } catch {
       handleLogout();

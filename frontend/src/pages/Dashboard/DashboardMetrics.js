@@ -12,6 +12,7 @@ import {
     Chip,
 } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
+import { useTheme } from "@mui/material/styles";
 import {
 	BarChart,
 	Bar,
@@ -34,23 +35,51 @@ import { i18n } from "../../translate/i18n";
 import PeriodFilter, { PRESETS } from "./PeriodFilter";
 
 const useStyles = makeStyles(theme => ({
+	// Os blocos do painel perderam a sombra junto com o tema; sem borda eles
+	// desapareciam contra o fundo da página.
 	paper: {
 		padding: theme.spacing(2),
 		display: "flex",
 		flexDirection: "column",
 		height: "100%",
+		border: `1px solid ${theme.palette.divider}`,
 	},
+	/**
+	 * Cartão de número.
+	 *
+	 * Alinhado à esquerda, e não centrado: uma fileira de números centrados
+	 * não tem eixo comum, e o olho precisa reencontrar cada um. Encostados na
+	 * margem, os quatro se leem numa varrida só.
+	 */
 	metricCard: {
 		padding: theme.spacing(2),
-		textAlign: "center",
+		textAlign: "left",
+		border: `1px solid ${theme.palette.divider}`,
+		height: "100%",
 	},
 	chartWrapper: {
 		width: "100%",
 		height: 280,
 	},
+
+	tituloSecao: {
+		fontSize: "0.7rem",
+		fontWeight: 700,
+		letterSpacing: "0.1em",
+		textTransform: "uppercase",
+		color: theme.palette.text.secondary,
+	},
 }));
 
-const COLORS = ["#2E93fA", "#66DA26", "#546E7A", "#E91E63", "#FF9800", "#9C27B0"];
+/**
+ * Paleta dos gráficos: degradê do azul do sistema, fechando no neutro.
+ *
+ * A anterior eram seis matizes sem relação entre si -- azul, verde, rosa,
+ * laranja, roxo --, e cada fatia parecia significar uma categoria diferente de
+ * coisa. Variando um matiz só, a diferença entre as fatias lê como o que ela
+ * é: quantidade.
+ */
+const COLORS = ["#0b5cff", "#3d7bff", "#5b93ff", "#8fb4ff", "#c2d5ff", "#9aa3af"];
 
 const formatSeconds = seconds => {
 	if (seconds === null || seconds === undefined) return "—";
@@ -63,6 +92,7 @@ const formatSeconds = seconds => {
 
 const DashboardMetrics = () => {
 	const classes = useStyles();
+	const theme = useTheme();
 	const [metrics, setMetrics] = useState(null);
 	const [loading, setLoading] = useState(true);
 	// Semana como padrão: o histórico inteiro dilui a leitura do momento atual.
@@ -91,23 +121,30 @@ const DashboardMetrics = () => {
 
 	// O filtro continua visível durante o carregamento: escondê-lo faria a
 	// página saltar a cada troca de período.
-	const filtro = (
-		<Grid item xs={12}>
-			<PeriodFilter value={periodo} onChange={setPeriodo} />
-		</Grid>
+	const cabecalho = (
+		<>
+			<Grid item xs={12}>
+				<Typography component="h2" className={classes.tituloSecao}>
+					{i18n.t("dashboard.period.title")}
+				</Typography>
+			</Grid>
+			<Grid item xs={12}>
+				<PeriodFilter value={periodo} onChange={setPeriodo} />
+			</Grid>
+		</>
 	);
 
 	if (loading || !metrics) {
 		return (
 			<Grid container spacing={3} style={{ marginTop: 8 }}>
-				{filtro}
+				{cabecalho}
 			</Grid>
 		);
 	}
 
 	return (
 		<Grid container spacing={3} style={{ marginTop: 8 }}>
-			{filtro}
+			{cabecalho}
 			<Grid item xs={12} sm={6} md={3}>
 				<Paper className={classes.metricCard} variant="outlined">
 					<Typography variant="body2" color="textSecondary">
@@ -177,7 +214,7 @@ const DashboardMetrics = () => {
 					    daqui que pede ação imediata. */}
 					<Typography
 						variant="h5"
-						style={{ color: metrics.stalePending > 0 ? "#d64545" : undefined }}
+						color={metrics.stalePending > 0 ? "error" : undefined}
 					>
 						{metrics.stalePending}
 					</Typography>
@@ -203,7 +240,7 @@ const DashboardMetrics = () => {
 							<XAxis dataKey="label" interval={1} tick={{ fontSize: 11 }} />
 							<YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
 							<Tooltip />
-							<Bar dataKey="total" fill="#2576d2" radius={[6, 6, 0, 0]} />
+							<Bar dataKey="total" fill={theme.palette.primary.main} radius={0} />
 						</BarChart>
 					</ResponsiveContainer>
 				</Paper>
@@ -248,7 +285,7 @@ const DashboardMetrics = () => {
 								<Line
 									type="monotone"
 									dataKey="total"
-									stroke="#2576d2"
+									stroke="#0b5cff"
 									strokeWidth={2}
 									dot={{ r: 3 }}
 								/>

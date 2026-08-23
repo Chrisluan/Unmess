@@ -8,6 +8,8 @@ import Contact from "../../models/Contact";
 import User from "../../models/User";
 import PipelineStage from "../../models/PipelineStage";
 import Board from "../../models/Board";
+import Order from "../../models/Order";
+import DealAttachment from "../../models/DealAttachment";
 
 export interface FiltrosOportunidade {
   companyId: number;
@@ -94,7 +96,18 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
 
   const where: WhereOptions & Record<string, any> = { companyId };
 
-  if (!includeClosed) where.status = { [Op.notIn]: ["won", "lost"] };
+  /**
+   * O faturado fica no quadro; o perdido é que sai de vista.
+   *
+   * Esconder "won" deixava a coluna Faturado permanentemente vazia: o card
+   * chegava ao seu destino final e desaparecia da tela, como se tivesse sido
+   * apagado. É o mesmo motivo pelo qual o card "moved" já ficava visível --
+   * um quadro que esconde o que aconteceu nele mente sobre o próprio fluxo.
+   *
+   * "lost" continua atrás do filtro: ali o trabalho não terminou, foi embora,
+   * e acumulá-lo no quadro só afasta o que ainda está em jogo.
+   */
+  if (!includeClosed) where.status = { [Op.notIn]: ["lost"] };
   if (boardId) where.boardId = boardId;
   if (stageId) where.stageId = stageId;
   if (customerId) where.customerId = customerId;
@@ -215,7 +228,23 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
       { model: User, as: "responsibleUser", required: false, attributes: ["id", "name"] },
       { model: PipelineStage, as: "stage", required: false, attributes: ["id", "name", "color", "probability", "type", "isWon", "isFinal"] },
       { model: Board, as: "board", required: false, attributes: ["id", "name", "isSalesFunnel"] },
+      // Distingue orçamento de pedido: existe só depois de sair do funil.
+      { model: Order, as: "salesOrder", required: false, attributes: ["id", "number", "quoteNumber", "status"] },
       { model: Tag, as: "tags", required: false, through: { attributes: [] }, attributes: ["id", "name", "color"] },
+      /**
+       * Só a capa, não o material inteiro: o card mostra uma imagem, e trazer
+       * todos os arquivos de todos os pedidos do quadro para usar um de cada
+       * seria dezenas de registros por card. `separate` resolve numa consulta à
+       * parte, em vez de um join que multiplicaria as linhas.
+       */
+      {
+        model: DealAttachment,
+        as: "attachments",
+        required: false,
+        separate: true,
+        where: { isPreview: true },
+        attributes: ["id", "fileName", "mimetype", "name"]
+      },
       { model: DealItem, as: "items", required: false, separate: true, order: [["position", "ASC"]] }
     ],
     order,

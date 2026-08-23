@@ -13,9 +13,11 @@ import Customers from "../pages/Customers/";
 import Crm from "../pages/Crm/";
 import QuickAnswers from "../pages/QuickAnswers/";
 import Products from "../pages/Products/";
+import Finance from "../pages/Finance/";
 import Queues from "../pages/Queues/";
 import Companies from "../pages/Companies/";
-import PermissionGroups from "../pages/PermissionGroups/";
+import CompanyDetail from "../pages/CompanyDetail/";
+import Access from "../pages/Access/";
 import SuperCompanySelect from "../pages/SuperCompanySelect/";
 
 import { AuthProvider } from "../context/Auth/AuthContext";
@@ -45,22 +47,28 @@ const Routes = () => {
                 <AttendanceSettingsProvider>
                 <BrandingProvider>
                 <LoggedInLayout>
-                  <Route exact path="/"                   component={Dashboard}        isPrivate permission="dashboard:access" />
-                  <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:access" />
+                  <Route exact path="/"                   component={Dashboard}        isPrivate permission="dashboard:view" />
+                  <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:view" />
                   {/* Conexões virou aba de Configurações. A rota fica como
                       redirect para não quebrar link/bookmark antigo. */}
-                  <Route exact path="/connections"        component={ConnectionsRedirect} isPrivate permission="connections:access" />
-                  <Route exact path="/contacts"           component={Contacts}         isPrivate permission="contacts:access" />
-                  <Route exact path="/customers"          component={Customers}        isPrivate permission="clients:access" />
-                  <Route exact path="/crm"                component={Crm}              isPrivate permission="crm:access" />
-                  <Route exact path="/users"              component={Users}            isPrivate permission="users:access" />
-                  <Route exact path="/quickAnswers"       component={QuickAnswers}     isPrivate permission="quickAnswers:access" />
+                  <Route exact path="/connections"        component={ConnectionsRedirect} isPrivate permission="connections:view" />
+                  <Route exact path="/contacts"           component={Contacts}         isPrivate permission="contacts:view" />
+                  <Route exact path="/customers"          component={Customers}        isPrivate permission="clients:view" />
+                  <Route exact path="/crm"                component={Crm}              isPrivate permission="crm:view" />
+                  <Route exact path="/users"              component={Users}            isPrivate permission="users:view" />
+                  <Route exact path="/quickAnswers"       component={QuickAnswers}     isPrivate permission="quickAnswers:view" />
 
-                  <Route exact path="/products"             component={Products}         isPrivate permission="products:access" />
-                  <Route exact path="/Settings"           component={Settings}         isPrivate permission="settings:access" />
-                  <Route exact path="/Queues"             component={Queues}           isPrivate permission="queues:access" />
-                  <Route exact path="/companies"          component={Companies}        isPrivate />
-                  <Route exact path="/permission-groups"  component={PermissionGroups} isPrivate permission="permissionGroups:access" />
+                  <Route exact path="/products"             component={Products}         isPrivate permission="products:view" />
+                  <Route exact path="/finance"            component={Finance}          isPrivate permission="finance:view" />
+                  {/* Conexões e Etiquetas moram dentro de Configurações, e
+                      têm permissão própria: quem cuida só delas também entra. */}
+                  <Route exact path="/Settings"           component={Settings}         isPrivate anyOf={["settings:view", "connections:view", "tags:view"]} />
+                  <Route exact path="/Queues"             component={Queues}           isPrivate permission="queues:view" />
+                  <Route exact path="/companies"          component={Companies}        isPrivate superOnly />
+                  {/* Ficha da empresa: usuários, cobrança e acesso. Depois
+                      da rota exata acima para não capturá-la. */}
+                  <Route exact path="/companies/:companyId" component={CompanyDetail}  isPrivate superOnly />
+                  <Route exact path="/roles"              component={Access}           isPrivate permission="roles:view" />
                 </LoggedInLayout>
                 </BrandingProvider>
                 </AttendanceSettingsProvider>

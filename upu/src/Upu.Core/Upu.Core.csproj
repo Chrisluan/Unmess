@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    O núcleo não referencia nenhum pacote de fora.
+
+    Isso não é purismo: a máquina que hospeda a produção compila este projeto,
+    e cada dependência a mais é uma restauração que pode falhar às três da
+    manhã, num servidor sem ninguém por perto. Tudo que o UPU precisa —
+    criptografia do Web Push, HKDF, JSON, processo externo — já vem no .NET 8.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Upu.Core</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

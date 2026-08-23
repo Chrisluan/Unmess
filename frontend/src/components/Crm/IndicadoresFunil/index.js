@@ -13,7 +13,7 @@ const useStyles = makeStyles((theme) => ({
     gap: 1,
     background: theme.palette.divider,
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     overflowX: "auto",
     marginBottom: theme.spacing(1),
   },
@@ -44,8 +44,8 @@ const useStyles = makeStyles((theme) => ({
   },
 
   // O que exige ação fica em cor de alerta; o resto é informação neutra.
-  alerta: { color: "#b23b30" },
-  bom: { color: "#1a7a55" },
+  alerta: { color: theme.palette.error.main },
+  bom: { color: theme.palette.success.main },
 }));
 
 const moeda = (valor) =>
@@ -65,7 +65,7 @@ const moeda = (valor) =>
  * carregados: com filtro ativo ou paginação, somar na tela daria o total do
  * que está à vista, não o do funil.
  */
-const IndicadoresFunil = ({ boardId, recarregar }) => {
+const IndicadoresFunil = ({ boardId, recarregar, resumo }) => {
   const classes = useStyles();
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -110,6 +110,16 @@ const IndicadoresFunil = ({ boardId, recarregar }) => {
       valor: moeda(dados.valorPonderado),
       dica: "Valor ponderado pela probabilidade de cada etapa — o que se espera fechar de fato",
     },
+    ...(resumo
+      ? [
+          {
+            rotulo: "Faturado",
+            valor: moeda(resumo.billedValue),
+            classe: classes.bom,
+            dica: `${resumo.billedCount} oportunidade(s) já faturada(s)`,
+          },
+        ]
+      : []),
     {
       rotulo: "Conversão",
       valor: `${dados.taxaConversao}%`,

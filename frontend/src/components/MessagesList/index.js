@@ -4,8 +4,14 @@ import { isSameDay, parseISO, format } from "date-fns";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { green } from "@mui/material/colors";
-import { Button, CircularProgress, Divider, IconButton, InputBase } from "@mui/material";
+import {
+  Button,
+  CircularProgress,
+  Divider,
+  IconButton,
+  InputBase,
+  Tooltip,
+} from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 import {
   AccessTime,
@@ -17,6 +23,8 @@ import {
   GetApp,
   PhoneAndroid,
   Search as SearchIcon,
+  ChatBubbleOutline as ChatBubbleOutlineIcon,
+  ArrowDownward as ArrowDownwardIcon,
 } from "@mui/icons-material";
 
 import { i18n } from "../../translate/i18n";
@@ -25,7 +33,7 @@ import VcardPreview from "../VcardPreview";
 import LocationPreview from "../LocationPreview";
 import ModalImageCors from "../ModalImageCors";
 import MessageOptionsMenu from "../MessageOptionsMenu";
-import whatsBackground from "../../assets/wa-background.png";
+import EmptyState from "../EmptyState";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -42,8 +50,15 @@ const useStyles = makeStyles((theme) => ({
     flexGrow: 1,
   },
 
+  /**
+   * Fundo liso, da cor da página.
+   *
+   * O rabisco do WhatsApp brigava com o texto das mensagens e trazia 700 KB de
+   * PNG para dentro do bundle de uma instalação que roda em rede local. O que
+   * separa mensagem de fundo aqui é o próprio balão.
+   */
   messagesList: {
-    backgroundImage: `url(${whatsBackground})`,
+    backgroundColor: theme.palette.background.default,
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
@@ -55,8 +70,24 @@ const useStyles = makeStyles((theme) => ({
     ...theme.scrollbarStyles,
   },
 
+  /**
+   * Volta para o fim da conversa.
+   *
+   * Flutua acima da lista, encostado no canto onde a última mensagem aparece.
+   * Some quando a pessoa já está no fim: um botão permanente que não faz nada
+   * é ruído em uma tela usada o dia inteiro.
+   */
+  irParaFim: {
+    position: "absolute",
+    right: 20,
+    bottom: 16,
+    zIndex: 5,
+    boxShadow: theme.shadows[3],
+    whiteSpace: "nowrap",
+  },
+
   circleLoading: {
-    color: green[500],
+    color: theme.palette.primary.main,
     position: "absolute",
     opacity: "70%",
     top: 0,
@@ -80,25 +111,23 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#ffffff",
-    color: "#303030",
+    // Recebida é superfície neutra com borda; a borda é o que a separa do
+    // fundo agora que não há mais sombra nem textura para fazer isso.
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.divider}`,
     alignSelf: "flex-start",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    paddingLeft: 5,
-    paddingRight: 5,
+    paddingLeft: 6,
+    paddingRight: 6,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
   },
 
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor: "#f0f0f0",
-    borderRadius: "7.5px",
+    backgroundColor: theme.palette.action.hover,
+    borderRadius: 0,
     display: "flex",
     position: "relative",
   },
@@ -114,8 +143,8 @@ const useStyles = makeStyles((theme) => ({
 
   quotedSideColorLeft: {
     flex: "none",
-    width: "4px",
-    backgroundColor: "#6bcbef",
+    width: "3px",
+    backgroundColor: theme.palette.primary.main,
   },
 
   messageRight: {
@@ -134,25 +163,25 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#dcf8c6",
-    color: "#303030",
+    // Enviada é bloco de cor cheia: de relance, o lado azul é o nosso e o lado
+    // claro é o do cliente, sem precisar ler o alinhamento.
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
     alignSelf: "flex-end",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 0,
-    paddingLeft: 5,
-    paddingRight: 5,
+    paddingLeft: 6,
+    paddingRight: 6,
     paddingTop: 5,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
   },
 
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
-    backgroundColor: "#cfe9ba",
-    borderRadius: "7.5px",
+    // Um véu escuro sobre o azul do balão, e não uma cor fixa: escurece o
+    // suficiente para destacar a citação nos dois modos, sem mexer na
+    // opacidade do bloco -- que apagaria o texto citado junto.
+    backgroundColor: "rgba(0,0,0,0.12)",
+    borderRadius: 0,
     display: "flex",
     position: "relative",
   },
@@ -166,24 +195,27 @@ const useStyles = makeStyles((theme) => ({
 
   quotedSideColorRight: {
     flex: "none",
-    width: "4px",
-    backgroundColor: "#35cd96",
+    width: "3px",
+    backgroundColor: "currentColor",
   },
 
   messageActionsButton: {
     display: "none",
     position: "relative",
-    color: "#999",
+    color: "inherit",
     zIndex: 1,
     backgroundColor: "inherit",
     opacity: "90%",
     "&:hover, &.Mui-focusVisible": { backgroundColor: "inherit" },
   },
 
+  // Nome de quem falou dentro do grupo: precisa distinguir participantes sem
+  // virar destaque, por isso peso e não cor forte.
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: theme.palette.primary.main,
+    fontWeight: 700,
+    fontSize: "0.78rem",
   },
 
   textContentItem: {
@@ -191,9 +223,11 @@ const useStyles = makeStyles((theme) => ({
     padding: "3px 80px 6px 6px",
   },
 
+  // Apagada continua legível, só apagada: o cinza fixo sumia por completo no
+  // modo escuro e dentro do balão azul.
   textContentItemDeleted: {
     fontStyle: "italic",
-    color: "rgba(0, 0, 0, 0.36)",
+    opacity: 0.6,
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
   },
@@ -202,10 +236,6 @@ const useStyles = makeStyles((theme) => ({
     objectFit: "cover",
     width: 250,
     height: 200,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
   },
 
   // Figurinha não é foto: no WhatsApp ela aparece solta, com fundo
@@ -250,22 +280,26 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     bottom: 0,
     right: 5,
-    color: "#999",
+    color: "currentColor",
+    opacity: 0.7,
   },
 
+  // Separador de dia: é uma legenda, não um aviso. Vinha num azul-claro fixo
+  // que virava uma mancha clara no modo escuro e ainda insinuava um estado
+  // ("informação"?) que o separador não tem.
   dailyTimestamp: {
     alignItems: "center",
     textAlign: "center",
     alignSelf: "center",
     width: "110px",
-    backgroundColor: "#e1f3fb",
+    backgroundColor: theme.palette.action.hover,
+    border: `1px solid ${theme.palette.divider}`,
     margin: "10px",
-    borderRadius: "10px",
-    boxShadow: "0 1px 1px #b3b3b3",
+    borderRadius: 0,
   },
 
   dailyTimestampText: {
-    color: "#808888",
+    color: theme.palette.text.secondary,
     padding: 8,
     alignSelf: "center",
     marginLeft: "0px",
@@ -279,10 +313,11 @@ const useStyles = makeStyles((theme) => ({
   },
 
   internalNote: {
-    backgroundColor: "#fff8c4",
-    border: "1px solid #f0e2a0",
-    color: "#5a4b00",
-    borderRadius: 8,
+    backgroundColor:
+      theme.palette.mode === "dark" ? "rgba(224,163,58,0.16)" : "#fff8c4",
+    border: `1px solid ${theme.palette.warning.main}`,
+    color: theme.palette.mode === "dark" ? theme.palette.text.primary : "#5a4b00",
+    borderRadius: 0,
     padding: "6px 10px",
     maxWidth: "70%",
     fontSize: "0.9em",
@@ -314,13 +349,30 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.85rem",
   },
 
+  contadorBusca: {
+    fontSize: "0.78rem",
+    color: theme.palette.text.secondary,
+    whiteSpace: "nowrap",
+  },
+
+  abrirBusca: {
+    marginLeft: "auto",
+  },
+
+  // Sem fundo nem borda enquanto está fechada: não há barra, só um botão.
+  searchBarFechada: {
+    borderBottom: "none",
+    backgroundColor: "transparent",
+    padding: "0 4px",
+  },
+
   searchBar: {
     display: "flex",
     alignItems: "center",
     gap: 8,
     padding: "4px 8px",
-    borderBottom: "1px solid rgba(0,0,0,0.12)",
-    backgroundColor: "#f7f7f7",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.paper,
   },
 
   ackIcons: {
@@ -336,7 +388,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   ackDoneAllIcon: {
-    color: green[500],
+    color: theme.palette.primary.main,
     fontSize: 18,
     verticalAlign: "middle",
     marginLeft: 4,
@@ -409,6 +461,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const lastMessageRef = useRef();
+  // Se a pessoa está acompanhando o fim da conversa. Em ref, e não em estado,
+  // porque quem consulta é o handler do socket — registrado uma vez, ele
+  // enxergaria para sempre o valor do primeiro render.
+  const naFrenteRef = useRef(true);
+  const [mostrarIrParaFim, setMostrarIrParaFim] = useState(false);
+  const [novasAbaixo, setNovasAbaixo] = useState(0);
 
   const [selectedMessage, setSelectedMessage] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
@@ -427,6 +485,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
     setPageNumber(1);
 
     currentTicketId.current = ticketId;
+    naFrenteRef.current = true;
+    setMostrarIrParaFim(false);
+    setNovasAbaixo(0);
   }, [ticketId]);
 
   // Trocar de conversa fecha a busca — o termo anterior não faz sentido aqui.
@@ -496,7 +557,15 @@ const MessagesList = ({ ticketId, isGroup }) => {
         // mensagem nova ali confundiria o resultado.
         if (searchOpenRef.current) return;
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
-        scrollToBottom();
+
+        if (naFrenteRef.current) {
+          scrollToBottom();
+        } else {
+          // Longe do fim: em vez de arrastar a tela, avisa que chegou algo e
+          // deixa a pessoa decidir quando descer.
+          setNovasAbaixo((n) => n + 1);
+          setMostrarIrParaFim(true);
+        }
       }
 
       if (data.action === "update") {
@@ -513,15 +582,29 @@ const MessagesList = ({ ticketId, isGroup }) => {
     setPageNumber((prevPageNumber) => prevPageNumber + 1);
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (suave = false) => {
     if (lastMessageRef.current) {
-      lastMessageRef.current.scrollIntoView({});
+      lastMessageRef.current.scrollIntoView(
+        suave ? { behavior: "smooth", block: "end" } : { block: "end" }
+      );
     }
+    naFrenteRef.current = true;
+    setNovasAbaixo(0);
   };
 
+  // Margem generosa: quem está a cem pixels do fim ainda está "acompanhando",
+  // e para essa pessoa a rolagem automática ajuda em vez de atrapalhar.
+  const MARGEM_FIM = 120;
+
   const handleScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+
+    const noFim = scrollHeight - (scrollTop + clientHeight) < MARGEM_FIM;
+    naFrenteRef.current = noFim;
+    if (noFim && novasAbaixo > 0) setNovasAbaixo(0);
+    setMostrarIrParaFim(!noFim);
+
     if (!hasMore) return;
-    const { scrollTop } = e.currentTarget;
 
     if (scrollTop === 0) {
       document.getElementById("messagesList").scrollTop = 1;
@@ -909,13 +992,19 @@ const MessagesList = ({ ticketId, isGroup }) => {
       });
       return viewMessagesList;
     } else {
-      return <div>Say hello to your new contact!</div>;
+      return (
+        <EmptyState
+          icon={ChatBubbleOutlineIcon}
+          title={i18n.t("messagesList.empty.title")}
+          description={i18n.t("messagesList.empty.message")}
+        />
+      );
     }
   };
 
   return (
     <div className={classes.messagesListWrapper}>
-      <div className={classes.searchBar}>
+      <div className={clsx(classes.searchBar, !searchOpen && classes.searchBarFechada)}>
         {searchOpen ? (
           <>
             <SearchIcon fontSize="small" />
@@ -926,23 +1015,33 @@ const MessagesList = ({ ticketId, isGroup }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <IconButton
-              size="small"
-              onClick={() => {
-                setSearchOpen(false);
-                setSearchTerm("");
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
+            <Tooltip title={i18n.t("messagesList.closeSearch")} arrow>
+              <IconButton
+                size="small"
+                aria-label={i18n.t("messagesList.closeSearch")}
+                onClick={() => {
+                  setSearchOpen(false);
+                  setSearchTerm("");
+                }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </>
         ) : (
-          <IconButton size="small" onClick={() => setSearchOpen(true)}>
-            <SearchIcon fontSize="small" />
-          </IconButton>
+          <Tooltip title={i18n.t("messagesList.searchPlaceholder")} arrow>
+            <IconButton
+              size="small"
+              className={classes.abrirBusca}
+              aria-label={i18n.t("messagesList.searchPlaceholder")}
+              onClick={() => setSearchOpen(true)}
+            >
+              <SearchIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         )}
         {debouncedSearch && (
-          <span style={{ fontSize: "0.78rem", color: "#666", whiteSpace: "nowrap" }}>
+          <span className={classes.contadorBusca}>
             {i18n.t("messagesList.searchResults", {
               count: messagesList.length,
             })}
@@ -962,6 +1061,21 @@ const MessagesList = ({ ticketId, isGroup }) => {
       >
         {messagesList.length > 0 ? renderMessages() : []}
       </div>
+      {mostrarIrParaFim && (
+        <Button
+          size="small"
+          variant="contained"
+          color={novasAbaixo > 0 ? "primary" : "inherit"}
+          className={classes.irParaFim}
+          startIcon={<ArrowDownwardIcon fontSize="small" />}
+          onClick={() => scrollToBottom(true)}
+        >
+          {novasAbaixo > 0
+            ? i18n.t("messagesList.newMessages", { count: novasAbaixo })
+            : i18n.t("messagesList.goToEnd")}
+        </Button>
+      )}
+
       {loading && (
         <div>
           <CircularProgress className={classes.circleLoading} />

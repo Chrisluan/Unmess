@@ -118,6 +118,8 @@ const HolidaysSection = () => {
 				title={deleting ? `${i18n.t("settings.holidays.confirmDelete")} "${deleting.name}"?` : ""}
 				open={Boolean(deleting)}
 				onClose={() => setDeleting(null)}
+				danger
+				confirmLabel="Remover feriado"
 				onConfirm={handleDelete}
 			>
 				{i18n.t("settings.holidays.confirmDeleteMessage")}

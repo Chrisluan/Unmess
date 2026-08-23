@@ -24,15 +24,15 @@ const useStyles = makeStyles((theme) => ({
 
   margem: {
     padding: "8px 12px",
-    borderRadius: 6,
+    borderRadius: 0,
     background: theme.palette.action.hover,
     fontSize: 13,
     display: "flex",
     justifyContent: "space-between",
   },
 
-  margemBoa: { fontWeight: 700, color: "#1a7a55" },
-  margemBaixa: { fontWeight: 700, color: "#b23b30" },
+  margemBoa: { fontWeight: 700, color: theme.palette.success.main },
+  margemBaixa: { fontWeight: 700, color: theme.palette.error.main },
 }));
 
 const VAZIO = {

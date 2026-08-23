@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import clsx from "clsx";
+import { useLocation } from "react-router-dom";
 import {
   Drawer,
   AppBar,
@@ -7,18 +8,22 @@ import {
   List,
   Typography,
   Divider,
+  ListItemText,
   MenuItem,
   IconButton,
   Menu,
-  Switch,
   Button,
+  useMediaQuery,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import makeStyles from '@mui/styles/makeStyles';
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import AccountCircle from "@mui/icons-material/AccountCircle";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
+import LightModeIcon from "@mui/icons-material/LightModeOutlined";
+import DarkModeIcon from "@mui/icons-material/DarkModeOutlined";
+import Tooltip from "@mui/material/Tooltip";
 
 import MainListItems from "./MainListItems";
 import NotificationsPopOver from "../components/NotificationsPopOver";
@@ -28,6 +33,7 @@ import { useBranding } from "../context/Branding";
 import BackdropLoading from "../components/BackdropLoading";
 import { i18n } from "../translate/i18n";
 import { useThemeContext } from "../context/DarkMode";
+import { tituloDaRota } from "../constants/navigation";
 
 const drawerWidth = 240;
 
@@ -47,8 +53,11 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
-    padding: "0 8px",
-    minHeight: "56px",
+    padding: "0 4px 0 12px",
+    // Mesma altura da barra superior: o desencontro deixava um degrau visível
+    // exatamente na quina entre as duas.
+    minHeight: "48px",
+    borderBottom: `1px solid ${theme.palette.divider}`,
   },
 
   brandBox: {
@@ -62,7 +71,7 @@ const useStyles = makeStyles((theme) => ({
   brandLogo: {
     width: 28,
     height: 28,
-    borderRadius: 8,
+    borderRadius: 0,
     objectFit: "contain",
     flexShrink: 0,
   },
@@ -71,7 +80,7 @@ const useStyles = makeStyles((theme) => ({
   brandInitial: {
     width: 28,
     height: 28,
-    borderRadius: 8,
+    borderRadius: 0,
     flexShrink: 0,
     display: "flex",
     alignItems: "center",
@@ -84,17 +93,21 @@ const useStyles = makeStyles((theme) => ({
 
   brandName: {
     fontWeight: 700,
+    letterSpacing: "-0.01em",
     color: theme.palette.text.primary,
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
+    // Superfície própria, separada do conteúdo pela borda que o tema aplica.
+    // Antes usava a cor de fundo da página e as duas se confundiam.
+    color: theme.palette.text.primary,
     transition: theme.transitions.create(["width", "margin"], {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
-    backgroundColor: theme.palette.background.default,
+    backgroundColor: theme.palette.background.paper,
   },
   appBarShift: {
     marginLeft: drawerWidth,
@@ -114,6 +127,25 @@ const useStyles = makeStyles((theme) => ({
   title: {
     flexGrow: 1,
     color: theme.palette.text.primary,
+  },
+
+  // Cabeçalho do menu da conta: quem está logado e com que e-mail. Sem isso,
+  // numa máquina compartilhada só dava para descobrir abrindo o perfil.
+  identidade: {
+    padding: theme.spacing(1, 2),
+    maxWidth: 260,
+  },
+
+  nomeUsuario: {
+    fontWeight: 700,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+
+  emailUsuario: {
+    color: theme.palette.text.secondary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
   },
   drawerPaper: {
     position: "relative",
@@ -140,6 +172,8 @@ const useStyles = makeStyles((theme) => ({
       width: theme.spacing(9),
     },
   },
+  // Acompanha a altura da barra fixa; se divergir, o topo do conteúdo fica
+  // escondido atrás dela.
   appBarSpacer: {
     minHeight: "48px",
   },
@@ -157,18 +191,31 @@ const useStyles = makeStyles((theme) => ({
     overflow: "auto",
     flexDirection: "column",
   },
-  switch: {
-    transform: "scale(0.8)",
-  },
   iconButton: {
     color: theme.palette.text.primary,
   },
-  themeSwitchContainer: {
+  // Contexto perigoso merece a cor cheia: quem é super operando dentro de uma
+  // empresa precisa ver isso sem procurar.
+  faixaSuper: {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    fontSize: 12,
+    padding: "4px 16px",
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
-  themeIcon: {
-    color: theme.palette.text.primary,
+
+  botaoFaixaSuper: {
+    color: "inherit",
+    // currentColor, e não branco fixo: o texto sobre o azul é branco no modo
+    // claro e quase-preto no escuro, e a borda tem que acompanhar.
+    borderColor: "currentColor",
+    opacity: 0.85,
+    fontSize: 11,
+    padding: "1px 8px",
+    minHeight: 0,
   },
 }));
 
@@ -182,22 +229,25 @@ const LoggedInLayout = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
+  const theme = useTheme();
+  const { pathname } = useLocation();
+
+  /**
+   * A largura era lida uma vez, no primeiro render, direto do DOM.
+   *
+   * Girar o tablet ou redimensionar a janela não mudava nada: a barra
+   * continuava fixa ocupando um terço de uma tela de 500px, ou permanecia
+   * "temporária" numa janela que já tinha voltado a ser larga. O media query
+   * reavalia sozinho, que é o que se esperava desde o começo.
+   */
+  const telaPequena = useMediaQuery(theme.breakpoints.down("sm"));
 
   const isSuperInCompany = user?.profile === "super" && !!user?.companyId;
 
   useEffect(() => {
-    if (document.body.offsetWidth > 600) {
-      setDrawerOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (document.body.offsetWidth < 600) {
-      setDrawerVariant("temporary");
-    } else {
-      setDrawerVariant("permanent");
-    }
-  }, [drawerOpen]);
+    setDrawerVariant(telaPequena ? "temporary" : "permanent");
+    setDrawerOpen(!telaPequena);
+  }, [telaPequena]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -225,7 +275,7 @@ const LoggedInLayout = ({ children }) => {
   };
 
   const drawerClose = () => {
-    if (document.body.offsetWidth < 600) {
+    if (telaPequena) {
       setDrawerOpen(false);
     }
   };
@@ -290,21 +340,13 @@ const LoggedInLayout = ({ children }) => {
       >
         {/* Banner de contexto — visível apenas quando super está operando em empresa */}
         {isSuperInCompany && (
-          <div style={{
-            backgroundColor: "#1565c0",
-            color: "#fff",
-            fontSize: 12,
-            padding: "3px 16px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}>
+          <div className={classes.faixaSuper}>
             <span>
               🏢 Operando como <strong>Super Admin</strong> na empresa <strong>{user.companyName || `#${user.companyId}`}</strong>
             </span>
             <Button
               size="small"
-              style={{ color: "#fff", borderColor: "rgba(255,255,255,0.5)", fontSize: 11, padding: "1px 8px" }}
+              className={classes.botaoFaixaSuper}
               variant="outlined"
               onClick={handleClickLeaveCompany}
             >
@@ -330,18 +372,26 @@ const LoggedInLayout = ({ children }) => {
             noWrap
             className={classes.title}
           >
-            {brandName}
+            {tituloDaRota(pathname) || brandName}
           </Typography>
 
-          <div className={classes.themeSwitchContainer}>
-            <Brightness4Icon className={classes.themeIcon} />
-            <Switch
-              checked={darkMode}
-              onChange={toggleTheme}
-              color="default"
-              className={classes.switch}
-            />
-          </div>
+          {/* Um botão que mostra para onde vai, em vez de um interruptor que
+              mostra onde está: com dois modos só, é a leitura mais direta —
+              e ocupa metade do espaço na barra. */}
+          <Tooltip title={darkMode ? "Modo claro" : "Modo escuro"} arrow>
+            <IconButton
+              onClick={toggleTheme}
+              className={classes.iconButton}
+              aria-label={darkMode ? "Usar modo claro" : "Usar modo escuro"}
+              size="large"
+            >
+              {darkMode ? (
+                <LightModeIcon fontSize="small" />
+              ) : (
+                <DarkModeIcon fontSize="small" />
+              )}
+            </IconButton>
+          </Tooltip>
 
           {user.id && (
             <NotificationsPopOver className={classes.iconButton} />
@@ -360,7 +410,6 @@ const LoggedInLayout = ({ children }) => {
             <Menu
               id="menu-appbar"
               anchorEl={anchorEl}
-              getContentAnchorEl={null}
               anchorOrigin={{
                 vertical: "bottom",
                 horizontal: "right",
@@ -372,8 +421,17 @@ const LoggedInLayout = ({ children }) => {
               open={menuOpen}
               onClose={handleCloseMenu}
             >
+              <div className={classes.identidade}>
+                <Typography variant="body2" noWrap className={classes.nomeUsuario}>
+                  {user?.name}
+                </Typography>
+                <Typography variant="caption" noWrap component="div" className={classes.emailUsuario}>
+                  {user?.email}
+                </Typography>
+              </div>
+              <Divider />
               <MenuItem onClick={handleOpenUserModal}>
-                {i18n.t("mainDrawer.appBar.user.profile")}
+                <ListItemText primary={i18n.t("mainDrawer.appBar.user.profile")} />
               </MenuItem>
               {isSuperInCompany && (
                 <MenuItem onClick={handleClickLeaveCompany}>

@@ -1,72 +1,68 @@
 import { useContext, useCallback, useMemo } from "react";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const ADMIN_PROFILES = ["admin", "super"];
-
 /**
- * Hook central de autorização.
+ * O que a pessoa logada pode fazer.
  *
- * Exemplo de uso:
  *   const { can, canAny, canAll } = usePermissions();
  *   if (can("tickets:delete")) { ... }
- *   if (canAny(["tickets:edit", "tickets:delete"])) { ... }
  *
- * Admin e super sempre retornam true.
- * As permissões vêm do user.permissions (array resolvido pelo backend no login).
+ * A lista vem de `GET /access/me`, que é a mesma conta que o servidor faz
+ * antes de deixar uma requisição passar. Isso não substitui a conferência do
+ * backend — nada que roda no navegador substitui —, mas garante que a tela e a
+ * API concordem sobre o que está liberado.
+ *
+ * Não existe mais atalho de administrador aqui. A versão anterior devolvia
+ * `true` para tudo quando `user.profile` era "admin", e o backend fazia o
+ * mesmo: o campo de texto que a tela de usuários deixava escolher era, na
+ * prática, um interruptor de acesso total. Agora "Administrador" é um cargo
+ * como os outros, só que com todas as permissões — e elas aparecem na lista,
+ * uma a uma, como as de qualquer pessoa.
  */
 const usePermissions = () => {
   const { user } = useContext(AuthContext);
 
-  const isAdmin = useMemo(
-    () => ADMIN_PROFILES.includes(user?.profile),
-    [user?.profile]
-  );
-
-  const userPermissions = useMemo(
+  const permissions = useMemo(
     () => (Array.isArray(user?.permissions) ? user.permissions : []),
     [user?.permissions]
   );
 
-  /**
-   * Verifica se o usuário possui uma permissão específica.
-   * @param {string} permission - Ex: "tickets:delete"
-   */
+  /** O super-admin da plataforma — o dono do servidor, não da empresa. */
+  const isSuper = user?.profile === "super";
+
   const can = useCallback(
     (permission) => {
-      if (!user) return false;
-      if (isAdmin) return true;
-      return userPermissions.includes(permission);
+      if (!user || !permission) return false;
+      return permissions.includes(permission);
     },
-    [user, isAdmin, userPermissions]
+    [user, permissions]
   );
 
-  /**
-   * Verifica se o usuário possui ALGUMA das permissões listadas.
-   * @param {string[]} permissions
-   */
   const canAny = useCallback(
-    (permissions) => {
-      if (!user) return false;
-      if (isAdmin) return true;
-      return permissions.some((p) => userPermissions.includes(p));
+    (lista) => {
+      if (!user || !Array.isArray(lista)) return false;
+      return lista.some((p) => permissions.includes(p));
     },
-    [user, isAdmin, userPermissions]
+    [user, permissions]
   );
 
-  /**
-   * Verifica se o usuário possui TODAS as permissões listadas.
-   * @param {string[]} permissions
-   */
   const canAll = useCallback(
-    (permissions) => {
-      if (!user) return false;
-      if (isAdmin) return true;
-      return permissions.every((p) => userPermissions.includes(p));
+    (lista) => {
+      if (!user || !Array.isArray(lista)) return false;
+      return lista.every((p) => permissions.includes(p));
     },
-    [user, isAdmin, userPermissions]
+    [user, permissions]
   );
 
-  return { can, canAny, canAll, isAdmin, permissions: userPermissions };
+  return {
+    can,
+    canAny,
+    canAll,
+    isSuper,
+    permissions,
+    /** O cargo, para mostrar o nome dele na interface. */
+    role: user?.role ?? null,
+  };
 };
 
 export default usePermissions;

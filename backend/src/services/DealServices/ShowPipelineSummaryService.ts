@@ -13,7 +13,7 @@ interface Response {
   // Já passou do primeiro quadro e ainda não faturou: venda em andamento
   inProgressValue: number;
   inProgressCount: number;
-  // Chegou ao fim do último quadro: venda faturada
+  // Cruzou uma coluna de ganho (ou o fim da fila de quadros): venda faturada
   billedValue: number;
   billedCount: number;
   lostCount: number;
@@ -46,7 +46,7 @@ const ShowPipelineSummaryService = async ({
 
   const deals = await Deal.findAll({
     where,
-    attributes: ["id", "value", "status", "boardId", "rootDealId"]
+    attributes: ["id", "value", "status", "boardId", "rootDealId", "wonAt"]
   });
 
   // Uma entrada por jornada, guardando o card mais avançado dela.
@@ -55,7 +55,36 @@ const ShowPipelineSummaryService = async ({
     { value: number; status: string; saiuDoFunil: boolean }
   >();
 
+  /**
+   * O faturado é somado **por card**, não por jornada.
+   *
+   * Uma jornada se ramifica: o orçamento aprovado abre vários cards adiante,
+   * pedaços diferentes do mesmo trabalho, e cada um chega ao faturamento com
+   * seu próprio valor. Contar uma vez por jornada fazia o segundo card em
+   * diante entrar mudo -- ia para "Faturado" e o número no topo não se mexia.
+   *
+   * O valor é o do card que cruzou a coluna de ganho, e não o do card mais
+   * avançado da jornada: é aquele que registra o que foi vendido.
+   */
+  let faturadoValor = 0;
+  let faturadoQtd = 0;
+
   deals.forEach(deal => {
+    /**
+     * Card já faturado sai da conta das jornadas.
+     *
+     * Ele foi somado aqui; deixá-lo também representar a jornada colocaria o
+     * mesmo dinheiro em dois blocos da faixa. E a jornada continua existindo
+     * nos blocos de aberto/em andamento pelos cards que ainda estão vivos --
+     * que é o certo, porque numa jornada ramificada faturar um pedaço não
+     * encerra os outros.
+     */
+    if (deal.wonAt) {
+      faturadoValor += deal.value;
+      faturadoQtd += 1;
+      return;
+    }
+
     const chave = deal.rootDealId || deal.id;
     const atual = jornadas.get(chave);
 
@@ -91,11 +120,11 @@ const ShowPipelineSummaryService = async ({
     conversionRate: 0
   };
 
+  resumo.billedValue = faturadoValor;
+  resumo.billedCount = faturadoQtd;
+
   jornadas.forEach(jornada => {
-    if (jornada.status === "won") {
-      resumo.billedValue += jornada.value;
-      resumo.billedCount += 1;
-    } else if (jornada.status === "lost") {
+    if (jornada.status === "lost") {
       resumo.lostCount += 1;
     } else if (jornada.saiuDoFunil) {
       resumo.inProgressValue += jornada.value;

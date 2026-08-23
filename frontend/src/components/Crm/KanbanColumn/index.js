@@ -1,6 +1,7 @@
 import React from "react";
 
 import makeStyles from "@mui/styles/makeStyles";
+import { useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
@@ -19,7 +20,7 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     flex: "0 0 280px",
     maxHeight: "100%",
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor:
       theme.palette.mode === "dark"
         ? "rgba(255,255,255,0.03)"
@@ -30,15 +31,15 @@ const useStyles = makeStyles((theme) => ({
   colunaAtiva: {
     backgroundColor:
       theme.palette.mode === "dark"
-        ? "rgba(37,118,210,0.14)"
-        : "rgba(37,118,210,0.08)",
+        ? "rgba(91,147,255,0.14)"
+        : "rgba(11,92,255,0.06)",
   },
 
   cabecalho: {
     padding: theme.spacing(1, 1.25),
     borderTop: "3px solid",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
   },
 
   linhaTitulo: {
@@ -91,7 +92,7 @@ const useStyles = makeStyles((theme) => ({
   // Linha fina que mostra onde o card vai cair.
   marcador: {
     height: 3,
-    borderRadius: 2,
+    borderRadius: 0,
     backgroundColor: theme.palette.primary.main,
     margin: theme.spacing(0.25, 0),
   },
@@ -114,6 +115,7 @@ const useStyles = makeStyles((theme) => ({
 const KanbanColumn = ({
   stage,
   deals,
+  noFunil,
   dragging,
   dropTarget,
   podeMover,
@@ -125,6 +127,8 @@ const KanbanColumn = ({
   onAddDeal,
 }) => {
   const classes = useStyles();
+  // A cor da coluna é configurável; sem uma escolhida, o acento do tema.
+  const theme = useTheme();
 
   const total = deals.reduce((acc, deal) => acc + (Number(deal.value) || 0), 0);
   const arrastandoAqui = dropTarget?.stageId === stage.id;
@@ -161,7 +165,7 @@ const KanbanColumn = ({
     >
       <div
         className={classes.cabecalho}
-        style={{ borderTopColor: stage.color || "#2576d2" }}
+        style={{ borderTopColor: stage.color || theme.palette.primary.main }}
       >
         <div className={classes.linhaTitulo}>
           {/* Entrada e saída marcadas no próprio cabeçalho: sem isso não dá
@@ -213,6 +217,7 @@ const KanbanColumn = ({
                 deal={deal}
                 arrastavel={podeMover}
                 arrastando={dragging?.deal?.id === deal.id}
+                noFunil={noFunil}
                 onDragStart={() => onDragStart(deal, indice)}
                 onDragEnd={onDragEnd}
                 onClick={() => onCardClick(deal.id)}

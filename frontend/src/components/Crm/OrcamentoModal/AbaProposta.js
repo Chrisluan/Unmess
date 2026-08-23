@@ -16,7 +16,7 @@ import usePermissions from "../../../hooks/usePermissions";
 const useStyles = makeStyles((theme) => ({
   secao: {
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 16,
     marginBottom: 14,
   },
@@ -47,7 +47,7 @@ const useStyles = makeStyles((theme) => ({
 
   resultado: {
     padding: "8px 12px",
-    borderRadius: 4,
+    borderRadius: 0,
     background: theme.palette.action.hover,
     fontVariantNumeric: "tabular-nums",
   },

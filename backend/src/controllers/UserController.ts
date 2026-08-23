@@ -3,6 +3,7 @@ import { getIO } from "../libs/socket";
 
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
+import { resolverAcessoDoUsuario } from "../helpers/permissions/resolve";
 
 import CreateUserService from "../services/UserServices/CreateUserService";
 import ListUsersService from "../services/UserServices/ListUsersService";
@@ -33,24 +34,30 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     email,
     password,
     name,
-    profile,
     queueIds,
     whatsappId,
-    permissionGroupId,
+    roleId,
     maxSimultaneousTickets
   } = req.body;
 
-  // Autorização fica na rota (hasPermission("users:create")).
+  // `profile` não é mais lido do corpo. Ele separa o super-admin da
+  // plataforma de quem é membro de uma empresa, e não é a API de usuários
+  // que decide isso — antes, mandar profile: "admin" no cadastro bastava
+  // para criar alguém com acesso total.
+  const ator = await resolverAcessoDoUsuario(Number(req.user.id));
+
   const user = await CreateUserService({
     email,
     password,
     name,
-    profile,
     queueIds,
     whatsappId,
-    permissionGroupId,
+    roleId,
     maxSimultaneousTickets,
-    companyId: getCompanyId(req)
+    companyId: getCompanyId(req),
+    ator,
+    atorPodeAtribuirCargo:
+      ator.isSuper || ator.permissions.includes("roles:assign")
   });
 
   const io = getIO();
@@ -105,7 +112,7 @@ export const remove = async (
 ): Promise<Response> => {
   const { userId } = req.params;
 
-  await DeleteUserService(userId, getCompanyId(req));
+  await DeleteUserService(userId, getCompanyId(req), Number(req.user.id));
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("user", {

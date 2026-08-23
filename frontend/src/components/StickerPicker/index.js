@@ -27,7 +27,7 @@ const useStyles = makeStyles(theme => ({
   busca: {
     padding: "4px 10px",
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     fontSize: 14,
   },
 
@@ -46,7 +46,7 @@ const useStyles = makeStyles(theme => ({
     aspectRatio: "1",
     objectFit: "contain",
     cursor: "pointer",
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 4,
     background: "transparent",
     border: "none",
@@ -79,7 +79,7 @@ const useStyles = makeStyles(theme => ({
     height: 18,
     padding: 0,
     minWidth: 0,
-    borderRadius: "50%",
+    borderRadius: 0,
     background: theme.palette.error.main,
     color: "#fff",
     border: "none",

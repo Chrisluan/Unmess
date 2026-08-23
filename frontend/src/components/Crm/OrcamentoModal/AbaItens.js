@@ -12,7 +12,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import api from "../../../services/api";
 import toastError from "../../../errors/toastError";
 import usePermissions from "../../../hooks/usePermissions";
-import { getBackendUrl } from "../../../config";
+import abrirOrdemDeServico from "../../../helpers/ordemDeServico";
 import SeletorProduto from "../SeletorProduto";
 
 const useStyles = makeStyles((theme) => ({
@@ -63,7 +63,7 @@ const useStyles = makeStyles((theme) => ({
   avisoMinimo: {
     fontSize: 11,
     fontWeight: 700,
-    color: "#96690a",
+    color: theme.palette.warning.main,
   },
 
   total: {
@@ -231,13 +231,7 @@ const AbaItens = ({ deal, onSalvo }) => {
         <Button
           size="small"
           startIcon={<PrintIcon />}
-          onClick={() =>
-            window.open(
-              `${getBackendUrl()}/deals/${deal.id}/ordem-servico`,
-              "_blank",
-              "noopener"
-            )
-          }
+          onClick={() => abrirOrdemDeServico(deal.id).catch(toastError)}
         >
           Ordem de serviço
         </Button>

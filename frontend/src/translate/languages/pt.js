@@ -18,14 +18,16 @@ const messages = {
         },
       },
       login: {
-        title: "Login",
+        title: "Entrar",
+        subtitle: "Use a conta cadastrada para você.",
         form: {
-          email: "Email",
+          email: "E-mail",
           password: "Senha",
         },
         buttons: {
           submit: "Entrar",
-          register: "Não tem um conta? Cadastre-se!",
+          submitting: "Entrando...",
+          register: "Não tem uma conta? Cadastre-se",
         },
       },
       auth: {
@@ -35,6 +37,7 @@ const messages = {
       },
       dashboard: {
         period: {
+          title: "No período selecionado",
           today: "Hoje",
           week: "7 dias",
           month: "Mês",
@@ -46,18 +49,24 @@ const messages = {
         },
         charts: {
           perDay: {
-            title: "Chats hoje: ",
+            title: "Conversas hoje: ",
           },
+        },
+        now: {
+          title: "Situação agora",
+          inAttendanceHelp: "Conversas já assumidas por um atendente",
+          waitingHelp: "Clientes na fila, ainda sem atendente",
+          closedHelp: "Total acumulado desde o início",
         },
         messages: {
           inAttendance: {
-            title: "Em Atendimento"
+            title: "Em atendimento"
           },
           waiting: {
             title: "Aguardando"
           },
           closed: {
-            title: "Finalizado"
+            title: "Encerradas"
           }
         },
         metrics: {
@@ -68,14 +77,14 @@ const messages = {
           newContacts: "Novos contatos",
           byHour: "Movimento por hora do dia",
           byDay: "Movimento por dia",
-          byConnection: "Chats por conexão",
+          byConnection: "Conversas por número",
           avgHandling: "Tempo médio de atendimento",
           totalPeriod: "Total no período",
           closed: "Finalizados",
           byAgent: "Desempenho por atendente",
-          byQueue: "Chats por setor",
+          byQueue: "Conversas por setor",
           byClosingStatus: "Motivos de finalização",
-          noData: "Nenhum chat finalizado com status definido ainda.",
+          noData: "Nenhuma conversa encerrada com motivo definido ainda.",
           table: {
             agent: "Atendente",
             total: "Total",
@@ -86,18 +95,32 @@ const messages = {
       },
       connections: {
         title: "Conexões",
+        description:
+          "Cada conexão é um número de WhatsApp ligado ao sistema. É por eles que as conversas entram e saem.",
         toasts: {
           deleted: "Conexão com o WhatsApp excluída com sucesso!",
         },
+        actions: {
+          edit: "Editar conexão",
+          delete: "Excluir conexão",
+        },
+        empty: {
+          title: "Nenhum número conectado",
+          message:
+            "Conecte um número de WhatsApp para começar a receber e responder conversas pelo sistema.",
+        },
         confirmationModal: {
-          deleteTitle: "Deletar",
-          deleteMessage: "Você tem certeza? Essa ação não pode ser revertida.",
-          disconnectTitle: "Desconectar",
+          deleteTitle: "Excluir conexão",
+          deleteMessage:
+            "A conexão será removida e as conversas param de entrar por este número. Essa ação não pode ser desfeita.",
+          deleteConfirm: "Excluir conexão",
+          disconnectTitle: "Desconectar número",
           disconnectMessage:
-            "Tem certeza? Você precisará ler o QR Code novamente.",
+            "O número sai do ar até alguém ler um novo QR Code. As conversas já recebidas continuam no sistema.",
+          disconnectConfirm: "Desconectar",
         },
         buttons: {
-          add: "Adicionar WhatsApp",
+          add: "Conectar número",
           disconnect: "desconectar",
           tryAgain: "Tentar novamente",
           qrcode: "QR CODE",
@@ -141,13 +164,23 @@ const messages = {
       },
       whatsappModal: {
         title: {
-          add: "Adicionar WhatsApp",
-          edit: "Editar WhatsApp",
+          add: "Conectar número",
+          edit: "Editar conexão",
         },
         form: {
-          name: "Nome",
-          default: "Padrão",
-          farewellMessage: "Mensagem de despedida"
+          name: "Nome da conexão",
+          nameHelp:
+            "Só para identificar o número dentro do sistema (ex: Vendas, Suporte). O cliente não vê.",
+          default: "Usar como número padrão",
+          defaultHelp:
+            "É por ele que saem as conversas iniciadas pelo sistema quando nenhum outro é escolhido.",
+          greetingMessage: "Mensagem de saudação",
+          greetingHelp:
+            "Enviada quando o cliente escreve pela primeira vez neste número. Se houver mais de um setor, é nela que se pede para escolher.",
+          farewellMessage: "Mensagem de despedida",
+          farewellHelp:
+            "Enviada quando o atendimento é encerrado. Deixe em branco para não enviar nada.",
+          queues: "Setores atendidos por este número",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -164,24 +197,41 @@ const messages = {
         toasts: {
           deleted: "Contato excluído com sucesso!",
         },
-        searchPlaceholder: "Pesquisar...",
+        searchPlaceholder: "Buscar por nome, número ou e-mail",
+        actions: {
+          startChat: "Abrir conversa com este contato",
+          edit: "Editar contato",
+          delete: "Excluir contato",
+        },
+        empty: {
+          title: "Nenhum contato cadastrado",
+          message:
+            "Os contatos aparecem aqui automaticamente quando alguém escreve pelo WhatsApp. Você também pode cadastrar ou importar do celular.",
+          searchTitle: "Nada encontrado",
+          searchMessage: "Nenhum contato com esse nome, número ou e-mail.",
+        },
         known: {
           badge: "Conhecido",
-          set: "Marcar como pessoa conhecida (não entra em Oportunidades)",
-          unset: "Deixar de tratar como pessoa conhecida",
-          toastSet: "Contato marcado como conhecido. As conversas dele vão para a aba Conhecidos.",
-          toastUnset: "Contato desmarcado. As conversas dele voltam para Oportunidades.",
+          set: "Marcar como conhecido: as conversas dele entram já abertas, sem passar por setor",
+          unset: "Deixar de tratar como conhecido: as conversas voltam a entrar na fila de espera",
+          toastSet:
+            "Contato marcado como conhecido. As conversas dele vão para a aba Conhecidos.",
+          toastUnset:
+            "Contato desmarcado. As conversas dele voltam para a fila de espera.",
         },
         confirmationModal: {
-          deleteTitle: "Deletar ",
-          importTitlte: "Importar contatos",
+          deleteTitle: "Excluir contato",
+          importTitlte: "Importar contatos do celular",
           deleteMessage:
-            "Tem certeza que deseja deletar este contato? Todos os chats relacionados serão perdidos.",
-          importMessage: "Deseja importas todos os contatos do telefone?",
+            "Todas as conversas deste contato serão perdidas. Essa ação não pode ser desfeita.",
+          importMessage:
+            "Todos os contatos salvos no celular conectado serão adicionados à sua lista. Contatos já existentes não são duplicados.",
         },
         buttons: {
-          import: "Importar Contatos",
-          add: "Adicionar Contato",
+          import: "Importar do celular",
+          add: "Novo contato",
+          confirmDelete: "Excluir contato",
+          confirmImport: "Importar contatos",
         },
         table: {
           name: "Nome",
@@ -217,13 +267,26 @@ const messages = {
         toasts: {
           deleted: "Cliente excluído com sucesso!",
         },
-        searchPlaceholder: "Pesquisar por nome, documento ou telefone...",
+        searchPlaceholder: "Buscar por nome, documento ou telefone",
+        actions: {
+          edit: "Editar cliente",
+          delete: "Excluir cliente",
+        },
+        empty: {
+          title: "Nenhum cliente cadastrado",
+          message:
+            "Cadastre os clientes para reunir conversas, oportunidades e cobranças no mesmo histórico.",
+          searchTitle: "Nada encontrado",
+          searchMessage: "Nenhum cliente com esse nome, documento ou telefone.",
+        },
         confirmationModal: {
-          deleteTitle: "Deletar cliente",
-          deleteMessage: "Tem certeza que deseja deletar este cliente?",
+          deleteTitle: "Excluir cliente",
+          deleteMessage:
+            "O cadastro do cliente será removido. As conversas do contato continuam existindo. Essa ação não pode ser desfeita.",
+          confirmDelete: "Excluir cliente",
         },
         buttons: {
-          add: "Adicionar Cliente",
+          add: "Novo cliente",
         },
         table: {
           name: "Nome",
@@ -247,9 +310,9 @@ const messages = {
         filters: {
           responsible: "Responsável",
           all: "Todos",
-          status: "Exibir",
-          onlyOpen: "Em aberto",
-          withClosed: "Com fechados",
+          status: "Perdidos",
+          onlyOpen: "Ocultos",
+          withClosed: "Visíveis",
         },
         buttons: {
           addDeal: "Novo Negócio",
@@ -432,13 +495,17 @@ const messages = {
       },
       queueModal: {
         title: {
-          add: "Adicionar fila",
-          edit: "Editar fila",
+          add: "Novo setor",
+          edit: "Editar setor",
         },
         form: {
           name: "Nome",
           color: "Cor",
+          colorHelp:
+            "Marca a lateral da conversa na lista de atendimento e o cabeçalho dela.",
           greetingMessage: "Mensagem de saudação",
+          greetingHelp:
+            "Enviada automaticamente ao cliente quando a conversa entra neste setor. Deixe em branco para não enviar nada.",
           isDefault: "Setor padrão",
           isDefaultHelp: "Conversas sem setor definido caem automaticamente neste setor. Só pode existir um setor padrão por vez.",
         },
@@ -457,18 +524,13 @@ const messages = {
           name: "Nome",
           email: "Email",
           password: "Senha",
-          profile: "Perfil",
-          whatsapp: "Conexão Padrão",
-          permissionGroup: "Grupo de permissão",
-          maxSimultaneousTickets: "Limite de chats simultâneos",
+          whatsapp: "Número padrão para enviar",
+          noWhatsapp: "Usar o número padrão da empresa",
+          showPassword: "Mostrar a senha",
+          hidePassword: "Ocultar a senha",
+          maxSimultaneousTickets: "Limite de conversas simultâneas",
           maxSimultaneousTicketsHelper:
-            "0 = sem limite. Usado pela distribuição automática de chats.",
-        },
-        profiles: {
-          vendedor: "Vendedor",
-          producao: "Produção",
-          instalacao: "Instalação",
-          financeiro: "Financeiro",
+            "0 = sem limite. Usado pela distribuição automática de conversas.",
         },
         buttons: {
           okAdd: "Adicionar",
@@ -477,117 +539,95 @@ const messages = {
         },
         success: "Usuário salvo com sucesso.",
       },
-      permissionGroups: {
-        title: "Equipe - Grupos de Permissão",
-        table: {
-          name: "Nome",
-          actions: "Ações",
-        },
-        buttons: {
-          add: "Adicionar grupo",
-        },
-        confirmationModal: {
-          deleteTitle: "Excluir",
-          deleteMessage:
-            "Você tem certeza? Essa ação não pode ser revertida! Só é possível excluir grupos que não possuam mais usuários vinculados.",
-        },
-        toasts: {
-          deleted: "Grupo excluído com sucesso!",
-        },
-      },
-      permissionGroupModal: {
-        title: {
-          add: "Adicionar Grupo de Permissão",
-          edit: "Editar Grupo de Permissão",
-        },
-        form: {
-          name: "Nome do grupo",
-          permissions: "Permissões",
-        },
-        permissions: {
-          "chats:viewAll": "Ver todos os chats",
-          "chats:delete": "Excluir chats",
-          "chats:transfer": "Transferir chats",
-          "customers:manage": "Gerenciar clientes",
-          "users:manage": "Gerenciar usuários",
-          "queues:manage": "Gerenciar setores",
-          "settings:manage": "Gerenciar configurações",
-          "reports:view": "Ver relatórios",
-          "financial:manage": "Gerenciar financeiro",
-        },
-        buttons: {
-          okAdd: "Adicionar",
-          okEdit: "Salvar",
-          cancel: "Cancelar",
-        },
-        success: "Grupo salvo com sucesso!",
-      },
       chat: {
-        noTicketMessage: "Selecione um chat para começar a conversar.",
+        noTicketTitle: "Nenhuma conversa aberta",
+        noTicketMessage:
+          "Escolha uma conversa na lista ao lado para ler o histórico e responder.",
       },
       ticketsManager: {
         buttons: {
-          newTicket: "Novo",
-          filters: "Filtros",
+          newTicket: "Nova conversa",
+          filters: "Filtrar conversas",
           clearFilters: "Limpar filtros",
+          clearSearch: "Limpar busca",
         },
       },
       ticketsQueueSelect: {
-        placeholder: "Filas",
+        placeholder: "Setores",
       },
       ticketsWhatsappSelect: {
         placeholder: "Conexões",
         allConnections: "Todos os números",
         multiple: "{{count}} números",
-        tooltip: "Filtrar chats por número de WhatsApp",
+        tooltip: "Filtrar conversas por número de WhatsApp",
         disconnected: "Desconectado",
       },
       tickets: {
         toasts: {
-          deleted: "O chat que você estava foi deletado.",
+          deleted: "A conversa que você estava atendendo foi excluída.",
         },
         notification: {
           message: "Mensagem de",
         },
         tabs: {
-          open: { title: "Inbox" },
-          closed: { title: "Resolvidos" },
+          ariaLabel: "Situação das conversas",
+          open: { title: "Em aberto" },
+          closed: { title: "Encerradas" },
           groups: { title: "Grupos" },
-          search: { title: "Busca" },
+          search: { title: "Buscar" },
         },
         search: {
           placeholder: "Buscar por nome, mensagem ou protocolo",
+          resultsFor: "Resultados para",
         },
         buttons: {
-          showAll: "Todos",
+          showAll: "Ver conversas de todos os atendentes",
         },
       },
       transferTicketModal: {
-        title: "Transferir Chat",
-        fieldLabel: "Digite para buscar usuários",
-        fieldQueueLabel: "Transferir para fila",
+        title: "Transferir conversa",
+        helper:
+          "Escolha um atendente, um setor, ou os dois. Só com setor, a conversa volta para a fila de espera dele.",
+        noQueue: "Sem setor",
+        fieldLabel: "Transferir para atendente",
+        fieldQueueLabel: "Transferir para setor",
         fieldConnectionLabel: "Transferir para conexão",
-        fieldQueuePlaceholder: "Selecione uma fila",
+        fieldQueuePlaceholder: "Selecione um setor",
         fieldConnectionPlaceholder: "Selecione uma conexão",
         noOptions: "Nenhum usuário encontrado com esse nome",
-        removeQueueHelp: "Se remover a fila e não sobrar nenhuma, o ticket cai automaticamente no setor padrão.",
+        removeQueueHelp:
+          "Se remover o setor e não sobrar nenhum, a conversa vai para o setor padrão.",
         buttons: {
           ok: "Transferir",
           cancel: "Cancelar",
           removeUser: "Remover atendente",
-          removeQueue: "Remover fila",
+          removeQueue: "Remover setor",
         },
       },
       ticketsList: {
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
-        myTicketsHeader: "Meus",
-        attendingHeader: "Em Atendimento",
-        waitingHeader: "Oportunidades",
+        myTicketsHeader: "Minhas",
+        attendingHeader: "Em atendimento",
+        waitingHeader: "Aguardando",
         knownHeader: "Conhecidos",
+        tabTooltips: {
+          myTickets: "Conversas em que você é o responsável",
+          attending: "Todas as conversas já assumidas por algum atendente",
+          waiting: "Conversas na fila, ainda sem responsável",
+          known: "Conversas de contatos marcados como conhecidos: entram já abertas, sem passar por setor e sem precisar aceitar",
+        },
+        empty: {
+          title: "Nenhuma conversa aqui",
+          message:
+            "Quando chegar uma conversa nesta aba, ela aparece nesta lista automaticamente.",
+          searchTitle: "Nada encontrado",
+          searchMessage:
+            "Nenhuma conversa com esse nome, mensagem ou protocolo. Tente outro termo.",
+        },
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
-          "Nenhum chat encontrado com esse status ou termo pesquisado",
+          "Nenhuma conversa encontrada com esse status ou termo pesquisado",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         waitingFor: "Tempo que o cliente está aguardando",
         protocol: "Protocolo do atendimento",
@@ -603,15 +643,18 @@ const messages = {
       ticketsTagSelect: {
         all: "Etiquetas",
         multiple: "{{count}} etiquetas",
-        tooltip: "Filtrar chats por etiqueta",
+        tooltip: "Filtrar conversas por etiqueta",
       },
       ticketsUserSelect: {
         all: "Atendentes",
         multiple: "{{count}} atendentes",
-        tooltip: "Filtrar chats por atendente responsável",
+        tooltip: "Filtrar conversas por atendente responsável",
       },
       ticketTags: {
-        placeholder: "Adicionar etiqueta...",
+        placeholder: "Digite para buscar uma etiqueta",
+        add: "Etiquetar conversa",
+        edit: "Alterar etiquetas",
+        done: "Pronto",
       },
       tags: {
         description:
@@ -637,6 +680,12 @@ const messages = {
       ticketInfo: {
         protocolTooltip: "Protocolo do atendimento (clique para copiar)",
         protocolCopied: "Protocolo copiado.",
+        queueTooltip: "Setor responsável por esta conversa",
+        unassigned: "Sem responsável",
+        openContact: "Abrir os dados do contato",
+        togglePanel: "Dados do cliente e pedidos",
+        togglePanelWithDeals:
+          "Dados do cliente · {{count}} pedido(s) nesta conversa",
       },
       forwardMessageModal: {
         title: "Encaminhar mensagem",
@@ -647,11 +696,11 @@ const messages = {
         buttons: { confirm: "Encaminhar", cancel: "Cancelar" },
       },
       closeTicketModal: {
-        title: "Encerrar chat",
+        title: "Encerrar conversa",
         status: "Motivo do encerramento",
         none: "Sem motivo",
         requiredHelper:
-          "Selecione o motivo do encerramento para finalizar este chat.",
+          "Selecione o motivo do encerramento para finalizar esta conversa.",
         optionalHelper:
           "Você pode registrar o motivo do encerramento. É opcional.",
         noStatuses:
@@ -662,32 +711,41 @@ const messages = {
         },
       },
       newTicketModal: {
-        title: "Criar Chat",
-        fieldLabel: "Digite para pesquisar o contato",
+        title: "Nova conversa",
+        fieldLabel: "Buscar contato pelo nome ou número",
         add: "Adicionar",
         connection: "Enviar pelo número",
         connectionHelper: "O contato receberá a mensagem por este número.",
-        noConnection: "Nenhuma conexão ativa. Conecte um número em Configurações › Conexões.",
+        noConnection:
+          "Nenhuma conexão ativa. Conecte um número em Configurações › Conexões.",
         buttons: {
-          ok: "Salvar",
+          ok: "Abrir conversa",
           cancel: "Cancelar",
         },
       },
       mainDrawer: {
+        sections: {
+          operation: "Operação",
+          commercial: "Comercial",
+          administration: "Administração",
+          platform: "Plataforma",
+        },
         listItems: {
-          dashboard: "Dashboard",
+          dashboard: "Visão geral",
           connections: "Conexões",
-          tickets: "Chats",
+          tickets: "Conversas",
           contacts: "Contatos",
           customers: "Clientes",
-          crm: "CRM",
-          quickAnswers: "Respostas Rápidas",
-          queues: "Filas",
+          crm: "Funil de vendas",
+          products: "Produtos",
+          finance: "Financeiro",
+          quickAnswers: "Respostas rápidas",
+          queues: "Setores",
           administration: "Administração",
           superAdmin: "Gestão de Empresas",
           companies: "Empresas",
           users: "Usuários",
-          permissionGroups: "Equipe",
+          roles: "Cargos e acessos",
           settings: "Configurações",
         },
         appBar: {
@@ -698,10 +756,28 @@ const messages = {
         },
       },
       notifications: {
-        noTickets: "Nenhuma notificação.",
+        title: "Mensagens não lidas",
+        tooltip: "Conversas com mensagens não lidas",
+        count: "{{count}} conversa(s)",
+        noTickets: "Nenhuma mensagem nova.",
       },
       queues: {
-        title: "Filas",
+        title: "Setores",
+        toasts: {
+          deleted: "Setor excluído com sucesso!",
+        },
+        actions: {
+          edit: "Editar setor",
+          delete: "Excluir setor",
+        },
+        empty: {
+          title: "Nenhum setor cadastrado",
+          message:
+            "Sem setores, todas as conversas chegam numa lista só. Crie ao menos um para organizar o atendimento por área.",
+        },
+        confirmDelete: "Excluir setor",
+        description:
+          "Setores organizam o atendimento por área (Vendas, Suporte, Financeiro). Cada conversa entra em um setor, e o atendente vê apenas os setores dos quais faz parte.",
         table: {
           name: "Nome",
           color: "Cor",
@@ -710,16 +786,26 @@ const messages = {
           actions: "Ações",
         },
         buttons: {
-          add: "Adicionar fila",
+          add: "Novo setor",
         },
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Você tem certeza? Essa ação não pode ser revertida! Os chats dessa fila continuarão existindo, mas não terão mais nenhuma fila atribuída.",
+            "Essa ação não pode ser desfeita. As conversas deste setor continuam existindo, mas ficam sem setor atribuído.",
         },
       },
       companies: {
         title: "Empresas",
+        detailTitle: "Ficha da empresa",
+        actions: {
+          edit: "Editar empresa",
+          delete: "Excluir empresa",
+        },
+        empty: {
+          title: "Nenhuma empresa cadastrada",
+          message: "Cadastre a primeira empresa para começar a operar.",
+        },
+        confirmDelete: "Excluir empresa",
         table: {
           name: "Nome",
           document: "CNPJ/CPF",
@@ -777,10 +863,25 @@ const messages = {
         success: "Empresa salva com sucesso!",
       },
       queueSelect: {
-        inputLabel: "Filas",
+        inputLabel: "Setores",
       },
       quickAnswers: {
-        title: "Respostas Rápidas",
+        title: "Respostas rápidas",
+        description:
+          "Textos prontos que o atendente insere digitando / na conversa.",
+        searchPlaceholderLong: "Buscar por atalho ou texto",
+        actions: {
+          edit: "Editar resposta rápida",
+          delete: "Excluir resposta rápida",
+        },
+        empty: {
+          title: "Nenhuma resposta rápida cadastrada",
+          message:
+            "Cadastre as frases que sua equipe mais repete. Na conversa, o atendente digita / e escolhe pelo atalho.",
+          searchTitle: "Nada encontrado",
+          searchMessage: "Nenhuma resposta rápida com esse atalho ou texto.",
+        },
+        confirmDelete: "Excluir resposta",
         table: {
           shortcut: "Atalho",
           message: "Resposta Rápida",
@@ -801,11 +902,30 @@ const messages = {
       },
       users: {
         title: "Usuários",
+        searchPlaceholder: "Buscar por nome ou e-mail",
+        actions: {
+          edit: "Editar usuário",
+          delete: "Excluir usuário",
+          access: "Definir cargo e permissões",
+        },
+        noRole: "sem cargo",
+        hasExceptions: "+ exceções",
+        hasExceptionsHelp:
+          "Esta pessoa tem permissões liberadas ou bloqueadas além do cargo dela.",
+        empty: {
+          title: "Nenhum usuário cadastrado",
+          message:
+            "Crie um usuário para cada pessoa que vai atender. Cada uma entra com o próprio e-mail e senha.",
+          searchTitle: "Nada encontrado",
+          searchMessage: "Nenhum usuário com esse nome ou e-mail.",
+        },
+        confirmDelete: "Excluir usuário",
+        unlimited: "Sem limite",
         table: {
           name: "Nome",
           email: "Email",
-          profile: "Perfil",
-          whatsapp: "Conexão Padrão",
+          role: "Cargo",
+          whatsapp: "Número padrão",
           status: "Status",
           online: "Online",
           offline: "Offline",
@@ -821,12 +941,14 @@ const messages = {
         confirmationModal: {
           deleteTitle: "Excluir",
           deleteMessage:
-            "Todos os dados do usuário serão perdidos. Os chats abertos deste usuário serão movidos para a fila.",
+            "Todos os dados do usuário serão perdidos. As conversas abertas dele voltam para o setor.",
         },
       },
       settings: {
         success: "Configurações salvas com sucesso.",
         title: "Configurações",
+        description:
+          "Regras de atendimento, números conectados, horários e identidade da empresa. Usuários, perfis de acesso e setores ficam em Administração, no menu lateral.",
         tabs: {
           general: "Geral",
           connections: "Conexões",
@@ -840,38 +962,39 @@ const messages = {
           sections: {
             attendance: "Regras de atendimento",
             experience: "Experiência do atendente",
+            integrations: "Integrações",
           },
           autoAssignTickets: {
-            label: "Distribuição automática de chats",
+            label: "Distribuição automática de conversas",
             helper:
-              "Novos chats são entregues automaticamente ao atendente online da fila com menos conversas abertas. Respeita o limite individual de cada atendente.",
+              "Novas conversas são entregues automaticamente ao atendente online do setor que tiver menos conversas abertas. Respeita o limite individual de cada atendente.",
           },
           requireClosingStatus: {
             label: "Exigir status ao encerrar",
             helper:
-              "O atendente precisa escolher um motivo de encerramento antes de finalizar o chat.",
+              "O atendente precisa escolher um motivo de encerramento antes de finalizar a conversa.",
           },
           allowAgentSeeAllTickets: {
-            label: "Atendente pode ver chats de outras filas",
+            label: "Atendente pode ver conversas de outros setores",
             helper:
-              "Quando desligado, cada atendente vê apenas os chats das filas às quais pertence.",
+              "Quando desligado, cada atendente vê apenas as conversas dos setores dos quais faz parte.",
           },
           autoCloseInactiveHours: {
-            label: "Encerrar chats parados após (horas)",
+            label: "Encerrar conversas paradas após (horas)",
             helper: "0 desliga o encerramento automático. Verificado a cada 5 minutos pelo servidor.",
           },
           reopenTicketWindowHours: {
             label: "Janela de reabertura (horas)",
             helper:
-              "Nova mensagem dentro desse período reabre o último chat do contato em vez de criar outro.",
+              "Nova mensagem dentro desse período reabre a última conversa do contato em vez de criar outra.",
           },
           signMessages: {
             label: "Assinar mensagens com o nome do atendente",
-            helper: "Define o padrão para novos atendentes. Cada um pode alternar na tela de chat.",
+            helper: "Define o padrão para novos atendentes. Cada um pode alternar dentro da conversa.",
           },
           notificationSound: {
             label: "Som de notificação",
-            helper: "Toca um alerta sonoro quando chega mensagem em um chat não aberto.",
+            helper: "Toca um alerta sonoro quando chega mensagem em uma conversa que não está aberta.",
           },
         },
         buttons: {
@@ -888,7 +1011,16 @@ const messages = {
           apiToken: {
             name: "Token da API",
             generate: "Gerar novo token",
-            helper: "Use este token para autenticar integrações externas com a API de mensagens desta empresa.",
+            copy: "Copiar token",
+            copied: "Token copiado.",
+            generated: "Token novo gerado. Atualize suas integrações.",
+            empty: "Nenhum token gerado ainda",
+            helper:
+              "Use este token para autenticar integrações externas com a API de mensagens desta empresa.",
+            confirmTitle: "Gerar um token novo?",
+            confirmMessage:
+              "O token atual deixa de funcionar imediatamente. Toda integração que já usa ele para de enviar e receber mensagens até ser atualizada com o novo.",
+            confirmButton: "Gerar token novo",
           },
         },
         holidays: {
@@ -988,7 +1120,7 @@ const messages = {
           },
           transfer: {
             toggle: "Enviar mensagem automática ao transferir o atendimento",
-            description: "Enviada automaticamente quando um chat é transferido de atendente ou setor.",
+            description: "Enviada automaticamente quando uma conversa é transferida de atendente ou setor.",
             placeholder: "Ex: Olá {{cliente.nome}}, seu atendimento foi transferido para o setor {{setor}} e será continuado por {{atendente}}.",
           },
         },
@@ -1000,28 +1132,58 @@ const messages = {
         fromAppTooltip:
           "Enviada pelo aplicativo do WhatsApp no celular, fora do sistema",
         searchPlaceholder: "Buscar nesta conversa",
+        closeSearch: "Fechar a busca",
+        goToEnd: "Ir para o fim",
+        newMessages: "{{count}} mensagem(ns) nova(s)",
         searchResults: "{{count}} resultado(s)",
+        empty: {
+          title: "Nenhuma mensagem ainda",
+          message:
+            "Escreva a primeira mensagem no campo abaixo para começar a conversa.",
+        },
         header: {
-          assignedTo: "Atribuído à:",
+          assignedTo: "Responsável:",
           buttons: {
-            return: "Retornar",
-            resolve: "Resolver",
+            return: "Devolver",
+            resolve: "Encerrar",
             reopen: "Reabrir",
             accept: "Aceitar",
+          },
+          tooltips: {
+            return:
+              "Devolve a conversa para o setor. Ela volta para a fila e outro atendente pode assumir.",
+            resolve:
+              "Encerra o atendimento. A conversa sai da sua lista e vai para 'Encerradas'.",
+            reopen: "Reabre a conversa e coloca você como responsável.",
+            accept: "Assume a conversa. Você passa a ser o responsável por ela.",
+            more: "Mais ações desta conversa",
           },
         },
       },
       messagesInput: {
-        placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
+        placeholderOpen:
+          "Escreva uma mensagem, ou digite / para usar uma resposta pronta",
+        quickAnswersHint: "↑ ↓ para escolher · Enter para inserir · Esc para fechar",
         placeholderClosed:
-          "Reabra ou aceite esse chat para enviar uma mensagem.",
-        signMessage: "Assinar",
+          "Reabra ou aceite esta conversa para enviar uma mensagem.",
+        signMessage: "Assinar com meu nome",
         internalNoteTooltip: "Nota interna (só a equipe vê)",
+        filesSelected: "{{count}} arquivos selecionados",
+        tooltips: {
+          emoji: "Emoji",
+          stickers: "Figurinhas",
+          attach: "Anexar arquivo",
+          send: "Enviar (Enter)",
+          record: "Gravar áudio",
+          cancelAttach: "Descartar o anexo",
+          sendAttach: "Enviar o anexo",
+        },
         placeholderInternalNote:
           "Nota interna — não será enviada ao cliente",
       },
       contactDrawer: {
         header: "Dados do contato",
+        close: "Fechar painel",
         customer: {
           title: "Cliente",
           status: "Situação",
@@ -1040,6 +1202,7 @@ const messages = {
           title: "Atendimentos anteriores",
           empty: "Nenhum atendimento anterior.",
           noAgent: "Sem atendente",
+          open: "Abrir este atendimento",
         },
         buttons: {
           edit: "Editar contato",
@@ -1047,13 +1210,13 @@ const messages = {
         extraInfo: "Outras informações",
       },
       ticketOptionsMenu: {
-        delete: "Deletar",
-        transfer: "Transferir",
+        delete: "Excluir conversa",
+        transfer: "Transferir conversa",
         confirmationModal: {
-          title: "Deletar o chat do contato",
+          title: "Excluir a conversa do contato",
           titleFrom: "do contato ",
           message:
-            "Atenção! Todas as mensagens relacionadas ao chat serão perdidas.",
+            "Todas as mensagens desta conversa serão perdidas. Essa ação não pode ser desfeita.",
         },
         buttons: {
           delete: "Excluir",
@@ -1085,7 +1248,7 @@ const messages = {
         },
       },
       messageOptionsMenu: {
-        delete: "Deletar",
+        delete: "Apagar mensagem",
         edit: "Editar",
         reply: "Responder",
         forward: "Encaminhar",
@@ -1093,6 +1256,9 @@ const messages = {
           title: "Apagar mensagem?",
           message: "Esta ação não pode ser revertida.",
         },
+      },
+      errors: {
+        generic: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
         ERR_NO_OTHER_WHATSAPP: "Deve haver pelo menos um WhatsApp padrão.",
@@ -1110,7 +1276,7 @@ const messages = {
         ERR_SENDING_WAPP_MSG:
           "Erro ao enviar mensagem do WhatsApp. Verifique a página de conexões.",
         ERR_DELETE_WAPP_MSG: "Não foi possível excluir a mensagem do WhatsApp.",
-        ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",
+        ERR_OTHER_OPEN_TICKET: "Já existe uma conversa aberta para este contato.",
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
@@ -1123,17 +1289,17 @@ const messages = {
           "Não é possível excluir uma empresa que ainda possui usuários vinculados.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
-        ERR_NO_TICKET_FOUND: "Nenhum tíquete encontrado com este ID.",
+        ERR_NO_TICKET_FOUND: "Nenhuma conversa encontrada com este ID.",
         ERR_NO_USER_FOUND: "Nenhum usuário encontrado com este ID.",
         ERR_NO_WAPP_FOUND: "Nenhum WhatsApp encontrado com este ID.",
         ERR_CREATING_MESSAGE: "Erro ao criar mensagem no banco de dados.",
-        ERR_CREATING_TICKET: "Erro ao criar tíquete no banco de dados.",
+        ERR_CREATING_TICKET: "Erro ao criar a conversa no banco de dados.",
         ERR_FETCH_WAPP_MSG:
           "Erro ao buscar a mensagem no WhtasApp, talvez ela seja muito antiga.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:
           "Esta cor já está em uso, escolha outra.",
         ERR_WAPP_GREETING_REQUIRED:
-          "A mensagem de saudação é obrigatório quando há mais de uma fila.",
+          "A mensagem de saudação é obrigatória quando existe mais de um setor.",
       },
     },
   },

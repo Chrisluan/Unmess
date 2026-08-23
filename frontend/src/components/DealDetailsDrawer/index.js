@@ -106,7 +106,7 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     gap: theme.spacing(1),
     padding: theme.spacing(0.75, 1),
-    borderRadius: 6,
+    borderRadius: 0,
     textDecoration: "none",
     color: "inherit",
     backgroundColor:
@@ -167,7 +167,7 @@ const useStyles = makeStyles((theme) => ({
     marginRight: 6,
     padding: "0 5px",
     border: "1px solid",
-    borderRadius: 4,
+    borderRadius: 0,
     fontSize: 10,
     fontWeight: 700,
     textTransform: "uppercase",
@@ -385,6 +385,8 @@ const DealDetailsDrawer = ({ dealId, open, onClose, onEdit, onDelete }) => {
         title={i18n.t("crm.confirmationModal.deleteTitle")}
         open={confirmarExclusao}
         onClose={setConfirmarExclusao}
+        danger
+        confirmLabel="Excluir oportunidade"
         onConfirm={() => onDelete(dealId)}
       >
         {i18n.t("crm.confirmationModal.deleteMessage")}

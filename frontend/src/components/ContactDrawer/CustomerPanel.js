@@ -7,6 +7,7 @@ import { format, parseISO } from "date-fns";
 
 import api from "../../services/api";
 import CustomerModal from "../CustomerModal";
+import StatusChip from "../StatusChip";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
@@ -32,10 +33,18 @@ const useStyles = makeStyles(theme => ({
 		wordBreak: "break-word",
 	},
 	historyItem: {
-		padding: "6px 0",
+		padding: "6px 4px",
 		cursor: "pointer",
-		"&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+		"&:hover": { backgroundColor: theme.palette.action.hover },
 	},
+
+	statusBase: {
+		borderColor: "currentColor",
+		fontWeight: 700,
+	},
+	statusLead: { color: theme.palette.warning.main },
+	statusAtivo: { color: theme.palette.success.main },
+	statusInativo: { color: theme.palette.text.secondary },
 	empty: {
 		fontSize: "0.8rem",
 		color: theme.palette.text.secondary,
@@ -43,10 +52,10 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const STATUS_COLORS = {
-	lead: "#f39c12",
-	active: "#27ae60",
-	inactive: "#95a5a6",
+const STATUS_CLASSE = {
+	lead: "statusLead",
+	active: "statusAtivo",
+	inactive: "statusInativo",
 };
 
 /**
@@ -132,11 +141,11 @@ const CustomerPanel = ({ contact }) => {
 							</span>
 							<Chip
 								size="small"
+								variant="outlined"
 								label={i18n.t(`contactDrawer.customer.statuses.${customer.status}`)}
-								style={{
-									backgroundColor: STATUS_COLORS[customer.status] || "#95a5a6",
-									color: "#fff",
-								}}
+								className={`${classes.statusBase} ${
+									classes[STATUS_CLASSE[customer.status]] || classes.statusInativo
+								}`}
 							/>
 						</div>
 						{renderRow(i18n.t("contactDrawer.customer.name"), customer.name)}
@@ -207,7 +216,16 @@ const CustomerPanel = ({ contact }) => {
 					<div
 						key={ticket.id}
 						className={classes.historyItem}
+						role="button"
+						tabIndex={0}
+						title={i18n.t("contactDrawer.history.open")}
 						onClick={() => history.push(`/tickets/${ticket.id}`)}
+						onKeyDown={e => {
+							if (e.key === "Enter" || e.key === " ") {
+								e.preventDefault();
+								history.push(`/tickets/${ticket.id}`);
+							}
+						}}
 					>
 						<div className={classes.row}>
 							<span className={classes.value} style={{ textAlign: "left" }}>
@@ -234,7 +252,7 @@ const CustomerPanel = ({ contact }) => {
 									}}
 								/>
 							) : (
-								<span className={classes.label}>{ticket.status}</span>
+								<StatusChip status={ticket.status} />
 							)}
 						</div>
 					</div>

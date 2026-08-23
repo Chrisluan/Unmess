@@ -21,6 +21,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import { Can } from "../../components/Can";
+import usePermissions from "../../hooks/usePermissions";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
@@ -47,6 +49,7 @@ const useStyles = makeStyles(theme => ({
 const emptyForm = { id: null, name: "", color: "#2ecc71" };
 
 const TagsTab = () => {
+	const { canAny } = usePermissions();
 	const classes = useStyles();
 	const [tags, setTags] = useState([]);
 	const [form, setForm] = useState(emptyForm);
@@ -113,6 +116,8 @@ const TagsTab = () => {
 				}
 				open={Boolean(deletingTag)}
 				onClose={() => setDeletingTag(null)}
+				danger
+				confirmLabel="Excluir etiqueta"
 				onConfirm={handleDelete}
 			>
 				{i18n.t("tags.confirmDeleteMessage")}
@@ -122,6 +127,9 @@ const TagsTab = () => {
 				{i18n.t("tags.description")}
 			</Typography>
 
+			{/* O formulário serve para criar e para editar; quem não pode
+			    nenhuma das duas coisas vê apenas a lista. */}
+			{canAny(["tags:create", "tags:edit"]) && (
 			<Paper className={classes.form} variant="outlined" component="form" onSubmit={handleSubmit}>
 				<TextField
 					label={i18n.t("tags.form.name")}
@@ -154,6 +162,7 @@ const TagsTab = () => {
 					</Button>
 				)}
 			</Paper>
+			)}
 
 			<Paper className={classes.paper} variant="outlined">
 				<Table size="small">
@@ -174,12 +183,16 @@ const TagsTab = () => {
 									/>
 								</TableCell>
 								<TableCell align="right">
-									<IconButton size="small" onClick={() => setForm(tag)}>
-										<EditIcon />
-									</IconButton>
-									<IconButton size="small" onClick={() => setDeletingTag(tag)}>
-										<DeleteOutlineIcon />
-									</IconButton>
+									<Can permission="tags:edit">
+										<IconButton size="small" onClick={() => setForm(tag)}>
+											<EditIcon />
+										</IconButton>
+									</Can>
+									<Can permission="tags:delete">
+										<IconButton size="small" onClick={() => setDeletingTag(tag)}>
+											<DeleteOutlineIcon />
+										</IconButton>
+									</Can>
 								</TableCell>
 							</TableRow>
 						))}

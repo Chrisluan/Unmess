@@ -10,12 +10,9 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  InputAdornment,
-  TextField,
 } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 import { Edit, DeleteOutline } from "@mui/icons-material";
-import SearchIcon from "@mui/icons-material/Search";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -23,8 +20,16 @@ import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper"
 import Title from "../../components/Title";
 
 import api from "../../services/api";
+import { Can } from "../../components/Can";
 import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import TableEmpty from "../../components/EmptyState/TableEmpty";
+import SearchField from "../../components/SearchField";
+import Tooltip from "@mui/material/Tooltip";
+import Typography from "@mui/material/Typography";
+import AddIcon from "@mui/icons-material/Add";
+import QuestionAnswerOutlinedIcon from "@mui/icons-material/QuestionAnswerOutlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import QuickAnswersModal from "../../components/QuickAnswersModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { toast } from "react-toastify";
@@ -75,10 +80,43 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  /**
+   * Painel de conteúdo das telas de listagem.
+   *
+   * Ganhou borda e margem: o Paper deixou de ter sombra no tema novo, e sem
+   * nenhuma das duas a tabela ficava solta no meio da página, encostada nas
+   * bordas da janela sem nada dizendo onde ela começa.
+   */
+  descricao: {
+    padding: theme.spacing(1.5, 2, 0),
+    maxWidth: 720,
+  },
+
+  // Monoespaçado: o atalho é algo que se digita literalmente, e a fonte de
+  // texto corrido não distingue l de I nem 0 de O.
+  atalho: {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  },
+
+  mensagem: {
+    maxWidth: 620,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    margin: theme.spacing(1.5, 2, 2),
+    padding: theme.spacing(0.5),
+    // "auto" e não "scroll": a barra vazia desenhava uma faixa cinza fixa na
+    // direita de toda listagem, inclusive nas que cabem na tela.
+    overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
+    border: `1px solid ${theme.palette.divider}`,
     ...theme.scrollbarStyles,
   },
 }));
@@ -196,6 +234,8 @@ const QuickAnswers = () => {
         }
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
+        danger
+        confirmLabel={i18n.t("quickAnswers.confirmDelete")}
         onConfirm={() => handleDeleteQuickAnswers(deletingQuickAnswers.id)}
       >
         {i18n.t("quickAnswers.confirmationModal.deleteMessage")}
@@ -209,28 +249,29 @@ const QuickAnswers = () => {
       <MainHeader>
         <Title>{i18n.t("quickAnswers.title")}</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("quickAnswers.searchPlaceholder")}
-            type="search"
+          <SearchField
             value={searchParam}
             onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
+            onClear={() => setSearchParam("")}
+            placeholder={i18n.t("quickAnswers.searchPlaceholderLong")}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenQuickAnswersModal}
-          >
-            {i18n.t("quickAnswers.buttons.add")}
-          </Button>
+          <Can permission="quickAnswers:create">
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenQuickAnswersModal}
+            >
+              {i18n.t("quickAnswers.buttons.add")}
+            </Button>
+          </Can>
         </MainHeaderButtonsWrapper>
       </MainHeader>
+
+      {/* O "/" da conversa é o que faz esta tela existir, e nada dizia isso. */}
+      <Typography variant="body2" color="textSecondary" className={classes.descricao}>
+        {i18n.t("quickAnswers.description")}
+      </Typography>
       <Paper
         className={classes.mainPaper}
         variant="outlined"
@@ -239,12 +280,8 @@ const QuickAnswers = () => {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell align="center">
-                {i18n.t("quickAnswers.table.shortcut")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("quickAnswers.table.message")}
-              </TableCell>
+              <TableCell>{i18n.t("quickAnswers.table.shortcut")}</TableCell>
+              <TableCell>{i18n.t("quickAnswers.table.message")}</TableCell>
               <TableCell align="center">
                 {i18n.t("quickAnswers.table.actions")}
               </TableCell>
@@ -254,28 +291,72 @@ const QuickAnswers = () => {
             <>
               {quickAnswers.map((quickAnswer) => (
                 <TableRow key={quickAnswer.id}>
-                  <TableCell align="center">{quickAnswer.shortcut}</TableCell>
-                  <TableCell align="center">{quickAnswer.message}</TableCell>
+                  <TableCell className={classes.atalho}>
+                    /{quickAnswer.shortcut}
+                  </TableCell>
+                  <TableCell className={classes.mensagem}>
+                    {quickAnswer.message}
+                  </TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditQuickAnswers(quickAnswer)}
-                    >
-                      <Edit />
-                    </IconButton>
+                    <Can permission="quickAnswers:edit">
+                      <Tooltip title={i18n.t("quickAnswers.actions.edit")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("quickAnswers.actions.edit")}
+                          onClick={() => handleEditQuickAnswers(quickAnswer)}
+                        >
+                          <Edit />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingQuickAnswers(quickAnswer);
-                      }}
-                    >
-                      <DeleteOutline />
-                    </IconButton>
+                    <Can permission="quickAnswers:delete">
+                      <Tooltip title={i18n.t("quickAnswers.actions.delete")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("quickAnswers.actions.delete")}
+                          onClick={() => {
+                            setConfirmModalOpen(true);
+                            setDeletingQuickAnswers(quickAnswer);
+                          }}
+                        >
+                          <DeleteOutline />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
                   </TableCell>
                 </TableRow>
               ))}
+              {!loading && quickAnswers.length === 0 && (
+                <TableEmpty
+                  colSpan={3}
+                  icon={searchParam ? SearchOffIcon : QuestionAnswerOutlinedIcon}
+                  title={
+                    searchParam
+                      ? i18n.t("quickAnswers.empty.searchTitle")
+                      : i18n.t("quickAnswers.empty.title")
+                  }
+                  description={
+                    searchParam
+                      ? i18n.t("quickAnswers.empty.searchMessage")
+                      : i18n.t("quickAnswers.empty.message")
+                  }
+                  action={
+                    !searchParam && (
+                      <Can permission="quickAnswers:create">
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          startIcon={<AddIcon />}
+                          onClick={handleOpenQuickAnswersModal}
+                        >
+                          {i18n.t("quickAnswers.buttons.add")}
+                        </Button>
+                      </Can>
+                    )
+                  }
+                />
+              )}
               {loading && <TableRowSkeleton columns={3} />}
             </>
           </TableBody>

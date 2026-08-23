@@ -4,11 +4,11 @@ import makeStyles from '@mui/styles/makeStyles';
 
 const useStyles = makeStyles(theme => ({
 	MainHeaderButtonsWrapper: {
-		flex: "none",
 		marginLeft: "auto",
-		"& > *": {
-			margin: theme.spacing(1),
-		},
+		display: "flex",
+		alignItems: "center",
+		flexWrap: "wrap",
+		gap: theme.spacing(1),
 	},
 }));
 

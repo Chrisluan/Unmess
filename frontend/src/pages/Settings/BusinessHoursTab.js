@@ -10,7 +10,6 @@ import {
     TableRow,
     Switch,
     TextField,
-    Button,
 } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
@@ -19,6 +18,7 @@ import { i18n } from "../../translate/i18n.js";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import HolidaysSection from "./HolidaysSection";
+import ButtonWithSpinner from "../../components/ButtonWithSpinner";
 
 const useStyles = makeStyles(theme => ({
 	paper: {
@@ -119,6 +119,11 @@ const BusinessHoursTab = () => {
 										handleDayChange(day.weekDay, "enabled", e.target.checked)
 									}
 									color="primary"
+									inputProps={{
+										"aria-label": `${i18n.t("settings.businessHours.table.enabled")} — ${i18n.t(
+											`settings.businessHours.weekDays.${day.weekDay}`
+										)}`,
+									}}
 								/>
 							</TableCell>
 							<TableCell align="center">
@@ -130,6 +135,11 @@ const BusinessHoursTab = () => {
 										handleDayChange(day.weekDay, "startTime", e.target.value)
 									}
 									size="small"
+									inputProps={{
+										"aria-label": `${i18n.t("settings.businessHours.table.start")} — ${i18n.t(
+											`settings.businessHours.weekDays.${day.weekDay}`
+										)}`,
+									}}
 								/>
 							</TableCell>
 							<TableCell align="center">
@@ -141,21 +151,26 @@ const BusinessHoursTab = () => {
 										handleDayChange(day.weekDay, "endTime", e.target.value)
 									}
 									size="small"
+									inputProps={{
+										"aria-label": `${i18n.t("settings.businessHours.table.end")} — ${i18n.t(
+											`settings.businessHours.weekDays.${day.weekDay}`
+										)}`,
+									}}
 								/>
 							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>
 			</Table>
-			<Button
+			<ButtonWithSpinner
 				variant="contained"
 				color="primary"
 				className={classes.saveButton}
 				onClick={handleSave}
-				disabled={loading}
+				loading={loading}
 			>
 				{i18n.t("settings.buttons.save")}
-			</Button>
+			</ButtonWithSpinner>
 		</Paper>
 		<HolidaysSection />
 		</>

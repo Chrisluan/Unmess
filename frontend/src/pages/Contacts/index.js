@@ -13,9 +13,6 @@ import Paper from "@mui/material/Paper";
 import Button from "@mui/material/Button";
 import Avatar from "@mui/material/Avatar";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
-import SearchIcon from "@mui/icons-material/Search";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
 
 import IconButton from "@mui/material/IconButton";
 import Chip from "@mui/material/Chip";
@@ -27,6 +24,12 @@ import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import TableEmpty from "../../components/EmptyState/TableEmpty";
+import SearchField from "../../components/SearchField";
+import AddIcon from "@mui/icons-material/Add";
+import CloudDownloadOutlinedIcon from "@mui/icons-material/CloudDownloadOutlined";
+import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
 
@@ -84,10 +87,23 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  /**
+   * Painel de conteúdo das telas de listagem.
+   *
+   * Ganhou borda e margem: o Paper deixou de ter sombra no tema novo, e sem
+   * nenhuma das duas a tabela ficava solta no meio da página, encostada nas
+   * bordas da janela sem nada dizendo onde ela começa.
+   */
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    margin: theme.spacing(0, 2, 2),
+    padding: theme.spacing(0.5),
+    // "auto" e não "scroll": a barra vazia desenhava uma faixa cinza fixa na
+    // direita de toda listagem, inclusive nas que cabem na tela.
+    overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
+    border: `1px solid ${theme.palette.divider}`,
     ...theme.scrollbarStyles,
   },
 }));
@@ -255,7 +271,13 @@ const Contacts = () => {
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
-        onConfirm={(e) =>
+        danger={Boolean(deletingContact)}
+        confirmLabel={
+          deletingContact
+            ? i18n.t("contacts.buttons.confirmDelete")
+            : i18n.t("contacts.buttons.confirmImport")
+        }
+        onConfirm={() =>
           deletingContact
             ? handleDeleteContact(deletingContact.id)
             : handleimportContact()
@@ -268,33 +290,32 @@ const Contacts = () => {
       <MainHeader>
         <Title>{i18n.t("contacts.title")}</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("contacts.searchPlaceholder")}
-            type="search"
+          <SearchField
             value={searchParam}
             onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
+            onClear={() => setSearchParam("")}
+            placeholder={i18n.t("contacts.searchPlaceholder")}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={(e) => setConfirmOpen(true)}
-          >
-            {i18n.t("contacts.buttons.import")}
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenContactModal}
-          >
-            {i18n.t("contacts.buttons.add")}
-          </Button>
+          <Can permission="contacts:import">
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<CloudDownloadOutlinedIcon />}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {i18n.t("contacts.buttons.import")}
+            </Button>
+          </Can>
+          <Can permission="contacts:create">
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenContactModal}
+            >
+              {i18n.t("contacts.buttons.add")}
+            </Button>
+          </Can>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper
@@ -339,54 +360,100 @@ const Contacts = () => {
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleSaveTicket(contact.id)}
-                    >
-                      <WhatsAppIcon />
-                    </IconButton>
-                    <Tooltip
-                      title={i18n.t(
-                        contact.isKnown
-                          ? "contacts.known.unset"
-                          : "contacts.known.set"
-                      )}
-                    >
-                      <IconButton
-                        size="small"
-                        onClick={() => handleToggleKnown(contact)}
-                      >
-                        {contact.isKnown ? (
-                          <StarIcon color="secondary" />
-                        ) : (
-                          <StarBorderIcon />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-                    <IconButton
-                      size="small"
-                      onClick={() => hadleEditContact(contact.id)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <Can
-                      role={user.profile}
-                      perform="contacts-page:deleteContact"
-                      yes={() => (
+                    <Can permission="tickets:create">
+                      <Tooltip title={i18n.t("contacts.actions.startChat")} arrow>
                         <IconButton
                           size="small"
-                          onClick={(e) => {
+                          aria-label={i18n.t("contacts.actions.startChat")}
+                          onClick={() => handleSaveTicket(contact.id)}
+                        >
+                          <WhatsAppIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
+                    {/* Marcar como conhecido grava no contato: mesma
+                        permissão de editá-lo. */}
+                    <Can permission="contacts:edit">
+                      <Tooltip
+                        arrow
+                        title={i18n.t(
+                          contact.isKnown
+                            ? "contacts.known.unset"
+                            : "contacts.known.set"
+                        )}
+                      >
+                        <IconButton
+                          size="small"
+                          aria-pressed={Boolean(contact.isKnown)}
+                          onClick={() => handleToggleKnown(contact)}
+                        >
+                          {/* Marcado usa a cor de aviso, não a "secundária" —
+                              que no tema atual é o mesmo cinza-escuro do ícone
+                              desmarcado, deixando os dois estados idênticos. */}
+                          {contact.isKnown ? (
+                            <StarIcon color="warning" />
+                          ) : (
+                            <StarBorderIcon />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
+                    <Can permission="contacts:edit">
+                      <Tooltip title={i18n.t("contacts.actions.edit")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("contacts.actions.edit")}
+                          onClick={() => hadleEditContact(contact.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
+                    <Can permission="contacts:delete">
+                      <Tooltip title={i18n.t("contacts.actions.delete")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("contacts.actions.delete")}
+                          onClick={() => {
                             setConfirmOpen(true);
                             setDeletingContact(contact);
                           }}
                         >
                           <DeleteOutlineIcon />
                         </IconButton>
-                      )}
-                    />
+                      </Tooltip>
+                    </Can>
                   </TableCell>
                 </TableRow>
               ))}
+              {!loading && contacts.length === 0 && (
+                <TableEmpty
+                  colSpan={5}
+                  icon={searchParam ? SearchOffIcon : ContactPhoneOutlinedIcon}
+                  title={
+                    searchParam
+                      ? i18n.t("contacts.empty.searchTitle")
+                      : i18n.t("contacts.empty.title")
+                  }
+                  description={
+                    searchParam
+                      ? i18n.t("contacts.empty.searchMessage")
+                      : i18n.t("contacts.empty.message")
+                  }
+                  action={
+                    !searchParam && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenContactModal}
+                      >
+                        {i18n.t("contacts.buttons.add")}
+                      </Button>
+                    )
+                  }
+                />
+              )}
               {loading && <TableRowSkeleton avatar columns={3} />}
             </>
           </TableBody>

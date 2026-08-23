@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
 import ListSettingByValueService from "../services/SettingServices/ListSettingByValueService";
+import { etiquetar } from "../helpers/permissions/routeGuard";
 
 const isAuthApi = async (
   req: Request,
@@ -45,4 +46,4 @@ const isAuthApi = async (
   return next();
 };
 
-export default isAuthApi;
+export default etiquetar(isAuthApi, { tipo: "authApi" });

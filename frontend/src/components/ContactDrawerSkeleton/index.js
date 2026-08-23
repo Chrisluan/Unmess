@@ -11,13 +11,13 @@ const ContactDrawerSkeleton = ({ classes }) => {
 				<Skeleton
 					animation="wave"
 					variant="circular"
-					width={160}
-					height={160}
-					className={classes.contactAvatar}
+					width={56}
+					height={56}
 				/>
-				<Skeleton animation="wave" height={25} width={90} />
-				<Skeleton animation="wave" height={25} width={80} />
-				<Skeleton animation="wave" height={25} width={80} />
+				<div style={{ flex: 1 }}>
+					<Skeleton animation="wave" height={20} width="70%" />
+					<Skeleton animation="wave" height={18} width="45%" />
+				</div>
 			</Paper>
             <Paper square className={classes.contactDetails}>
 				<Typography variant="subtitle1">

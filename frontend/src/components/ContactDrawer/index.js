@@ -10,6 +10,7 @@ import InputLabel from "@mui/material/InputLabel";
 import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import Paper from "@mui/material/Paper";
+import Tooltip from "@mui/material/Tooltip";
 
 import { i18n } from "../../translate/i18n";
 
@@ -29,46 +30,71 @@ const useStyles = makeStyles(theme => ({
 	drawerPaper: {
 		width: drawerWidth,
 		display: "flex",
-		borderTop: "1px solid rgba(0, 0, 0, 0.12)",
-		borderRight: "1px solid rgba(0, 0, 0, 0.12)",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		borderTopRightRadius: 4,
-		borderBottomRightRadius: 4,
+		borderTop: `1px solid ${theme.palette.divider}`,
+		borderRight: `1px solid ${theme.palette.divider}`,
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		borderTopRightRadius: 0,
+		borderBottomRightRadius: 0,
 	},
+
+	// Mesma altura do cabeçalho da conversa, que fica logo ao lado: alturas
+	// diferentes desenhavam um degrau bem na emenda dos dois painéis.
 	header: {
 		display: "flex",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		backgroundColor: "#eee",
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		backgroundColor: theme.palette.background.paper,
 		alignItems: "center",
-		padding: theme.spacing(0, 1),
-		minHeight: "73px",
-		justifyContent: "flex-start",
+		gap: theme.spacing(1),
+		padding: theme.spacing(0, 0.5, 0, 2),
+		minHeight: 56,
 	},
+
+	tituloHeader: {
+		flex: 1,
+		fontWeight: 700,
+	},
+
 	content: {
 		display: "flex",
-		backgroundColor: "#eee",
+		backgroundColor: theme.palette.background.default,
 		flexDirection: "column",
-		padding: "8px 0px 8px 8px",
+		gap: 8,
+		padding: 8,
 		height: "100%",
-		overflowY: "scroll",
+		overflowY: "auto",
 		...theme.scrollbarStyles,
 	},
 
+	/**
+	 * Foto do contato.
+	 *
+	 * Eram 160x160 centralizados -- metade da altura útil do painel gasta com
+	 * uma imagem que, na maioria dos contatos, é só a inicial em cinza. O
+	 * nome, o telefone e o cadastro do cliente, que é o que se vem consultar
+	 * aqui, começavam abaixo da dobra.
+	 */
 	contactAvatar: {
-		margin: 15,
-		width: 160,
-		height: 160,
+		width: 56,
+		height: 56,
+		flexShrink: 0,
 	},
 
 	contactHeader: {
 		display: "flex",
-		padding: 8,
-		flexDirection: "column",
+		gap: theme.spacing(1.5),
 		alignItems: "center",
-		justifyContent: "center",
-		"& > *": {
-			margin: 4,
-		},
+		padding: theme.spacing(1.5),
+	},
+
+	dadosContato: {
+		minWidth: 0,
+		flex: 1,
+		display: "flex",
+		flexDirection: "column",
+	},
+
+	nomeContato: {
+		fontWeight: 600,
 	},
 
 	contactDetails: {
@@ -83,7 +109,13 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
+const ContactDrawer = ({
+	open,
+	handleDrawerClose,
+	contact,
+	loading,
+	onDealsCarregados,
+}) => {
 	const classes = useStyles();
 
 	const [modalOpen, setModalOpen] = useState(false);
@@ -105,12 +137,18 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 			}}
 		>
             <div className={classes.header}>
-				<IconButton onClick={handleDrawerClose} size="large">
-					<CloseIcon />
-				</IconButton>
-				<Typography style={{ justifySelf: "center" }}>
+				<Typography variant="subtitle1" className={classes.tituloHeader}>
 					{i18n.t("contactDrawer.header")}
 				</Typography>
+				<Tooltip title={i18n.t("contactDrawer.close")} arrow>
+					<IconButton
+						onClick={handleDrawerClose}
+						aria-label={i18n.t("contactDrawer.close")}
+						size="small"
+					>
+						<CloseIcon />
+					</IconButton>
+				</Tooltip>
 			</div>
             {loading ? (
 				<ContactDrawerSkeleton classes={classes} />
@@ -123,11 +161,17 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 							className={classes.contactAvatar}
 						></Avatar>
 
-						<Typography>{contact.name}</Typography>
-						<Typography>
-							<Link href={`tel:${contact.number}`}>{contact.number}</Link>
-						</Typography>
+						<div className={classes.dadosContato}>
+							<Typography noWrap className={classes.nomeContato}>
+								{contact.name}
+							</Typography>
+							<Typography variant="body2" noWrap>
+								<Link href={`tel:${contact.number}`}>{contact.number}</Link>
+							</Typography>
+						</div>
+
 						<Button
+							size="small"
 							variant="outlined"
 							color="primary"
 							onClick={() => setModalOpen(true)}
@@ -135,33 +179,40 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, loading }) => {
 							{i18n.t("contactDrawer.buttons.edit")}
 						</Button>
 					</Paper>
-					<Paper square variant="outlined" className={classes.contactDetails}>
-						<ContactModal
-							open={modalOpen}
-							onClose={() => setModalOpen(false)}
-							contactId={contact.id}
-						></ContactModal>
-						<Typography variant="subtitle1">
-							{i18n.t("contactDrawer.extraInfo")}
-						</Typography>
-						{contact?.extraInfo?.map(info => (
-							<Paper
-								key={info.id}
-								square
-								variant="outlined"
-								className={classes.contactExtraInfo}
-							>
-								<InputLabel>{info.name}</InputLabel>
-								<Typography component="div" noWrap style={{ paddingTop: 2 }}>
-									<MarkdownWrapper>{info.value}</MarkdownWrapper>
-								</Typography>
-							</Paper>
-						))}
-					</Paper>
+					<ContactModal
+						open={modalOpen}
+						onClose={() => setModalOpen(false)}
+						contactId={contact.id}
+					></ContactModal>
+
+					{/* Cadastro do cliente e pedidos primeiro: é o que se vem
+					    consultar no meio de um atendimento. */}
 					{contact?.id && <CustomerPanel contact={contact} />}
+
 					{/* Pedidos da conversa: a pergunta "o que ja foi orcado?" nasce aqui,
 					    no atendimento, e nao no CRM. */}
-					<TicketDeals />
+					<TicketDeals onCarregado={onDealsCarregados} />
+
+					{contact?.extraInfo?.length > 0 && (
+						<Paper square variant="outlined" className={classes.contactDetails}>
+							<Typography variant="subtitle1">
+								{i18n.t("contactDrawer.extraInfo")}
+							</Typography>
+							{contact?.extraInfo?.map(info => (
+								<Paper
+									key={info.id}
+									square
+									variant="outlined"
+									className={classes.contactExtraInfo}
+								>
+									<InputLabel>{info.name}</InputLabel>
+									<Typography component="div" noWrap style={{ paddingTop: 2 }}>
+										<MarkdownWrapper>{info.value}</MarkdownWrapper>
+									</Typography>
+								</Paper>
+							))}
+						</Paper>
+					)}
 				</div>
 			)}
         </Drawer>

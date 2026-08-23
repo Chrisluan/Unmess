@@ -1,0 +1,299 @@
+/* UPU — folha única, sem framework.
+
+   Mesma paleta do painel de operação, e pelo mesmo motivo: quem mexe em
+   servidor costuma fazer isso de madrugada, e uma tela branca às três da manhã
+   é hostil. A cor segue o tema do sistema operacional. */
+
+:root {
+  color-scheme: light dark;
+
+  --fundo: #f4f5f7;
+  --superficie: #ffffff;
+  --superficie-2: #f0f1f4;
+  --borda: #dcdfe4;
+  --texto: #16181d;
+  --texto-fraco: #61656e;
+
+  --ok: #1a7f52;
+  --ok-fundo: #e4f5ec;
+  --alerta: #9a6300;
+  --alerta-fundo: #fdf3e0;
+  --erro: #b3261e;
+  --erro-fundo: #fdeceb;
+  --acento: #2f5fd0;
+  --acento-fundo: #e8eefb;
+
+  --raio: 10px;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #16181d;
+    --superficie: #1e2127;
+    --superficie-2: #262a32;
+    --borda: #333944;
+    --texto: #e8eaed;
+    --texto-fraco: #9aa0aa;
+
+    --ok: #4ec98a;
+    --ok-fundo: #16301f;
+    --alerta: #e0ad4a;
+    --alerta-fundo: #322614;
+    --erro: #f2837c;
+    --erro-fundo: #3a1e1c;
+    --acento: #6d9bff;
+    --acento-fundo: #1a2438;
+
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+
+/* ------------------------------------------------------------------- topo */
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borda);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header h1 { margin: 0; font-size: 19px; }
+
+.discreta { color: var(--texto-fraco); font-size: 13px; }
+.mono { font-family: var(--mono); font-size: 12.5px; }
+
+main { max-width: 1080px; margin: 0 auto; padding: 20px 24px 60px; }
+
+h2 {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--texto-fraco);
+  margin: 28px 0 10px;
+}
+
+h2:first-of-type { margin-top: 8px; }
+
+/* ---------------------------------------------------------------- cartões */
+
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.cartao {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 14px 16px;
+}
+
+.cartao .rotulo { color: var(--texto-fraco); font-size: 13px; }
+.cartao .valor { font-size: 20px; font-weight: 600; margin-top: 2px; }
+
+/* ------------------------------------------------------------------ selos */
+
+.selo {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.selo.ok { background: var(--ok-fundo); color: var(--ok); }
+.selo.alerta { background: var(--alerta-fundo); color: var(--alerta); }
+.selo.erro { background: var(--erro-fundo); color: var(--erro); }
+.selo.neutro { background: var(--superficie-2); color: var(--texto-fraco); }
+.selo.acento { background: var(--acento-fundo); color: var(--acento); }
+
+/* ------------------------------------------------------------------ listas */
+
+.lista { display: flex; flex-direction: column; gap: 8px; }
+
+.item {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 12px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.item .corpo { min-width: 0; flex: 1; }
+.item .titulo { font-weight: 600; }
+.item .acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.item.clicavel { cursor: pointer; }
+.item.clicavel:hover { border-color: var(--acento); }
+
+/* ------------------------------------------------------------------ botões */
+
+button {
+  font: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  background: var(--superficie-2);
+  color: var(--texto);
+  padding: 7px 13px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { border-color: var(--acento); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+button.principal {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+
+button.perigo { color: var(--erro); border-color: var(--erro); background: transparent; }
+button.discreto { background: transparent; }
+
+/* ------------------------------------------------------------- formulário */
+
+form.release {
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.campo { display: grid; gap: 5px; }
+.campo > label { font-weight: 600; font-size: 14px; }
+.campo .ajuda { color: var(--texto-fraco); font-size: 13px; }
+
+.campo input[type="text"],
+.campo input[type="number"],
+.campo input[type="datetime-local"],
+.campo input[type="password"],
+.campo select,
+.campo textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  color: var(--texto);
+  width: 100%;
+}
+
+.campo textarea { min-height: 78px; resize: vertical; }
+
+.campo.errado input,
+.campo.errado select,
+.campo.errado textarea { border-color: var(--erro); }
+
+.campo .erro {
+  color: var(--erro);
+  font-size: 13px;
+}
+
+.linha { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+@media (max-width: 700px) {
+  .linha { grid-template-columns: 1fr; }
+}
+
+.caixa-marcavel { display: flex; gap: 8px; align-items: flex-start; }
+.caixa-marcavel input { margin-top: 4px; }
+
+.rodape-do-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--borda);
+  padding-top: 14px;
+}
+
+/* -------------------------------------------------------------- execução */
+
+.passos { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+
+.passo {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 14px;
+}
+
+.passo .marca { width: 16px; text-align: center; }
+.passo.ok .marca { color: var(--ok); }
+.passo.falhou .marca { color: var(--erro); }
+.passo.rodando .marca { color: var(--acento); }
+.passo .detalhe { color: var(--texto-fraco); }
+
+/* ------------------------------------------------------------------ diário */
+
+#diario {
+  background: #0d1016;
+  color: #d6dae1;
+  border-radius: var(--raio);
+  border: 1px solid var(--borda);
+  padding: 12px 14px;
+  height: 260px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+#diario .hora { color: #6b7280; }
+#diario .m-ok { color: #4ec98a; }
+#diario .m-erro { color: #f2837c; }
+#diario .m-alerta { color: #e0ad4a; }
+#diario .m-passo { color: #6d9bff; }
+
+/* ------------------------------------------------------------------ entrar */
+
+.portaria {
+  max-width: 380px;
+  margin: 12vh auto;
+  background: var(--superficie);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+}
+
+.portaria h1 { margin: 0; font-size: 20px; }
+
+.recado {
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+}
+
+.recado.erro { background: var(--erro-fundo); color: var(--erro); }
+.recado.ok { background: var(--ok-fundo); color: var(--ok); }
+.recado.alerta { background: var(--alerta-fundo); color: var(--alerta); }
+.recado:empty { display: none; }

@@ -246,9 +246,9 @@ const messages = {
         filters: {
           responsible: "Owner",
           all: "All",
-          status: "Show",
-          onlyOpen: "Open only",
-          withClosed: "Include closed",
+          status: "Lost",
+          onlyOpen: "Hidden",
+          withClosed: "Visible",
         },
         buttons: {
           addDeal: "New Deal",
@@ -457,7 +457,6 @@ const messages = {
           password: "Password",
           profile: "Profile",
           whatsapp: "Default Connection",
-          permissionGroup: "Permission group",
           maxSimultaneousTickets: "Simultaneous chat limit",
           maxSimultaneousTicketsHelper:
             "0 = unlimited. Used by automatic chat distribution.",
@@ -474,51 +473,6 @@ const messages = {
           cancel: "Cancel",
         },
         success: "User saved successfully.",
-      },
-      permissionGroups: {
-        title: "Team - Permission Groups",
-        table: {
-          name: "Name",
-          actions: "Actions",
-        },
-        buttons: {
-          add: "Add group",
-        },
-        confirmationModal: {
-          deleteTitle: "Delete",
-          deleteMessage:
-            "Are you sure? It cannot be reverted! You can only delete groups with no users linked to them.",
-        },
-        toasts: {
-          deleted: "Group deleted successfully!",
-        },
-      },
-      permissionGroupModal: {
-        title: {
-          add: "Add Permission Group",
-          edit: "Edit Permission Group",
-        },
-        form: {
-          name: "Group name",
-          permissions: "Permissions",
-        },
-        permissions: {
-          "chats:viewAll": "View all chats",
-          "chats:delete": "Delete chats",
-          "chats:transfer": "Transfer chats",
-          "customers:manage": "Manage customers",
-          "users:manage": "Manage users",
-          "queues:manage": "Manage queues",
-          "settings:manage": "Manage settings",
-          "reports:view": "View reports",
-          "financial:manage": "Manage financials",
-        },
-        buttons: {
-          okAdd: "Add",
-          okEdit: "Save",
-          cancel: "Cancel",
-        },
-        success: "Group saved successfully!",
       },
       chat: {
         noTicketMessage: "Select a chat to start chatting.",
@@ -681,7 +635,7 @@ const messages = {
           superAdmin: "Company Management",
           companies: "Companies",
           users: "Users",
-          permissionGroups: "Team",
+          roles: "Roles and access",
           settings: "Settings",
         },
         appBar: {
@@ -794,10 +748,19 @@ const messages = {
       },
       users: {
         title: "Users",
+        actions: {
+          edit: "Edit user",
+          delete: "Delete user",
+          access: "Set role and permissions",
+        },
+        noRole: "no role",
+        hasExceptions: "+ exceptions",
+        hasExceptionsHelp:
+          "This person has permissions granted or blocked beyond their role.",
         table: {
           name: "Name",
           email: "Email",
-          profile: "Profile",
+          role: "Role",
           whatsapp: "Default Connection",
           status: "Status",
           online: "Online",

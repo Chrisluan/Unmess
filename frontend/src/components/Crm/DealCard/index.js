@@ -10,11 +10,24 @@ import Tooltip from "@mui/material/Tooltip";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 
 import { formatarValor, paraData, estaAtrasado } from "../formatters";
+import { identidadeDoNegocio } from "../identidade";
+import { mediaUrl } from "../../../helpers/mediaUrl";
 
 const useStyles = makeStyles((theme) => ({
+  // A capa sangra até a borda: o material é a primeira coisa que se reconhece,
+  // e uma faixa de respiro em volta o transformaria em ilustração.
+  capa: {
+    width: "calc(100% + " + theme.spacing(2.5) + ")",
+    margin: theme.spacing(-1.25, -1.25, 1, -1.25),
+    height: 96,
+    objectFit: "cover",
+    display: "block",
+    background: theme.palette.action.hover,
+  },
+
   card: {
     padding: theme.spacing(1.25),
-    borderRadius: 8,
+    borderRadius: 0,
     cursor: "pointer",
     borderLeft: "3px solid transparent",
     transition: "box-shadow 120ms, transform 120ms",
@@ -41,7 +54,7 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 9.5,
     fontWeight: 700,
     padding: "1px 5px",
-    borderRadius: 3,
+    borderRadius: 0,
     color: "#fff",
     whiteSpace: "nowrap",
   },
@@ -54,15 +67,15 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 5,
   },
 
-  followUpAtrasado: { color: "#b23b30", fontWeight: 700 },
+  followUpAtrasado: { color: theme.palette.error.main, fontWeight: 700 },
 
   aguardando: {
     fontSize: 9.5,
     fontWeight: 600,
     padding: "1px 5px",
-    borderRadius: 3,
-    background: "rgba(150,105,10,.16)",
-    color: "#96690a",
+    borderRadius: 0,
+    color: theme.palette.warning.main,
+    border: "1px solid currentColor",
   },
   faixa: {
     display: "flex",
@@ -77,9 +90,31 @@ const useStyles = makeStyles((theme) => ({
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     padding: "1px 5px",
-    borderRadius: 3,
-    background: "rgba(26,122,85,.14)",
-    color: "#1a7a55",
+    borderRadius: 0,
+    color: theme.palette.success.main,
+    border: "1px solid currentColor",
+  },
+
+  // Venda fechada. O card continua no quadro porque o trabalho continua, mas
+  // o dinheiro já entrou na conta do faturamento.
+  ganho: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    padding: "1px 5px",
+    borderRadius: 0,
+    color: theme.palette.primary.main,
+    border: "1px solid currentColor",
+  },
+
+  // Número pelo qual o cliente pergunta: é a identidade do card, não decoração.
+  identidade: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    padding: "1px 5px",
+    borderRadius: 0,
+    background: theme.palette.action.hover,
   },
 
   // Referência ao card de origem: discreta, porque é rastreio e não conteúdo.
@@ -87,8 +122,8 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 9.5,
     fontWeight: 600,
     padding: "1px 5px",
-    borderRadius: 3,
-    background: "rgba(0,0,0,.06)",
+    borderRadius: 0,
+    background: theme.palette.action.hover,
     opacity: 0.8,
   },
   titulo: {
@@ -114,7 +149,8 @@ const useStyles = makeStyles((theme) => ({
   valor: {
     fontWeight: 700,
     fontSize: "0.85rem",
-    color: theme.palette.success.main,
+    color: theme.palette.text.primary,
+    fontVariantNumeric: "tabular-nums",
   },
 
   prazo: {
@@ -145,8 +181,8 @@ const iniciais = (nome) =>
     .join("");
 
 const CORES_PRIORIDADE = {
-  urgent: "#b23b30",
-  high: "#d97706",
+  urgent: "#c02b20",
+  high: "#a16207",
   normal: "transparent",
   low: "#94a3b8",
 };
@@ -180,7 +216,15 @@ const descreverFollowUp = (iso) => {
   return { texto: format(data, "dd/MM HH:mm"), atrasado: false };
 };
 
-const DealCard = ({ deal, arrastavel, arrastando, onDragStart, onDragEnd, onClick }) => {
+const DealCard = ({
+  deal,
+  arrastavel,
+  arrastando,
+  noFunil,
+  onDragStart,
+  onDragEnd,
+  onClick,
+}) => {
   const classes = useStyles();
 
   const atrasado = estaAtrasado(deal.expectedCloseAt, deal.status);
@@ -192,6 +236,19 @@ const DealCard = ({ deal, arrastavel, arrastando, onDragStart, onDragEnd, onClic
   const corPrioridade = CORES_PRIORIDADE[deal.priority] || "transparent";
   const aguardando = ROTULO_ATENDIMENTO[deal.serviceStatus];
   const etiquetas = deal.tags || [];
+  // O quadro ativo é quem sabe se este é o funil; o card sozinho não recebe o
+  // quadro na listagem.
+  const identidade = identidadeDoNegocio(deal, { noFunil });
+
+  /**
+   * A arte marcada como capa.
+   *
+   * A listagem já traz só a capa, mas a checagem de tipo fica: um PDF marcado
+   * como capa por engano viraria uma imagem quebrada no meio do quadro.
+   */
+  const capa = (deal.attachments || []).find((anexo) =>
+    String(anexo.mimetype || "").startsWith("image/")
+  );
 
   return (
     <Paper
@@ -214,17 +271,38 @@ const DealCard = ({ deal, arrastavel, arrastando, onDragStart, onDragEnd, onClic
           : undefined
       }
     >
-      {/* O card concluído continua no quadro (antes sumia), então precisa dizer
-          que já passou. E o card gerado adiante mostra de onde veio -- é o elo
-          entre o orçamento e o trabalho que ele originou. */}
-      {(deal.status === "moved" || deal.previousDealId) && (
-        <div className={classes.faixa}>
-          {deal.status === "moved" && <span className={classes.concluido}>Concluído</span>}
-          {deal.previousDealId && (
-            <span className={classes.origem}>Orçamento nº {deal.previousDealId}</span>
-          )}
-        </div>
+      {/* O material vem antes de tudo: numa gráfica, "banner 3x1" não diz o
+          que é o trabalho, e a arte diz de relance. */}
+      {capa && (
+        <img
+          className={classes.capa}
+          src={mediaUrl(capa.fileName)}
+          alt={capa.name || deal.title}
+          loading="lazy"
+        />
       )}
+
+      {/* A faixa responde "o que é este card": o número pelo qual o cliente
+          pergunta, se a venda já fechou e se o quadro já foi concluído. O card
+          concluído continua visível (antes sumia), então precisa dizer que já
+          passou. */}
+      <div className={classes.faixa}>
+        {deal.status === "moved" && <span className={classes.concluido}>Concluído</span>}
+        {deal.wonAt && <span className={classes.ganho}>Ganho</span>}
+
+        <span className={classes.identidade}>
+          {identidade.rotulo} nº {identidade.numero}
+        </span>
+
+        {/* De onde este trabalho veio. O número do orçamento é o elo entre o
+            que foi vendido e o que está sendo produzido -- antes o card mostrava
+            o id do card anterior, que não é número de nada para quem atende. */}
+        {identidade.orcamentoDeOrigem && (
+          <span className={classes.origem}>
+            Orçamento nº {identidade.orcamentoDeOrigem}
+          </span>
+        )}
+      </div>
 
       <Typography className={classes.titulo}>{deal.title}</Typography>
 

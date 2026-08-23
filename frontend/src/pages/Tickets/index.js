@@ -9,6 +9,8 @@ import Ticket from "../../components/Ticket/";
 
 import { i18n } from "../../translate/i18n";
 import Hidden from "@mui/material/Hidden";
+import EmptyState from "../../components/EmptyState";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 
 const useStyles = makeStyles((theme) => ({
   chatContainer: {
@@ -50,7 +52,7 @@ const useStyles = makeStyles((theme) => ({
   welcomeMsg: {
     backgroundColor: theme.palette.background.paper,
     display: "flex",
-    justifyContent: "space-evenly",
+    justifyContent: "center",
     alignItems: "center",
     height: "100%",
     textAlign: "center",
@@ -92,8 +94,13 @@ const Chat = () => {
             ) : (
               <Hidden only={["sm", "xs"]}>
                 <Paper className={classes.welcomeMsg}>
-                  {/* <Paper square variant="outlined" className={classes.welcomeMsg}> */}
-                  <span>{i18n.t("chat.noTicketMessage")}</span>
+                  {/* Metade da tela em branco com uma frase solta no meio não
+                      dizia o que fazer nem o que esperar. */}
+                  <EmptyState
+                    icon={ForumOutlinedIcon}
+                    title={i18n.t("chat.noTicketTitle")}
+                    description={i18n.t("chat.noTicketMessage")}
+                  />
                 </Paper>
               </Hidden>
             )}

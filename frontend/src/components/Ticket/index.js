@@ -5,7 +5,8 @@ import { toast } from "react-toastify";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { Paper } from "@mui/material";
+import { Badge, IconButton, Paper, Tooltip } from "@mui/material";
+import ContactPageOutlinedIcon from "@mui/icons-material/ContactPageOutlined";
 
 import makeStyles from '@mui/styles/makeStyles';
 
@@ -16,11 +17,13 @@ import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
 import MessagesList from "../MessagesList";
 import TicketTagsSelect from "../TicketTagsSelect";
+import { Can } from "../Can";
 import PendingTicketBar from "../PendingTicketBar";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
+import { i18n } from "../../translate/i18n";
 
 const drawerWidth = 320;
 
@@ -33,17 +36,24 @@ const useStyles = makeStyles((theme) => ({
   },
 
   ticketInfo: {
-    maxWidth: "50%",
-    flexBasis: "50%",
+    // Elástico: com status, setor, conexão e protocolo no subtítulo, travar em
+    // metade da largura truncava o nome do cliente em telas médias.
+    flex: 1,
+    minWidth: 0,
     [theme.breakpoints.down('md')]: {
       maxWidth: "80%",
       flexBasis: "80%",
     },
   },
+  botaoPainel: {
+    alignSelf: "center",
+    marginRight: theme.spacing(1),
+  },
+
   ticketActionButtons: {
-    maxWidth: "50%",
-    flexBasis: "50%",
+    flex: "none",
     display: "flex",
+    alignItems: "center",
     [theme.breakpoints.down('md')]: {
       maxWidth: "100%",
       flexBasis: "100%",
@@ -88,6 +98,9 @@ const Ticket = () => {
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
+  // Pedidos ligados a esta conversa. Quem busca é o painel lateral; aqui só
+  // se guarda a contagem, para o cabeçalho poder mostrá-la.
+  const [pedidos, setPedidos] = useState([]);
 
   useEffect(() => {
     setLoading(true);
@@ -120,7 +133,7 @@ const Ticket = () => {
       }
 
       if (data.action === "delete") {
-        toast.success("Ticket deleted sucessfully.");
+        toast.success(i18n.t("tickets.toasts.deleted"));
         history.push("/tickets");
       }
     });
@@ -168,13 +181,38 @@ const Ticket = () => {
           </div>
           <div className={classes.ticketActionButtons}>
             <TicketActionButtons ticket={ticket} />
+            <Tooltip
+              arrow
+              title={
+                pedidos.length > 0
+                  ? i18n.t("ticketInfo.togglePanelWithDeals", {
+                      count: pedidos.length,
+                    })
+                  : i18n.t("ticketInfo.togglePanel")
+              }
+            >
+              <IconButton
+                className={classes.botaoPainel}
+                aria-label={i18n.t("ticketInfo.togglePanel")}
+                aria-pressed={drawerOpen}
+                color={drawerOpen ? "primary" : "default"}
+                onClick={drawerOpen ? handleDrawerClose : handleDrawerOpen}
+                size="small"
+              >
+                <Badge badgeContent={pedidos.length} color="primary">
+                  <ContactPageOutlinedIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
           </div>
         </TicketHeader>
         {!loading && ticket?.id && (
-          <TicketTagsSelect
-            ticket={ticket}
-            disabled={ticket.status === "closed"}
-          />
+          <Can permission="tags:assign">
+            <TicketTagsSelect
+              ticket={ticket}
+              disabled={ticket.status === "closed"}
+            />
+          </Can>
         )}
         <ReplyMessageProvider>
           <MessagesList
@@ -197,6 +235,7 @@ const Ticket = () => {
         handleDrawerClose={handleDrawerClose}
         contact={contact}
         loading={loading}
+        onDealsCarregados={setPedidos}
       />
     </div>
   );

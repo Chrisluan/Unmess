@@ -88,6 +88,8 @@ const TicketStatusesTab = () => {
 				}
 				open={confirmModalOpen}
 				onClose={() => setConfirmModalOpen(false)}
+				danger
+				confirmLabel="Excluir status"
 				onConfirm={() => handleDelete(selectedStatus.id)}
 			>
 				{i18n.t("settings.ticketStatuses.confirmationModal.deleteMessage")}

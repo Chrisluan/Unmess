@@ -11,9 +11,6 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
-import SearchIcon from "@mui/icons-material/Search";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
 
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditIcon from "@mui/icons-material/Edit";
@@ -28,7 +25,17 @@ import Title from "../../components/Title";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import TableEmpty from "../../components/EmptyState/TableEmpty";
+import SearchField from "../../components/SearchField";
+import AddIcon from "@mui/icons-material/Add";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import UserModal from "../../components/UserModal";
+import UserAccessModal from "../../components/Access/UserAccessModal";
+import { Can } from "../../components/Can";
+import useAccessCatalog from "../../hooks/useAccessCatalog";
+import SecurityIcon from "@mui/icons-material/Security";
+import Typography from "@mui/material/Typography";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 
@@ -88,22 +95,37 @@ const reducer = (state, action) => {
 };
 
 const useStyles = makeStyles((theme) => ({
+  /**
+   * Painel de conteúdo das telas de listagem.
+   *
+   * Ganhou borda e margem: o Paper deixou de ter sombra no tema novo, e sem
+   * nenhuma das duas a tabela ficava solta no meio da página, encostada nas
+   * bordas da janela sem nada dizendo onde ela começa.
+   */
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
-    overflowY: "scroll",
+    margin: theme.spacing(0, 2, 2),
+    padding: theme.spacing(0.5),
+    // "auto" e não "scroll": a barra vazia desenhava uma faixa cinza fixa na
+    // direita de toda listagem, inclusive nas que cabem na tela.
+    overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
+    border: `1px solid ${theme.palette.divider}`,
     ...theme.scrollbarStyles,
   },
 }));
 
 const Users = () => {
   const classes = useStyles();
+  const catalogo = useAccessCatalog();
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
+  const [permissoesDe, setPermissoesDe] = useState(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
@@ -212,10 +234,22 @@ const Users = () => {
         }
         open={confirmModalOpen}
         onClose={setConfirmModalOpen}
+        danger
+        confirmLabel={i18n.t("users.confirmDelete")}
         onConfirm={() => handleDeleteUser(deletingUser.id)}
       >
         {i18n.t("users.confirmationModal.deleteMessage")}
       </ConfirmationModal>
+      {permissoesDe && !catalogo.carregando && (
+        <UserAccessModal
+          open
+          userId={permissoesDe.id}
+          userName={permissoesDe.name}
+          catalogo={catalogo}
+          onClose={() => setPermissoesDe(null)}
+          onSaved={() => setPageNumber(1)}
+        />
+      )}
       <UserModal
         open={userModalOpen}
         onClose={handleCloseUserModal}
@@ -225,26 +259,22 @@ const Users = () => {
       <MainHeader>
         <Title>{i18n.t("users.title")}</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder={i18n.t("contacts.searchPlaceholder")}
-            type="search"
+          <SearchField
             value={searchParam}
             onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
-                </InputAdornment>
-              ),
-            }}
+            onClear={() => setSearchParam("")}
+            placeholder={i18n.t("users.searchPlaceholder")}
           />
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpenUserModal}
-          >
-            {i18n.t("users.buttons.add")}
-          </Button>
+          <Can permission="users:create">
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenUserModal}
+            >
+              {i18n.t("users.buttons.add")}
+            </Button>
+          </Can>
         </MainHeaderButtonsWrapper>
       </MainHeader>
       <Paper
@@ -258,16 +288,13 @@ const Users = () => {
               <TableCell align="center">
                 {i18n.t("users.table.status")}
               </TableCell>
-              <TableCell align="center">{i18n.t("users.table.name")}</TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.email")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.profile")}
-              </TableCell>
-              <TableCell align="center">
-                {i18n.t("users.table.whatsapp")}
-              </TableCell>
+              <TableCell>{i18n.t("users.table.name")}</TableCell>
+              <TableCell>{i18n.t("users.table.email")}</TableCell>
+              {/* Duas colunas viraram uma. "Perfil" mostrava um valor que não
+                  fazia nada, e "Perfil de acesso" mostrava o que de fato
+                  valia — lado a lado, com nomes quase idênticos. */}
+              <TableCell>{i18n.t("users.table.role")}</TableCell>
+              <TableCell>{i18n.t("users.table.whatsapp")}</TableCell>
               <TableCell align="center">
                 {i18n.t("users.table.maxSimultaneousTickets")}
               </TableCell>
@@ -291,43 +318,120 @@ const Users = () => {
                     >
                       <FiberManualRecordIcon
                         fontSize="small"
-                        style={{
-                          color: user.online ? "#2ecc71" : "#bdc3c7",
-                          verticalAlign: "middle",
-                        }}
+                        color={user.online ? "success" : "disabled"}
+                        style={{ verticalAlign: "middle" }}
                       />
                     </Tooltip>
                   </TableCell>
-                  <TableCell align="center">{user.name}</TableCell>
-                  <TableCell align="center">{user.email}</TableCell>
-                  <TableCell align="center">{user.profile}</TableCell>
-                  <TableCell align="center">{user.whatsapp?.name}</TableCell>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    {user.role?.name || (
+                      <Typography variant="caption" color="error">
+                        {i18n.t("users.noRole")}
+                      </Typography>
+                    )}
+                    {user.accessExceptions && (
+                      <Tooltip
+                        arrow
+                        title={i18n.t("users.hasExceptionsHelp")}
+                      >
+                        <Typography
+                          variant="caption"
+                          color="textSecondary"
+                          style={{ marginLeft: 6 }}
+                        >
+                          {i18n.t("users.hasExceptions")}
+                        </Typography>
+                      </Tooltip>
+                    )}
+                  </TableCell>
+                  <TableCell>{user.whatsapp?.name || "—"}</TableCell>
                   <TableCell align="center">
-                    {user.maxSimultaneousTickets > 0
-                      ? user.maxSimultaneousTickets
-                      : "∞"}
+                    {user.maxSimultaneousTickets > 0 ? (
+                      user.maxSimultaneousTickets
+                    ) : (
+                      <Tooltip title={i18n.t("users.unlimited")} arrow>
+                        <span>∞</span>
+                      </Tooltip>
+                    )}
                   </TableCell>
                   <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditUser(user)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                    {/* Cada ação pergunta pela própria permissão. A de acesso
+                        não é mais desabilitada "porque a pessoa é admin" —
+                        Administrador é um cargo, e trocá-lo é uma operação
+                        legítima; quem barra é a regra do servidor, que não
+                        deixa a empresa ficar sem administrador. */}
+                    <Can permission="roles:assign">
+                      <Tooltip title={i18n.t("users.actions.access")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("users.actions.access")}
+                          onClick={() => setPermissoesDe(user)}
+                        >
+                          <SecurityIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingUser(user);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
+                    <Can permission="users:edit">
+                      <Tooltip title={i18n.t("users.actions.edit")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("users.actions.edit")}
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
+
+                    <Can permission="users:delete">
+                      <Tooltip title={i18n.t("users.actions.delete")} arrow>
+                        <IconButton
+                          size="small"
+                          aria-label={i18n.t("users.actions.delete")}
+                          onClick={() => {
+                            setConfirmModalOpen(true);
+                            setDeletingUser(user);
+                          }}
+                        >
+                          <DeleteOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Can>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={6} />}
+              {!loading && users.length === 0 && (
+                <TableEmpty
+                  colSpan={7}
+                  icon={searchParam ? SearchOffIcon : PeopleAltOutlinedIcon}
+                  title={
+                    searchParam
+                      ? i18n.t("users.empty.searchTitle")
+                      : i18n.t("users.empty.title")
+                  }
+                  description={
+                    searchParam
+                      ? i18n.t("users.empty.searchMessage")
+                      : i18n.t("users.empty.message")
+                  }
+                  action={
+                    !searchParam && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        startIcon={<AddIcon />}
+                        onClick={handleOpenUserModal}
+                      >
+                        {i18n.t("users.buttons.add")}
+                      </Button>
+                    )
+                  }
+                />
+              )}
+              {loading && <TableRowSkeleton columns={7} />}
             </>
           </TableBody>
         </Table>

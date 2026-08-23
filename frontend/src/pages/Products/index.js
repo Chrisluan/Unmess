@@ -9,20 +9,20 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
-import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import CircularProgress from "@mui/material/CircularProgress";
-import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/EditOutlined";
 import BlockIcon from "@mui/icons-material/Block";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
+import EmptyState from "../../components/EmptyState";
+import SearchField from "../../components/SearchField";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -37,6 +37,8 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
     ...theme.scrollbarStyles,
   },
 
@@ -44,8 +46,8 @@ const useStyles = makeStyles((theme) => ({
 
   // A margem colore sozinha: abaixo de 20% costuma ser prejuízo depois do
   // desconto que o vendedor dá, e isso precisa saltar aos olhos na lista.
-  margemBoa: { color: "#1a7a55", fontWeight: 700 },
-  margemBaixa: { color: "#b23b30", fontWeight: 700 },
+  margemBoa: { color: theme.palette.success.main, fontWeight: 700 },
+  margemBaixa: { color: theme.palette.error.main, fontWeight: 700 },
 
   inativo: { opacity: 0.5 },
   vazio: { padding: theme.spacing(6), textAlign: "center" },
@@ -140,6 +142,7 @@ const Products = () => {
         title={`Desativar ${paraDesativar?.name || ""}?`}
         open={Boolean(paraDesativar)}
         onClose={() => setParaDesativar(null)}
+        confirmLabel="Desativar produto"
         onConfirm={desativar}
       >
         O produto deixa de aparecer ao montar orçamentos. Os orçamentos antigos
@@ -157,23 +160,15 @@ const Products = () => {
       <MainHeader>
         <Title>Produtos</Title>
         <MainHeaderButtonsWrapper>
-          <TextField
-            placeholder="Buscar por nome ou código"
-            type="search"
-            size="small"
-            variant="outlined"
+          <SearchField
             className={classes.busca}
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="secondary" fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
+            onClear={() => setBusca("")}
+            placeholder="Buscar por nome ou código"
           />
 
+          {/* "Inativos" sozinho não dizia se ligar mostrava ou escondia. */}
           <FormControlLabel
             control={
               <Switch
@@ -182,7 +177,9 @@ const Products = () => {
                 onChange={(e) => setMostrarInativos(e.target.checked)}
               />
             }
-            label={<span style={{ fontSize: 13 }}>Inativos</span>}
+            label={
+              <span style={{ fontSize: 13 }}>Mostrar produtos inativos</span>
+            }
           />
 
           {podeGerenciar && (
@@ -204,19 +201,30 @@ const Products = () => {
             <CircularProgress />
           </div>
         ) : produtos.length === 0 ? (
-          <div className={classes.vazio}>
-            <Typography variant="body2" color="textSecondary">
-              {busca
+          <EmptyState
+            icon={busca ? SearchOffIcon : Inventory2OutlinedIcon}
+            title={
+              busca ? "Nada encontrado" : "Nenhum produto cadastrado"
+            }
+            description={
+              busca
                 ? "Nenhum produto com esse nome ou código."
-                : "Nenhum produto cadastrado ainda."}
-            </Typography>
-            {!busca && podeGerenciar && (
-              <Typography variant="caption" color="textSecondary">
-                Cadastre o que você vende para montar orçamentos sem digitar
-                tudo de novo a cada pedido.
-              </Typography>
-            )}
-          </div>
+                : "Cadastre o que você vende para montar orçamentos sem digitar tudo de novo a cada pedido."
+            }
+            action={
+              !busca &&
+              podeGerenciar && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={abrirNovo}
+                >
+                  Novo produto
+                </Button>
+              )
+            }
+          />
         ) : (
           <Table size="small">
             <TableHead>

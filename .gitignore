@@ -49,3 +49,9 @@ certs/
 /backend/.backup-seguranca/
 /backend/.env.antes-da-rotacao
 /backend/.senha-nova-temporaria.txt
+
+# UPU (Unmess Production Updater): compilacao, executavel publicado e os dados
+# desta instalacao -- que incluem a chave privada de notificacao e o hash da
+# senha do painel.
+/upu/publicacao/
+/upu/dados/

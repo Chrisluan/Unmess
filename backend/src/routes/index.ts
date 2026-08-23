@@ -1,5 +1,7 @@
 import { Router } from "express";
 
+import { capturarRotas } from "../helpers/permissions/routeGuard";
+
 import userRoutes from "./userRoutes";
 import authRoutes from "./authRoutes";
 import settingRoutes from "./settingRoutes";
@@ -12,7 +14,7 @@ import queueRoutes from "./queueRoutes";
 import quickAnswerRoutes from "./quickAnswerRoutes";
 import apiRoutes from "./apiRoutes";
 import companyRoutes from "./companyRoutes";
-import permissionGroupRoutes from "./permissionGroupRoutes";
+import accessRoutes from "./accessRoutes";
 import ticketStatusRoutes from "./ticketStatusRoutes";
 import businessHourRoutes from "./businessHourRoutes";
 import dashboardRoutes from "./dashboardRoutes";
@@ -21,6 +23,7 @@ import tagRoutes from "./tagRoutes";
 import crmRoutes from "./crmRoutes";
 import stickerRoutes from "./stickerRoutes";
 import productRoutes from "./productRoutes";
+import financeRoutes from "./financeRoutes";
 
 const routes = Router();
 
@@ -36,7 +39,7 @@ routes.use(queueRoutes);
 routes.use(quickAnswerRoutes);
 routes.use("/api/messages", apiRoutes);
 routes.use(companyRoutes);
-routes.use(permissionGroupRoutes);
+routes.use(accessRoutes);
 routes.use(ticketStatusRoutes);
 routes.use(businessHourRoutes);
 routes.use(dashboardRoutes);
@@ -45,5 +48,15 @@ routes.use(tagRoutes);
 routes.use(crmRoutes);
 routes.use(stickerRoutes);
 routes.use(productRoutes);
+routes.use(financeRoutes);
+
+/**
+ * Retrato das rotas para a auditoria, tirado aqui e não no boot.
+ *
+ * Precisa acontecer antes de o app usar este Router: o Sentry instrumenta o
+ * Express trocando o handler de cada camada, e a etiqueta de guarda vive na
+ * função original. Depois do `app.use`, não há mais o que ler.
+ */
+capturarRotas(routes);
 
 export default routes;

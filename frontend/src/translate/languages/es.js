@@ -249,9 +249,9 @@ const messages = {
         filters: {
           responsible: "Responsable",
           all: "Todos",
-          status: "Mostrar",
-          onlyOpen: "Abiertos",
-          withClosed: "Con cerrados",
+          status: "Perdidos",
+          onlyOpen: "Ocultos",
+          withClosed: "Visibles",
         },
         buttons: {
           addDeal: "Nuevo Negocio",
@@ -461,7 +461,6 @@ const messages = {
           password: "Contraseña",
           profile: "Perfil",
           whatsapp: "Conexión estándar",
-          permissionGroup: "Grupo de permisos",
           maxSimultaneousTickets: "Límite de chats simultáneos",
           maxSimultaneousTicketsHelper:
             "0 = sin límite. Usado por la distribución automática de chats.",
@@ -478,51 +477,6 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Usuario guardado satisfactoriamente.",
-      },
-      permissionGroups: {
-        title: "Equipo - Grupos de Permisos",
-        table: {
-          name: "Nombre",
-          actions: "Acciones",
-        },
-        buttons: {
-          add: "Agregar grupo",
-        },
-        confirmationModal: {
-          deleteTitle: "Eliminar",
-          deleteMessage:
-            "¿Estás seguro? ¡Esta acción no se puede revertir! Solo se pueden eliminar grupos sin usuarios vinculados.",
-        },
-        toasts: {
-          deleted: "¡Grupo eliminado con éxito!",
-        },
-      },
-      permissionGroupModal: {
-        title: {
-          add: "Agregar Grupo de Permisos",
-          edit: "Editar Grupo de Permisos",
-        },
-        form: {
-          name: "Nombre del grupo",
-          permissions: "Permisos",
-        },
-        permissions: {
-          "chats:viewAll": "Ver todos los chats",
-          "chats:delete": "Eliminar chats",
-          "chats:transfer": "Transferir chats",
-          "customers:manage": "Gestionar clientes",
-          "users:manage": "Gestionar usuarios",
-          "queues:manage": "Gestionar sectores",
-          "settings:manage": "Gestionar configuraciones",
-          "reports:view": "Ver informes",
-          "financial:manage": "Gestionar finanzas",
-        },
-        buttons: {
-          okAdd: "Agregar",
-          okEdit: "Guardar",
-          cancel: "Cancelar",
-        },
-        success: "¡Grupo guardado con éxito!",
       },
       chat: {
         noTicketMessage: "Selecciona un chat para empezar a chatear.",
@@ -686,7 +640,7 @@ const messages = {
           superAdmin: "Gestión de Empresas",
           companies: "Empresas",
           users: "Usuarios",
-          permissionGroups: "Equipo",
+          roles: "Cargos y accesos",
           settings: "Configuración",
         },
         appBar: {
@@ -800,10 +754,19 @@ const messages = {
       },
       users: {
         title: "Usuarios",
+        actions: {
+          edit: "Editar usuario",
+          delete: "Borrar usuario",
+          access: "Definir cargo y permisos",
+        },
+        noRole: "sin cargo",
+        hasExceptions: "+ excepciones",
+        hasExceptionsHelp:
+          "Esta persona tiene permisos liberados o bloqueados más allá de su cargo.",
         table: {
           name: "Nombre",
           email: "Correo Electrónico",
-          profile: "Perfil",
+          role: "Cargo",
           whatsapp: "Conexión estándar",
           status: "Estado",
           online: "En línea",

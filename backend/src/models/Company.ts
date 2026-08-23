@@ -11,6 +11,7 @@ import {
   Default,
   HasMany
 } from "sequelize-typescript";
+import CompanyInvoice from "./CompanyInvoice";
 import User from "./User";
 import Whatsapp from "./Whatsapp";
 import Contact from "./Contact";
@@ -59,6 +60,39 @@ class Company extends Model<Company> {
   @Column
   dueDate: Date;
 
+  /**
+   * Por que o acesso está como está.
+   *
+   * O status sozinho só diz "suspensa". Quem atende o telefone precisa saber
+   * se foi inadimplência, pedido do próprio cliente ou engano — e a tela de
+   * login pode devolver o motivo para a pessoa que ficou de fora.
+   */
+  @Column
+  statusReason: string;
+
+  @Column
+  statusChangedAt: Date;
+
+  /** Id do cliente no gateway de pagamento. */
+  @Column
+  billingCustomerId: string;
+
+  @Default(0)
+  @Column(DataType.DECIMAL(15, 2))
+  monthlyFee: number;
+
+  @Default(10)
+  @Column
+  billingDay: number;
+
+  @Default(false)
+  @Column
+  blockWhenOverdue: boolean;
+
+  @Default(5)
+  @Column
+  overdueGraceDays: number;
+
   @CreatedAt
   createdAt: Date;
 
@@ -79,6 +113,9 @@ class Company extends Model<Company> {
 
   @HasMany(() => Queue)
   queues: Queue[];
+
+  @HasMany(() => CompanyInvoice)
+  invoices: CompanyInvoice[];
 }
 
 export default Company;

@@ -52,7 +52,6 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			<Menu
 				id="menu-appbar"
 				anchorEl={anchorEl}
-				getContentAnchorEl={null}
 				anchorOrigin={{
 					vertical: "bottom",
 					horizontal: "right",
@@ -65,18 +64,19 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				open={menuOpen}
 				onClose={handleClose}
 			>
-				<MenuItem onClick={handleOpenTransferModal}>
-					{i18n.t("ticketOptionsMenu.transfer")}
-				</MenuItem>
-				<Can
-					role={user.profile}
-					perform="ticket-options:deleteTicket"
-					yes={() => (
-						<MenuItem onClick={handleOpenConfirmationModal}>
-							{i18n.t("ticketOptionsMenu.delete")}
-						</MenuItem>
-					)}
-				/>
+				<Can permission="tickets:transfer">
+					<MenuItem onClick={handleOpenTransferModal}>
+						{i18n.t("ticketOptionsMenu.transfer")}
+					</MenuItem>
+				</Can>
+				<Can permission="tickets:delete">
+					<MenuItem
+						onClick={handleOpenConfirmationModal}
+						sx={{ color: "error.main" }}
+					>
+						{i18n.t("ticketOptionsMenu.delete")}
+					</MenuItem>
+				</Can>
 			</Menu>
 			<ConfirmationModal
 				title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
@@ -86,6 +86,8 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				}?`}
 				open={confirmationOpen}
 				onClose={setConfirmationOpen}
+				danger
+				confirmLabel={i18n.t("ticketOptionsMenu.buttons.delete")}
 				onConfirm={handleDeleteTicket}
 			>
 				{i18n.t("ticketOptionsMenu.confirmationModal.message")}

@@ -35,6 +35,12 @@ const numero = (valor: unknown): number => {
  * O valor ponderado multiplica cada oportunidade pela probabilidade da etapa em
  * que ela está. É a diferença entre "tenho 500 mil no funil" e "espero fechar
  * 180 mil" -- a segunda é a que serve para planejar.
+ *
+ * O ganho é lido de `wonAt`, não do status: a venda fechada numa coluna de
+ * ganho segue para a Produção e o card vira "moved". Contar pelo status deixava
+ * o faturamento parado até a jornada chegar ao fim da fila de quadros. Pelo
+ * mesmo motivo, o que já foi ganho sai das somas de "em aberto" -- senão a
+ * mesma venda apareceria nos dois lados.
  */
 const IndicadoresFunilService = async ({
   companyId,
@@ -45,19 +51,21 @@ const IndicadoresFunilService = async ({
   const [linha] = await sequelize.query<Record<string, unknown>>(
     `
     SELECT
-      SUM(CASE WHEN d.status NOT IN ('won','lost') THEN 1 ELSE 0 END)          AS total,
-      SUM(CASE WHEN d.status NOT IN ('won','lost') THEN d.value ELSE 0 END)    AS valorTotal,
-      SUM(CASE WHEN d.status NOT IN ('won','lost')
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
+               THEN 1 ELSE 0 END)                                              AS total,
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
+               THEN d.value ELSE 0 END)                                        AS valorTotal,
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
                THEN d.value * COALESCE(s.probability, 0) / 100 ELSE 0 END)     AS valorPonderado,
-      SUM(CASE WHEN d.status = 'won' THEN 1 ELSE 0 END)                        AS ganhas,
-      SUM(CASE WHEN d.status = 'won' THEN d.value ELSE 0 END)                  AS valorGanho,
+      SUM(CASE WHEN d.wonAt IS NOT NULL THEN 1 ELSE 0 END)                     AS ganhas,
+      SUM(CASE WHEN d.wonAt IS NOT NULL THEN d.value ELSE 0 END)               AS valorGanho,
       SUM(CASE WHEN d.status = 'lost' THEN 1 ELSE 0 END)                       AS perdidas,
-      SUM(CASE WHEN d.status NOT IN ('won','lost')
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
                AND d.nextFollowUpAt IS NOT NULL
                AND d.nextFollowUpAt < NOW() THEN 1 ELSE 0 END)                 AS atrasadas,
-      SUM(CASE WHEN d.status NOT IN ('won','lost')
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
                AND DATE(d.nextFollowUpAt) = CURDATE() THEN 1 ELSE 0 END)       AS followUpsHoje,
-      SUM(CASE WHEN d.status NOT IN ('won','lost')
+      SUM(CASE WHEN d.status NOT IN ('won','lost') AND d.wonAt IS NULL
                AND d.responsibleUserId IS NULL THEN 1 ELSE 0 END)              AS semResponsavel
     FROM Deals d
     LEFT JOIN PipelineStages s ON s.id = d.stageId

@@ -7,11 +7,12 @@ import useSound from "use-sound";
 import Popover from "@mui/material/Popover";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import makeStyles from '@mui/styles/makeStyles';
 import Badge from "@mui/material/Badge";
-import ChatIcon from "@mui/icons-material/Chat";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNoneOutlined";
+import Tooltip from "@mui/material/Tooltip";
+import Divider from "@mui/material/Divider";
+import Typography from "@mui/material/Typography";
 
 import TicketListItem from "../TicketListItem";
 import { i18n } from "../../translate/i18n";
@@ -40,6 +41,19 @@ const useStyles = makeStyles(theme => ({
 	},
 	iconButton: {
 		color: theme.palette.text.primary,
+	},
+
+	cabecalho: {
+		display: "flex",
+		alignItems: "baseline",
+		justifyContent: "space-between",
+		gap: theme.spacing(1),
+		padding: theme.spacing(1, 1.5),
+	},
+
+	vazio: {
+		padding: theme.spacing(4, 2),
+		textAlign: "center",
 	},
 }));
 
@@ -195,16 +209,23 @@ const NotificationsPopOver = () => {
 
 	return (
         <>
-            <IconButton
-                onClick={handleClick}
-                ref={anchorEl}
-                aria-label="Open Notifications"
-                className={classes.iconButton}
-                size="large">
-				<Badge badgeContent={notifications.length} color="secondary">
-					<ChatIcon />
-				</Badge>
-			</IconButton>
+            <Tooltip title={i18n.t("notifications.tooltip")} arrow>
+				<IconButton
+					onClick={handleClick}
+					ref={anchorEl}
+					aria-label={i18n.t("notifications.tooltip")}
+					className={classes.iconButton}
+					size="large"
+				>
+					{/* Vermelho: mensagem não lida é a única coisa da barra do
+					    topo que piora sozinha com o tempo. Em "secondary" o
+					    contador virava um bloco cinza-escuro, indistinguível
+					    de decoração. */}
+					<Badge badgeContent={notifications.length} color="error">
+						<NotificationsNoneIcon />
+					</Badge>
+				</IconButton>
+			</Tooltip>
             <Popover
 				disableScrollLock
 				open={isOpen}
@@ -220,11 +241,26 @@ const NotificationsPopOver = () => {
 				classes={{ paper: classes.popoverPaper }}
 				onClose={handleClickAway}
 			>
-				<List dense className={classes.tabContainer}>
+				<div className={classes.cabecalho}>
+					<Typography variant="subtitle2">
+						{i18n.t("notifications.title")}
+					</Typography>
+					{notifications.length > 0 && (
+						<Typography variant="caption" color="textSecondary">
+							{i18n.t("notifications.count", {
+								count: notifications.length,
+							})}
+						</Typography>
+					)}
+				</div>
+				<Divider />
+				<List dense disablePadding className={classes.tabContainer}>
 					{notifications.length === 0 ? (
-						<ListItem>
-							<ListItemText>{i18n.t("notifications.noTickets")}</ListItemText>
-						</ListItem>
+						<div className={classes.vazio}>
+							<Typography variant="body2" color="textSecondary">
+								{i18n.t("notifications.noTickets")}
+							</Typography>
+						</div>
 					) : (
 						notifications.map(ticket => (
 							<NotificationTicket key={ticket.id}>

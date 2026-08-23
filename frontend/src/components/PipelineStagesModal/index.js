@@ -103,7 +103,7 @@ const PipelineStagesModal = ({ open, onClose, board, boards, onChange }) => {
   const [lista, setLista] = useState([]);
   const [novoNome, setNovoNome] = useState("");
   const [novoTipo, setNovoTipo] = useState("open");
-  const [novaCor, setNovaCor] = useState("#2576d2");
+  const [novaCor, setNovaCor] = useState("#0b5cff");
   const [excluindo, setExcluindo] = useState(null);
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const PipelineStagesModal = ({ open, onClose, board, boards, onChange }) => {
         boardId: board.id,
       });
       setNovoNome("");
-      setNovaCor("#2576d2");
+      setNovaCor("#0b5cff");
       setNovoTipo("open");
       toast.success(i18n.t("crm.toasts.stageCreated"));
       onChange();
@@ -229,6 +229,8 @@ const PipelineStagesModal = ({ open, onClose, board, boards, onChange }) => {
         title={i18n.t("crm.stagesModal.deleteTitle")}
         open={Boolean(excluindo)}
         onClose={() => setExcluindo(null)}
+        danger
+        confirmLabel="Excluir etapa"
         onConfirm={() => handleExcluir(excluindo.id)}
       >
         {i18n.t("crm.stagesModal.deleteMessage")}
@@ -250,7 +252,7 @@ const PipelineStagesModal = ({ open, onClose, board, boards, onChange }) => {
               <input
                 type="color"
                 className={classes.cor}
-                value={stage.color || "#2576d2"}
+                value={stage.color || "#0b5cff"}
                 onChange={(e) => alterarLocal(stage.id, { color: e.target.value })}
                 onBlur={(e) => salvar(stage, { color: e.target.value })}
               />

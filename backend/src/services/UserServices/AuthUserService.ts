@@ -5,6 +5,7 @@ import {
   createRefreshToken
 } from "../../helpers/CreateTokens";
 import { SerializeUser } from "../../helpers/SerializeUser";
+import GarantirEmpresaAtiva from "../../helpers/GarantirEmpresaAtiva";
 import Queue from "../../models/Queue";
 
 interface SerializedUser {
@@ -42,6 +43,10 @@ const AuthUserService = async ({
   if (!(await user.checkPassword(password))) {
     throw new AppError("ERR_INVALID_CREDENTIALS", 401);
   }
+
+  // Depois da senha, e não antes: quem erra a senha não deve descobrir por
+  // tabela que a empresa está suspensa.
+  await GarantirEmpresaAtiva(user);
 
   const token = createAccessToken(user);
   const refreshToken = createRefreshToken(user);

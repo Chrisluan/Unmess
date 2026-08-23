@@ -3,9 +3,12 @@ import DealItem from "../../models/DealItem";
 import Customer from "../../models/Customer";
 import Contact from "../../models/Contact";
 import Company from "../../models/Company";
+import Board from "../../models/Board";
+import Order from "../../models/Order";
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import { descreverMedida } from "../../helpers/CalcularItem";
+import valorLiquidoDoNegocio from "../../helpers/ValorLiquidoDoNegocio";
 
 interface Request {
   dealId: number | string;
@@ -58,17 +61,50 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
       { model: Customer, as: "customer" },
       { model: Contact, as: "contact" },
       { model: User, as: "responsibleUser", attributes: ["id", "name"] },
-      { model: Company, as: "company", attributes: ["id", "name"] }
+      { model: Company, as: "company", attributes: ["id", "name"] },
+      { model: Board, as: "board", attributes: ["id", "name", "isSalesFunnel"], required: false },
+      {
+        model: Order,
+        as: "salesOrder",
+        attributes: ["id", "number", "quoteNumber"],
+        required: false
+      }
     ]
   });
 
   if (!deal) throw new AppError("ERR_NO_DEAL_FOUND", 404);
 
   const itens = (deal.items || []) as DealItem[];
-  const total = itens.reduce((soma, item) => soma + item.total, 0);
+
+  /**
+   * O documento fecha com o valor que o cliente paga.
+   *
+   * A soma dos itens é o bruto; o desconto da proposta incide sobre ele. O
+   * documento imprimia o bruto e a cobrança lançava o líquido -- dois papéis do
+   * mesmo pedido com números diferentes, e a diferença aparecendo só na hora
+   * da conversa constrangedora.
+   */
+  const somaDosItens = itens.reduce((soma, item) => soma + item.total, 0);
+  const total = valorLiquidoDoNegocio(deal);
+  const desconto = Number((somaDosItens - total).toFixed(2));
 
   const nomeCliente =
     deal.customer?.name || deal.contact?.name || "Cliente não identificado";
+
+  /**
+   * O documento é orçamento ou pedido, e traz o número que o cliente ouve.
+   *
+   * Antes saía o `deal.id` -- o id da linha no banco. Dois documentos do mesmo
+   * trabalho (o orçamento e o pedido que nasceu dele) saíam com números
+   * diferentes, nenhum dos dois igual ao que a empresa numera.
+   */
+  const pedido = deal.salesOrder;
+  const eOrcamento = !pedido && deal.board?.isSalesFunnel !== false;
+
+  const tipoDoDocumento = eOrcamento ? "Orçamento" : "Pedido";
+  const numeroDoDocumento =
+    pedido?.number || deal.quoteNumber || deal.id;
+  const orcamentoDeOrigem = pedido?.quoteNumber || null;
   const telefone = deal.contact?.number || "";
 
   const linhas = itens
@@ -101,7 +137,7 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<title>Ordem de Serviço nº ${deal.id} — ${escapar(nomeCliente)}</title>
+<title>${tipoDoDocumento} nº ${numeroDoDocumento} — ${escapar(nomeCliente)}</title>
 <style>
   @page { size: A4; margin: 14mm 12mm; }
 
@@ -258,11 +294,14 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
     <header>
       <div>
         <div class="empresa">${escapar(deal.company?.name || "Unmess")}</div>
-        <div style="font-size:9.5pt;color:#555">Ordem de serviço / Orçamento</div>
+        <div style="font-size:9.5pt;color:#555">Ordem de serviço / ${tipoDoDocumento}</div>
       </div>
       <div class="doc">
         <div class="titulo">Ordem de Serviço</div>
-        <div class="numero">nº ${deal.id}</div>
+        <div class="numero">${tipoDoDocumento} nº ${numeroDoDocumento}</div>
+        ${orcamentoDeOrigem
+          ? `<div class="data">Orçamento nº ${orcamentoDeOrigem}</div>`
+          : ""}
         <div class="data">Emitida em ${new Date().toLocaleDateString("pt-BR")}</div>
       </div>
     </header>
@@ -318,6 +357,18 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
           <td class="rotulo">Itens</td>
           <td class="num">${itens.length}</td>
         </tr>
+        ${
+          desconto > 0
+            ? `<tr>
+                 <td class="rotulo">Subtotal</td>
+                 <td class="num">${dinheiro(somaDosItens)}</td>
+               </tr>
+               <tr>
+                 <td class="rotulo">Desconto</td>
+                 <td class="num">− ${dinheiro(desconto)}</td>
+               </tr>`
+            : ""
+        }
         <tr class="final">
           <td>Total</td>
           <td class="num">${dinheiro(total)}</td>
@@ -340,7 +391,7 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
     </div>
 
     <footer>
-      <span>Documento nº ${deal.id}</span>
+      <span>${tipoDoDocumento} nº ${numeroDoDocumento}</span>
       <span>Gerado em ${new Date().toLocaleString("pt-BR")}</span>
     </footer>
   </div>

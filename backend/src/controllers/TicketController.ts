@@ -17,7 +17,8 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import formatBody from "../helpers/Mustache";
 import getCompanyId from "../helpers/GetCompanyId";
 import { TAB_RULES } from "../helpers/TicketTabRules";
-import { userHasPermission } from "../helpers/permissions/GetUserPermissions";
+import { usuarioPode } from "../helpers/permissions/resolve";
+import AppError from "../errors/AppError";
 
 type IndexQuery = {
   searchParam: string;
@@ -96,7 +97,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   // conversas escolhe de quem são. Para os demais o parâmetro é ignorado em
   // silêncio — a lista continua sendo a que eles já teriam.
   if (userIdsStringified) {
-    const podeFiltrarPorAtendente = await userHasPermission(
+    const podeFiltrarPorAtendente = await usuarioPode(
       Number(userId),
       "tickets:viewAll"
     );
@@ -167,6 +168,27 @@ export const update = async (
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
   const { isTransfer } = req.body;
+
+  /**
+   * Transferir é uma permissão separada de responder, e é aqui que ela vale.
+   *
+   * A rota inteira é guardada por `tickets:edit` — o que basta para quem está
+   * respondendo. Passar a conversa para outra pessoa ou outra fila é outra
+   * decisão: tira o atendimento das mãos de quem está com ele. A permissão
+   * existia no catálogo e aparecia na tela de cargos, mas nada no servidor a
+   * conferia: bastava chamar esta rota direto para transferir sem tê-la.
+   */
+  const estaTransferindo =
+    isTransfer === true ||
+    ticketData.userId !== undefined ||
+    ticketData.queueId !== undefined;
+
+  if (estaTransferindo) {
+    const pode = await usuarioPode(Number(req.user.id), "tickets:transfer");
+    if (!pode) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   const { ticket } = await UpdateTicketService({
     ticketData,

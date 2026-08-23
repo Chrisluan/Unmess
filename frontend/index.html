@@ -32,6 +32,18 @@
          volta a deduzir a API sozinho, como no acesso pela rede local. É um
          script clássico de propósito -- roda antes do módulo do app abaixo. -->
     <script src="/env.js"></script>
+    <!-- Faixa de avisos do sistema (UPU).
+
+         Fica fora do bundle de propósito: o aviso mais importante que ela dá é
+         "o sistema vai cair em cinco minutos", e esse é justamente o momento em
+         que o bundle está sendo trocado. Um componente React desapareceria
+         junto com ele.
+
+         O arquivo é publicado na pasta do build pelo próprio UPU, junto com o
+         avisos.json que ele lê. Quando o UPU não está instalado, o script
+         simplesmente não existe e o `defer` faz o navegador seguir em frente
+         sem erro visível. -->
+    <script src="/avisos-unmess.js" defer></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

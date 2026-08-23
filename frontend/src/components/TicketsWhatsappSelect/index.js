@@ -49,7 +49,6 @@ const TicketsWhatsappSelect = ({
             MenuProps={{
               anchorOrigin: { vertical: "bottom", horizontal: "left" },
               transformOrigin: { vertical: "top", horizontal: "left" },
-              getContentAnchorEl: null,
             }}
             renderValue={renderValue}
           >

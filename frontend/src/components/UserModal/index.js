@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import {
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -22,16 +23,16 @@ import {
 } from "@mui/material";
 import { Visibility, VisibilityOff, Security } from "@mui/icons-material";
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
-import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
+import usePermissions from "../../hooks/usePermissions";
+import useAccessCatalog from "../../hooks/useAccessCatalog";
 import useWhatsApps from "../../hooks/useWhatsApps";
-import UserPermissionsModal from "../UserPermissionsModal";
+import UserAccessModal from "../Access/UserAccessModal";
 
 const useStyles = makeStyles((theme) => ({
   root: { display: "flex", flexWrap: "wrap" },
@@ -41,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
   },
   btnWrapper: { position: "relative" },
   buttonProgress: {
-    color: green[500],
+    color: theme.palette.primary.main,
     position: "absolute",
     top: "50%",
     left: "50%",
@@ -49,6 +50,19 @@ const useStyles = makeStyles((theme) => ({
     marginLeft: -12,
   },
   formControl: { margin: theme.spacing(1), minWidth: 120 },
+  // Resumo do cargo na edição: informa e leva para onde se muda, em vez de
+  // repetir aqui um seletor que a rota de usuários não aceita mais.
+  linhaCargo: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1),
+    padding: theme.spacing(1, 1.5),
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+    fontSize: 13.5,
+  },
 }));
 
 const UserSchema = Yup.object().shape({
@@ -59,35 +73,47 @@ const UserSchema = Yup.object().shape({
 
 const UserModal = ({ open, onClose, userId }) => {
   const classes = useStyles();
+  /**
+   * O campo "profile" saiu daqui.
+   *
+   * Ele oferecia admin, atendente, vendedor, produção, instalação e
+   * financeiro — e nenhum desses valores era consultado em lugar nenhum do
+   * sistema, exceto "admin", que liberava tudo. Escolher "vendedor" dava a
+   * impressão de restringir e não restringia nada. Quem responde a essa
+   * pergunta agora é o cargo, logo abaixo.
+   */
   const initialState = {
     name: "",
     email: "",
     password: "",
-    profile: "user",
     maxSimultaneousTickets: 0,
   };
 
-  const { user: loggedInUser } = useContext(AuthContext);
+  const { can } = usePermissions();
+  const catalogo = useAccessCatalog();
 
   const [user, setUser] = useState(initialState);
   const [selectedQueueIds, setSelectedQueueIds] = useState([]);
   const [showPassword, setShowPassword] = useState(false);
   const [whatsappId, setWhatsappId] = useState(false);
-  const [permissionGroupId, setPermissionGroupId] = useState("");
-  const [permissionGroups, setPermissionGroups] = useState([]);
-  const [permissionsModalOpen, setPermissionsModalOpen] = useState(false);
+  const [roleId, setRoleId] = useState("");
+  const [cargos, setCargos] = useState([]);
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const { loading, whatsApps } = useWhatsApps();
 
+  const podeAtribuirCargo = can("roles:assign");
+
   useEffect(() => {
+    if (!podeAtribuirCargo) return;
     (async () => {
       try {
-        const { data } = await api.get("/permission-groups");
-        setPermissionGroups(data);
+        const { data } = await api.get("/access/roles");
+        setCargos(data);
       } catch (err) {
         toastError(err);
       }
     })();
-  }, []);
+  }, [podeAtribuirCargo]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -97,7 +123,7 @@ const UserModal = ({ open, onClose, userId }) => {
         setUser((prev) => ({ ...prev, ...data }));
         setSelectedQueueIds(data.queues?.map((q) => q.id) ?? []);
         setWhatsappId(data.whatsappId || "");
-        setPermissionGroupId(data.permissionGroupId || "");
+        setRoleId(data.roleId || "");
       } catch (err) {
         toastError(err);
       }
@@ -115,14 +141,16 @@ const UserModal = ({ open, onClose, userId }) => {
       ...values,
       maxSimultaneousTickets: Number(values.maxSimultaneousTickets) || 0,
       whatsappId,
-      permissionGroupId: permissionGroupId || null,
       queueIds: selectedQueueIds,
     };
     try {
       if (userId) {
+        // Cargo e permissões não viajam neste pedido: têm rota própria, com
+        // permissão própria. Quando iam juntos, quem podia editar um usuário
+        // podia se promover a administrador no mesmo salvamento.
         await api.put(`/users/${userId}`, userData);
       } else {
-        await api.post("/users", userData);
+        await api.post("/users", { ...userData, roleId: roleId || null });
       }
       toast.success(i18n.t("userModal.success"));
     } catch (err) {
@@ -131,18 +159,17 @@ const UserModal = ({ open, onClose, userId }) => {
     handleClose();
   };
 
-  const selectedGroupName = permissionGroups.find((g) => g.id === permissionGroupId)?.name;
+  const nomeDoCargo = cargos.find((c) => c.id === roleId)?.name;
 
   return (
     <div className={classes.root}>
-      {/* Modal de permissões individuais */}
-      {userId && (
-        <UserPermissionsModal
-          open={permissionsModalOpen}
-          onClose={() => setPermissionsModalOpen(false)}
+      {userId && accessModalOpen && !catalogo.carregando && (
+        <UserAccessModal
+          open
+          onClose={() => setAccessModalOpen(false)}
           userId={userId}
           userName={user.name}
-          groupName={selectedGroupName}
+          catalogo={catalogo}
         />
       )}
 
@@ -188,7 +215,15 @@ const UserModal = ({ open, onClose, userId }) => {
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword((e) => !e)} size="large">
+                          <IconButton
+                            onClick={() => setShowPassword((e) => !e)}
+                            aria-label={
+                              showPassword
+                                ? i18n.t("userModal.form.hidePassword")
+                                : i18n.t("userModal.form.showPassword")
+                            }
+                            size="large"
+                          >
                             {showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
@@ -208,133 +243,100 @@ const UserModal = ({ open, onClose, userId }) => {
                     margin="dense"
                     fullWidth
                   />
-                  <FormControl variant="outlined" className={classes.formControl} margin="dense">
-                    <Can
-                      role={loggedInUser.profile}
-                      perform="user-modal:editProfile"
-                      yes={() => (
-                        <>
-                          <InputLabel id="profile-selection-input-label">
-                            {i18n.t("userModal.form.profile")}
-                          </InputLabel>
-                          <Field
-                            as={Select}
-                            label={i18n.t("userModal.form.profile")}
-                            name="profile"
-                            labelId="profile-selection-label"
-                            id="profile-selection"
-                            required
-                          >
-                            <MenuItem value="admin">Admin</MenuItem>
-                            <MenuItem value="user">User</MenuItem>
-                            <MenuItem value="vendedor">{i18n.t("userModal.profiles.vendedor")}</MenuItem>
-                            <MenuItem value="producao">{i18n.t("userModal.profiles.producao")}</MenuItem>
-                            <MenuItem value="instalacao">{i18n.t("userModal.profiles.instalacao")}</MenuItem>
-                            <MenuItem value="financeiro">{i18n.t("userModal.profiles.financeiro")}</MenuItem>
-                          </Field>
-                        </>
-                      )}
-                    />
-                  </FormControl>
-                  <Can
-                    role={loggedInUser.profile}
-                    perform="user-modal:editProfile"
-                    yes={() => (
-                      <FormControl variant="outlined" margin="dense" className={classes.formControl}>
-                        <InputLabel>{i18n.t("userModal.form.permissionGroup")}</InputLabel>
-                        <Select
-                          value={permissionGroupId}
-                          onChange={(e) => setPermissionGroupId(e.target.value)}
-                          label={i18n.t("userModal.form.permissionGroup")}
-                        >
-                          <MenuItem value="">&nbsp;</MenuItem>
-                          {permissionGroups.map((group) => (
-                            <MenuItem key={group.id} value={group.id}>
-                              {group.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
                 </div>
-                <Can
-                  role={loggedInUser.profile}
-                  perform="user-modal:editQueues"
-                  yes={() => (
-                    <QueueSelect
-                      selectedQueueIds={selectedQueueIds}
-                      onChange={(values) => setSelectedQueueIds(values)}
-                    />
+
+                {/*
+                  O cargo.
+
+                  No cadastro é um seletor: a pessoa já entra sabendo o que
+                  pode fazer. Na edição vira um resumo com botão, porque
+                  mudar acesso é uma rota à parte — e é lá que ficam as
+                  exceções individuais e a prévia do resultado.
+                */}
+                {podeAtribuirCargo && !userId && (
+                  <FormControl variant="outlined" margin="dense" fullWidth>
+                    <InputLabel>Cargo</InputLabel>
+                    <Select
+                      value={roleId}
+                      onChange={(e) => setRoleId(e.target.value)}
+                      label="Cargo"
+                    >
+                      <MenuItem value="">
+                        <em>Sem cargo — define depois</em>
+                      </MenuItem>
+                      {cargos.map((cargo) => (
+                        <MenuItem key={cargo.id} value={cargo.id}>
+                          {cargo.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+
+                {podeAtribuirCargo && userId && (
+                  <Box className={classes.linhaCargo}>
+                    <span>
+                      Cargo: <strong>{nomeDoCargo ?? "sem cargo"}</strong>
+                    </span>
+                    <Button
+                      size="small"
+                      startIcon={<Security />}
+                      onClick={() => setAccessModalOpen(true)}
+                    >
+                      Gerenciar acesso
+                    </Button>
+                  </Box>
+                )}
+                {/* Filas, conexão e teto de atendimentos são dados de
+                    trabalho, não de acesso: pedem "editar usuários". */}
+                <Can permission="users:edit">
+                  <QueueSelect
+                    selectedQueueIds={selectedQueueIds}
+                    onChange={(values) => setSelectedQueueIds(values)}
+                  />
+                </Can>
+
+                <Can permission="users:edit">
+                  {!loading && (
+                    <FormControl variant="outlined" margin="dense" fullWidth>
+                      <InputLabel>{i18n.t("userModal.form.whatsapp")}</InputLabel>
+                      <Field
+                        as={Select}
+                        value={whatsappId}
+                        onChange={(e) => setWhatsappId(e.target.value)}
+                        label={i18n.t("userModal.form.whatsapp")}
+                      >
+                        <MenuItem value="">
+                          <em>{i18n.t("userModal.form.noWhatsapp")}</em>
+                        </MenuItem>
+                        {whatsApps.map((whatsapp) => (
+                          <MenuItem key={whatsapp.id} value={whatsapp.id}>
+                            {whatsapp.name}
+                          </MenuItem>
+                        ))}
+                      </Field>
+                    </FormControl>
                   )}
-                />
-                <Can
-                  role={loggedInUser.profile}
-                  perform="user-modal:editQueues"
-                  yes={() =>
-                    !loading && (
-                      <FormControl variant="outlined" margin="dense" fullWidth>
-                        <InputLabel>{i18n.t("userModal.form.whatsapp")}</InputLabel>
-                        <Field
-                          as={Select}
-                          value={whatsappId}
-                          onChange={(e) => setWhatsappId(e.target.value)}
-                          label={i18n.t("userModal.form.whatsapp")}
-                        >
-                          <MenuItem value="">&nbsp;</MenuItem>
-                          {whatsApps.map((whatsapp) => (
-                            <MenuItem key={whatsapp.id} value={whatsapp.id}>
-                              {whatsapp.name}
-                            </MenuItem>
-                          ))}
-                        </Field>
-                      </FormControl>
-                    )
-                  }
-                />
-                <Can
-                  role={loggedInUser.profile}
-                  perform="user-modal:editQueues"
-                  yes={() => (
-                    <Field
-                      as={TextField}
-                      label={i18n.t("userModal.form.maxSimultaneousTickets")}
-                      name="maxSimultaneousTickets"
-                      type="number"
-                      inputProps={{ min: 0 }}
-                      helperText={i18n.t(
-                        "userModal.form.maxSimultaneousTicketsHelper"
-                      )}
-                      variant="outlined"
-                      margin="dense"
-                      fullWidth
-                    />
-                  )}
-                />
+                </Can>
+
+                <Can permission="users:edit">
+                  <Field
+                    as={TextField}
+                    label={i18n.t("userModal.form.maxSimultaneousTickets")}
+                    name="maxSimultaneousTickets"
+                    type="number"
+                    inputProps={{ min: 0 }}
+                    helperText={i18n.t(
+                      "userModal.form.maxSimultaneousTicketsHelper"
+                    )}
+                    variant="outlined"
+                    margin="dense"
+                    fullWidth
+                  />
+                </Can>
               </DialogContent>
 
               <DialogActions>
-                {/* Botão de permissões individuais — apenas em edição */}
-                {userId && (
-                  <Can
-                    role={loggedInUser.profile}
-                    perform="user-modal:editProfile"
-                    yes={() => (
-                      <Tooltip title="Gerenciar permissões individuais deste usuário">
-                        <Button
-                          onClick={() => setPermissionsModalOpen(true)}
-                          color="primary"
-                          variant="outlined"
-                          startIcon={<Security />}
-                          style={{ marginRight: "auto" }}
-                        >
-                          Permissões
-                        </Button>
-                      </Tooltip>
-                    )}
-                  />
-                )}
-
                 <Button
                   onClick={handleClose}
                   color="secondary"

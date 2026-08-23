@@ -7,6 +7,7 @@ import DealTicket from "../../models/DealTicket";
 import sequelize from "../../database";
 import Order from "../../models/Order";
 import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
+import MarcarGanhoService from "./MarcarGanhoService";
 
 interface Request {
   deal: Deal;
@@ -128,6 +129,23 @@ const AdvanceDealService = async ({
   // Chave da cadeia: este card pode já ser derivado de outro.
   const rootDealId = deal.rootDealId || deal.id;
 
+  /**
+   * Coluna marcada como ganho fecha a venda aqui mesmo, ainda que o trabalho
+   * siga para o quadro seguinte.
+   *
+   * Antes o ganho só existia no fim da fila de quadros: um card que passava por
+   * "Ganho" no funil e ia para a Produção virava "moved", e o faturamento
+   * ficava parado até a jornada terminar no último quadro.
+   */
+  if (stage.isWon) {
+    await MarcarGanhoService({
+      deal,
+      companyId,
+      userId,
+      origem: boardAtual ? `${boardAtual.name} → ${stage.name}` : stage.name
+    });
+  }
+
   // Fim da linha: a coluna final fatura a venda.
   if (!destino) {
     await deal.update({
@@ -136,12 +154,13 @@ const AdvanceDealService = async ({
       closedAt: new Date()
     });
 
-    await DealActivity.create({
-      type: "won",
-      body: boardAtual ? boardAtual.name : stage.name,
-      dealId: deal.id,
-      userId: userId || null,
-      companyId
+    // Devolve false quando a venda já tinha sido ganha antes na jornada — daí o
+    // registro não se repete na timeline.
+    await MarcarGanhoService({
+      deal,
+      companyId,
+      userId,
+      origem: boardAtual ? boardAtual.name : stage.name
     });
 
     return { origem: deal, destino: null, nextBoard: null };

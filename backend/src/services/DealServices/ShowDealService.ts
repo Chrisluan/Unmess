@@ -6,6 +6,7 @@ import Board from "../../models/Board";
 import PipelineStage from "../../models/PipelineStage";
 import DealActivity from "../../models/DealActivity";
 import DealItem from "../../models/DealItem";
+import Order from "../../models/Order";
 import Ticket from "../../models/Ticket";
 import AppError from "../../errors/AppError";
 
@@ -34,9 +35,17 @@ const ShowDealService = async (
         required: false
       },
       {
+        // Distingue orçamento de pedido na tela: existe só depois que o card
+        // saiu do funil de vendas.
+        model: Order,
+        as: "salesOrder",
+        attributes: ["id", "number", "quoteNumber", "status"],
+        required: false
+      },
+      {
         model: PipelineStage,
         as: "stage",
-        attributes: ["id", "name", "color", "type", "isFinal", "boardId"],
+        attributes: ["id", "name", "color", "type", "isFinal", "isWon", "boardId"],
         required: false
       },
       {

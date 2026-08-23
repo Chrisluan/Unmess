@@ -1,82 +1,32 @@
-import { useContext } from "react";
-import { AuthContext } from "../../context/Auth/AuthContext";
 import usePermissions from "../../hooks/usePermissions";
 
 /**
- * Componente declarativo de controle de acesso.
+ * Mostra o conteúdo só para quem tem a permissão.
  *
- * Novo uso (permissão granular):
  *   <Can permission="tickets:delete">
- *     <DeleteButton />
+ *     <BotaoExcluir />
  *   </Can>
  *
- * Múltiplas permissões (qualquer uma):
- *   <Can anyOf={["tickets:edit", "tickets:delete"]}>
+ *   <Can anyOf={["crm:edit", "crm:move"]} fallback={<Aviso />}>
  *     ...
  *   </Can>
  *
- * Compatibilidade legada (role-based):
- *   <Can role={user.profile} perform="ticket-options:deleteTicket" yes={() => ...} no={() => ...} />
+ * O modo antigo — `role` + `perform` contra uma tabela de regras escrita neste
+ * arquivo — saiu. Ele decidia por perfil ("admin pode transferir chat"), o que
+ * era uma terceira fonte de verdade sobre permissão, ao lado do catálogo e do
+ * campo `profile`. Três fontes para a mesma pergunta é uma garantia de que
+ * duas estarão erradas.
  */
-
-// Regras legadas mantidas para compatibilidade
-const legacyRules = {
-  user: { static: [] },
-  admin: {
-    static: [
-      "drawer-admin-items:view",
-      "tickets-manager:showall",
-      "user-modal:editProfile",
-      "user-modal:editQueues",
-      "ticket-options:deleteTicket",
-      "ticket-options:transferWhatsapp",
-      "contacts-page:deleteContact",
-    ],
-  },
-  super: { static: ["drawer-super-items:view"] },
-};
-
-const legacyCheck = (role, action) => {
-  const permissions = legacyRules[role];
-  if (!permissions) return false;
-  return permissions.static?.includes(action) ?? false;
-};
-
-const Can = ({
-  // Novo sistema granular
-  permission,
-  anyOf,
-  allOf,
-  children,
-  fallback = null,
-  // Sistema legado (role-based)
-  role,
-  perform,
-  yes,
-  no,
-}) => {
+const Can = ({ permission, anyOf, allOf, children, fallback = null }) => {
   const { can, canAny, canAll } = usePermissions();
 
-  // ── Novo sistema granular ──────────────────────────────────────────────────
-  if (permission || anyOf || allOf) {
-    let allowed = false;
+  let permitido = false;
+  if (permission) permitido = can(permission);
+  else if (anyOf) permitido = canAny(anyOf);
+  else if (allOf) permitido = canAll(allOf);
 
-    if (permission) allowed = can(permission);
-    else if (anyOf) allowed = canAny(anyOf);
-    else if (allOf) allowed = canAll(allOf);
-
-    if (!allowed) return fallback;
-    return children ?? null;
-  }
-
-  // ── Sistema legado (compatibilidade) ───────────────────────────────────────
-  if (role && perform) {
-    const allowed = legacyCheck(role, perform);
-    if (allowed) return yes ? yes() : null;
-    return no ? no() : null;
-  }
-
-  return null;
+  if (!permitido) return fallback;
+  return children ?? null;
 };
 
 export { Can };
