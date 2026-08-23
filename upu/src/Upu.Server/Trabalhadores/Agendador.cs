@@ -49,6 +49,7 @@ public sealed class Agendador(
             try
             {
                 await CuidarDasAgendadasAsync(ct);
+                await LimparAvisosVencidosAsync(ct);
                 await VigiarBranchAsync(ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -132,6 +133,24 @@ public sealed class Agendador(
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// Tira do arquivo os avisos cujo prazo passou.
+    ///
+    /// O widget já os ignora pela data, então isto é honestidade do arquivo, não
+    /// correção de comportamento: sem a varredura, um aviso que venceu numa
+    /// noite parada ficava lá até a próxima publicação — e quem abrisse o
+    /// `avisos.json` para entender o que os usuários estão vendo leria algo que
+    /// ninguém vê.
+    ///
+    /// Só regrava quando algo saiu: reescrever o arquivo a cada trinta segundos
+    /// seria disco à toa numa máquina que atende cliente.
+    /// </summary>
+    private async Task LimparAvisosVencidosAsync(CancellationToken ct)
+    {
+        if (await deposito.RemoverAvisosVencidosAsync(DateTimeOffset.Now, ct) > 0)
+            await publicador.RepublicarFeedAsync(ct);
     }
 
     private async Task AplicarAsync(Release release, CancellationToken ct)

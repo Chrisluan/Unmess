@@ -117,8 +117,13 @@ O widget fica fora do bundle de propósito: o aviso mais importante que ele dá 
 bundle está sendo trocado.
 
 **2. Notificação do navegador com a aba aberta** — funciona sem configurar nada,
-depois que o usuário permite. O widget pede a permissão no primeiro aviso que
-não é dispensável.
+depois que o usuário permite. O widget oferece o botão de permissão em qualquer
+aviso enquanto ela não tiver sido dada.
+
+A notificação sai por `registration.showNotification()`, e não por
+`new Notification()`. A diferença importa exatamente no aplicativo instalado: no
+Android, uma página controlada por service worker recebe *Illegal constructor* ao
+chamar o construtor. O aviso sumia sem erro visível.
 
 **3. Notificação com a aba fechada (Web Push)** — precisa que o frontend
 encaminhe `/upu/*` para o UPU, o que já está feito no `frontend/server.js`.
@@ -131,6 +136,31 @@ caindo.
 As chaves VAPID nascem na primeira execução e ficam em `dados/configuracao.json`.
 **Trocá-las invalida todas as permissões já concedidas** — ninguém permite
 notificação duas vezes.
+
+### O PWA muda as regras
+
+O unmess é um PWA com `registerType: "autoUpdate"` e `navigateFallback` para o
+`index.html` **precacheado**. Consequência que custou uma noite: **o aplicativo
+instalado nunca lê o `index.html` do disco**. Ele serve a cópia que o Workbox
+guardou no dia do build.
+
+Isso significa que a linha que carrega o widget precisa estar no
+`frontend/index.html` **do repositório**, e um `vite build` precisa acontecer.
+Editar o arquivo dentro de `build/` resolve para quem abre pelo navegador e não
+resolve para quem instalou o aplicativo.
+
+O UPU acrescenta a linha ao `build/index.html` quando ela falta — é uma rede de
+segurança para o acesso por navegador, não para o PWA. Para o PWA, a garantia é
+o fonte commitado.
+
+Duas coisas ficaram no `vite.config.js` por causa disso:
+
+- `globIgnores` tira `avisos.json`, `avisos-unmess.js` e `aviso-sw/**` do
+  precache. Eles são gravados **depois** do build, pelo UPU; precacheados,
+  ficariam congelados na versão do dia do build — um aviso de manutenção que
+  nunca chega, ou um que nunca sai da tela.
+- `/^\/upu/` entrou no `navigateFallbackDenylist`, para que as rotas públicas do
+  UPU não recebam o `index.html` de volta.
 
 ### Avisos que não são de atualização
 
@@ -254,3 +284,43 @@ durante o deploy.
 enxerga o gerenciador de credenciais do seu usuário. Se a branch vier de um
 repositório privado autenticado assim, o `fetch` vai falhar; o caminho é token
 no remote HTTPS.
+
+---
+
+## O git e o dono da pasta
+
+`C:\unmess` pertence a uma conta de pessoa (`UNMESS\quase`), e o serviço roda
+como LocalSystem. O git, ao ver isso, recusa: *detected dubious ownership in
+repository*. É uma proteção contra repositório plantado por outro usuário — aqui
+ela só atrapalha, porque a pasta é a mesma de sempre.
+
+O que o git sugere na mensagem é `git config --global --add safe.directory`. Essa
+sugestão **não resolve o serviço**: "global" é por conta, então rodá-la como
+usuário logado grava no perfil dele, e o LocalSystem continua sem enxergar. Foi
+o que fez o diário repetir o mesmo erro a cada dez minutos.
+
+O UPU passa `-c safe.directory=<raiz>` em toda chamada ao git, então funciona
+sob qualquer conta, sem depender de configuração na máquina. O `instalar-upu.ps1`
+ainda acrescenta a exceção no escopo `--system` (que vale para todas as contas,
+LocalSystem incluído) — não para o UPU, que já se vira, mas para o resto: o
+atualizador antigo em Node, um script npm por tarefa agendada, qualquer git que
+rode aqui fora da conta do dono.
+
+O `-c` funciona porque o git só aceita `safe.directory` de configuração
+protegida — sistema, global e linha de comando. Repositório e variável de
+ambiente são ignorados de propósito.
+
+---
+
+## Recompilar com o serviço instalado
+
+O serviço segura os próprios DLLs. Num PowerShell **como Administrador**:
+
+```powershell
+cd C:\unmess\upu
+.\scripts\compilar.ps1 -PararServico
+```
+
+Ele para, publica e sobe de novo. Sem `-PararServico`, o script detecta o
+serviço de pé e para antes de tentar, em vez de despejar trinta linhas de
+MSB3026.

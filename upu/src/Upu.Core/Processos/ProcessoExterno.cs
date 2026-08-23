@@ -27,7 +27,14 @@ public sealed record ResultadoDoProcesso(int Codigo, string Saida, TimeSpan Dura
 
         if (linhas.Count == 0) return $"o comando terminou com código {Codigo} e sem dizer nada";
 
-        var pistas = new[] { "error", "erro", "failed", "falhou", "cannot", "não foi possível" };
+        // "fatal" está aqui por experiência própria: sem ele, um `git fetch`
+        // recusado por "dubious ownership" caía na última linha da saída, que é
+        // o comando que o git sugere — e o log passou dias mostrando a sugestão
+        // no lugar do problema.
+        var pistas = new[]
+        {
+            "fatal", "error", "erro", "failed", "falhou", "cannot", "não foi possível"
+        };
 
         var suspeita = linhas.FirstOrDefault(l =>
             pistas.Any(p => l.Contains(p, StringComparison.OrdinalIgnoreCase)));
