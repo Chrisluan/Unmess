@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
@@ -101,6 +101,22 @@ const Ticket = () => {
   // Pedidos ligados a esta conversa. Quem busca é o painel lateral; aqui só
   // se guarda a contagem, para o cabeçalho poder mostrá-la.
   const [pedidos, setPedidos] = useState([]);
+  // Timer do agrupamento de "marcar como lida" (ver o socket mais abaixo).
+  const marcaLeituraRef = useRef(null);
+  // Chegou mensagem com a aba escondida: marcar ao voltar, não agora.
+  const leituraPendenteRef = useRef(false);
+
+  const marcarComoLida = () => {
+    api.post(`/tickets/${ticketId}/read`).catch(() => {
+      // Falhar aqui só deixa o contador desatualizado até a próxima abertura
+      // da conversa; não vale interromper o atendente com um erro.
+    });
+  };
+
+  // A conversa muda: o que ficou pendente era da anterior.
+  useEffect(() => {
+    leituraPendenteRef.current = false;
+  }, [ticketId]);
 
   useEffect(() => {
     setLoading(true);
@@ -149,10 +165,55 @@ const Ticket = () => {
       }
     });
 
+    /**
+     * Conversa aberta na tela não acumula "não lidas".
+     *
+     * A leitura só era registrada ao carregar o histórico ou ao responder.
+     * Agora que o contador realmente conta, a conversa que o atendente está
+     * lendo passaria a exibir 1, 2, 3... na frente dele até que saísse e
+     * voltasse. Só vale com a aba visível: mensagem que chega com o navegador
+     * em segundo plano ninguém leu, e é justamente a que precisa do aviso.
+     */
+    socket.on("appMessage", (data) => {
+      if (data.action !== "create") return;
+      if (data.message?.ticketId !== Number(ticketId)) return;
+      if (data.message?.fromMe) return;
+
+      if (document.visibilityState !== "visible") {
+        // Chegou com a aba em segundo plano: ninguém leu. Fica anotado para
+        // ser resolvido quando a pessoa voltar.
+        leituraPendenteRef.current = true;
+        return;
+      }
+
+      // Agrupa rajadas: cliente que manda cinco mensagens seguidas geraria
+      // cinco chamadas, e cada uma manda um "visto" para o WhatsApp.
+      clearTimeout(marcaLeituraRef.current);
+      marcaLeituraRef.current = setTimeout(marcarComoLida, 800);
+    });
+
     return () => {
+      clearTimeout(marcaLeituraRef.current);
       socket.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketId, history]);
+
+  // Voltou para a aba com a conversa aberta: o que chegou enquanto ela estava
+  // escondida acabou de ser lido. Sem o registro do que ficou pendente, todo
+  // clique de volta na aba viraria uma chamada — e um "visto" para o WhatsApp.
+  useEffect(() => {
+    const aoVoltar = () => {
+      if (document.visibilityState !== "visible") return;
+      if (!leituraPendenteRef.current) return;
+      leituraPendenteRef.current = false;
+      marcarComoLida();
+    };
+
+    document.addEventListener("visibilitychange", aoVoltar);
+    return () => document.removeEventListener("visibilitychange", aoVoltar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketId]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);

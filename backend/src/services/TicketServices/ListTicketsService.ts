@@ -8,6 +8,11 @@ import {
 import { startOfDay, endOfDay, parseISO } from "date-fns";
 
 import AppError from "../../errors/AppError";
+import {
+  EscopoResolvido,
+  alcanca,
+  filtroDeEscopo
+} from "../../helpers/permissions/escopos";
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import Queue from "../../models/Queue";
@@ -37,6 +42,12 @@ interface Request {
   userIds?: number[];
   /** "only" = só grupos, "exclude" = só individuais, undefined = tudo. */
   groups?: string;
+  /**
+   * As conexões que quem pediu alcança — diferente do filtro acima, que é
+   * escolha da pessoa. Ausente é "sem restrição", para as chamadas internas
+   * do sistema, que não são feitas em nome de ninguém.
+   */
+  escopoDeConexoes?: EscopoResolvido;
   companyId: number;
 }
 
@@ -60,6 +71,7 @@ const ListTicketsService = async ({
   tagIds,
   userIds,
   groups,
+  escopoDeConexoes,
   companyId
 }: Request): Promise<Response> => {
   let whereCondition: Filterable["where"] = {
@@ -215,13 +227,31 @@ const ListTicketsService = async ({
     };
   }
 
-  // Filtro por conexão. Aplicado por último, depois de todas as reatribuições
-  // de whereCondition acima, para nunca ser sobrescrito por aba/data/não-lidas.
-  if (whatsappIds && whatsappIds.length > 0) {
+  /**
+   * Filtro por conexão, e o escopo de conexões por cima dele.
+   *
+   * Aplicados por último, depois de todas as reatribuições de whereCondition
+   * acima, para nunca serem sobrescritos por aba/data/não-lidas.
+   *
+   * O escopo entra por interseção: pedir um número que não se alcança encurta
+   * a lista até ela ficar vazia, e nunca a alarga. Um `whatsappId` nulo
+   * continua passando — conversa sem conexão registrada não pertence a escopo
+   * nenhum, do mesmo jeito que a fila nula já é tratada acima.
+   */
+  const pedidas = whatsappIds && whatsappIds.length > 0 ? whatsappIds : null;
+
+  const permitidas = pedidas
+    ? pedidas.filter(id => alcanca(escopoDeConexoes, id))
+    : null;
+
+  if (permitidas) {
     whereCondition = {
       ...whereCondition,
-      whatsappId: { [Op.in]: whatsappIds }
+      whatsappId: { [Op.in]: permitidas }
     };
+  } else {
+    const restricao = filtroDeEscopo(escopoDeConexoes, "whatsappId");
+    if (restricao) whereCondition = { ...whereCondition, ...restricao };
   }
 
   // Filtro por atendente. Mesma posição do filtro de conexão, e pelo mesmo

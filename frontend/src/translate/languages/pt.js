@@ -305,6 +305,7 @@ const messages = {
       crm: {
         title: "CRM",
         searchPlaceholder: "Pesquisar por negócio ou cliente...",
+        emptyBoards: "Nenhum quadro no seu acesso. Peça a quem administra o sistema para incluir você nos quadros em que trabalha.",
         emptyStages: "Nenhuma coluna configurada neste quadro.",
         emptyStage: "Nenhum negócio nesta coluna",
         filters: {
@@ -605,6 +606,7 @@ const messages = {
         },
       },
       ticketsList: {
+        lastMessageFromMe: "A última mensagem foi nossa",
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
         myTicketsHeader: "Minhas",
@@ -631,6 +633,7 @@ const messages = {
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         waitingFor: "Tempo que o cliente está aguardando",
         protocol: "Protocolo do atendimento",
+        unread: "{{count}} mensagem(ns) nova(s) ainda não lida(s)",
         pendingBar: {
           readOnly:
             "Você está apenas visualizando. Aceite o atendimento para responder.",
@@ -725,10 +728,16 @@ const messages = {
       },
       mainDrawer: {
         sections: {
+          favorites: "Favoritos",
           operation: "Operação",
           commercial: "Comercial",
-          administration: "Administração",
+          finance: "Financeiro",
+          system: "Administração do sistema",
           platform: "Plataforma",
+        },
+        favorites: {
+          add: "Fixar em Favoritos",
+          remove: "Tirar dos Favoritos",
         },
         listItems: {
           dashboard: "Visão geral",
@@ -738,10 +747,14 @@ const messages = {
           customers: "Clientes",
           crm: "Funil de vendas",
           products: "Produtos",
-          finance: "Financeiro",
-          quickAnswers: "Respostas rápidas",
+          financePos: "PDV",
+          financeMetrics: "Métricas",
+          financeReceivables: "Contas a receber",
+          financePayables: "Contas a pagar",
+          financeCashflow: "Fluxo de caixa",
+          financeSettings: "Configuração financeira",
+          cadastros: "Cadastro",
           queues: "Setores",
-          administration: "Administração",
           superAdmin: "Gestão de Empresas",
           companies: "Empresas",
           users: "Usuários",
@@ -944,18 +957,31 @@ const messages = {
             "Todos os dados do usuário serão perdidos. As conversas abertas dele voltam para o setor.",
         },
       },
+      cadastros: {
+        title: "Cadastro",
+        description:
+          "As listas que a empresa mantém para o sistema funcionar: o que ela vende, o que ela responde de pronto, como ela classifica as conversas e como ela as encerra.",
+        tabs: {
+          products: "Produtos",
+          quickAnswers: "Respostas rápidas",
+          tags: "Etiquetas",
+          autoMessages: "Mensagens automáticas",
+          ticketStatuses: "Status de finalização",
+        },
+      },
+      tabbedPage: {
+        readOnly:
+          "Você tem acesso de leitura a esta tela. Para alterá-la, peça a permissão de editar.",
+      },
       settings: {
         success: "Configurações salvas com sucesso.",
         title: "Configurações",
         description:
-          "Regras de atendimento, números conectados, horários e identidade da empresa. Usuários, perfis de acesso e setores ficam em Administração, no menu lateral.",
+          "Como o sistema se comporta, por onde ele fala, quando ele atende e com que cara ele aparece. Etiquetas, mensagens automáticas e status de finalização ficam em Cadastro; usuários, cargos e setores, nos itens ao lado.",
         tabs: {
           general: "Geral",
           connections: "Conexões",
           businessHours: "Horário de Atendimento",
-          ticketStatuses: "Status de Finalização",
-          tags: "Etiquetas",
-          autoMessages: "Mensagens Automáticas",
           branding: "Identidade Visual",
         },
         general: {
@@ -1125,7 +1151,32 @@ const messages = {
           },
         },
       },
+      audioPlayer: {
+        play: "Tocar",
+        pause: "Pausar",
+        speed: "Velocidade da reprodução",
+        position: "Posição do áudio",
+        download: "Baixar o áudio",
+      },
       messagesList: {
+        openPdf: "Abrir o PDF",
+        retry: "Tentar novamente",
+        discard: "Descartar",
+        sendFailed: "Não foi enviada",
+        quotedOtherTicket: "de outro atendimento",
+        quotedOtherTicketTooltip:
+          "Esta mensagem é de outro atendimento deste contato. Clique para abrir aquela conversa na mensagem citada.",
+        quotedGoTo: "Ir até a mensagem citada",
+        quotedNotLoaded:
+          "Não foi possível localizar a mensagem citada neste histórico.",
+        ack: {
+          sending: "Enviando",
+          sent: "Enviada ao WhatsApp",
+          delivered: "Entregue ao contato",
+          read: "Lida",
+          played: "Ouvida",
+          failed: "Falha no envio",
+        },
         internalNote: "Nota interna",
         fromApp: "pelo celular",
         edited: "editada",
@@ -1161,6 +1212,7 @@ const messages = {
         },
       },
       messagesInput: {
+        captionPlaceholder: "Escreva uma legenda (opcional)",
         placeholderOpen:
           "Escreva uma mensagem, ou digite / para usar uma resposta pronta",
         quickAnswersHint: "↑ ↓ para escolher · Enter para inserir · Esc para fechar",
@@ -1170,6 +1222,7 @@ const messages = {
         internalNoteTooltip: "Nota interna (só a equipe vê)",
         filesSelected: "{{count}} arquivos selecionados",
         tooltips: {
+          removeAttach: "Remover este anexo",
           emoji: "Emoji",
           stickers: "Figurinhas",
           attach: "Anexar arquivo",
@@ -1231,6 +1284,7 @@ const messages = {
       },
       messageInput: {
         recording: {
+          label: "Áudio",
           insecureContext:
             "O navegador só libera o microfone em conexão segura (HTTPS). Acessando pelo IP da rede em HTTP, a gravação fica indisponível.",
           unavailable: "Não foi possível iniciar o gravador de áudio.",

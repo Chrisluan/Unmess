@@ -241,6 +241,7 @@ const messages = {
       crm: {
         title: "CRM",
         searchPlaceholder: "Search by deal or customer...",
+        emptyBoards: "No boards in your access. Ask whoever administers the system to add you to the boards you work on.",
         emptyStages: "No columns configured on this board.",
         emptyStage: "No deals in this column",
         filters: {
@@ -531,6 +532,7 @@ const messages = {
         },
       },
       ticketsList: {
+        lastMessageFromMe: "The last message was ours",
         pendingHeader: "Queue",
         assignedHeader: "Working on",
         myTicketsHeader: "Mine",
@@ -542,6 +544,7 @@ const messages = {
         connectionTitle: "Connection that is currently being used.",
         waitingFor: "How long the customer has been waiting",
         protocol: "Chat protocol",
+        unread: "{{count}} new unread message(s)",
         pendingBar: {
           readOnly: "You are only viewing. Accept the ticket to reply.",
           accept: "Accept ticket",
@@ -622,6 +625,18 @@ const messages = {
         },
       },
       mainDrawer: {
+        sections: {
+          favorites: "Favorites",
+          operation: "Operations",
+          commercial: "Sales",
+          finance: "Finance",
+          system: "System administration",
+          platform: "Platform",
+        },
+        favorites: {
+          add: "Pin to Favorites",
+          remove: "Unpin from Favorites",
+        },
         listItems: {
           dashboard: "Dashboard",
           connections: "Connections",
@@ -629,9 +644,14 @@ const messages = {
           contacts: "Contacts",
           customers: "Customers",
           crm: "CRM",
-          quickAnswers: "Quick Answers",
+          financePos: "Point of sale",
+          financeMetrics: "Metrics",
+          financeReceivables: "Receivables",
+          financePayables: "Payables",
+          financeCashflow: "Cash flow",
+          financeSettings: "Finance settings",
+          cadastros: "Records",
           queues: "Queues",
-          administration: "Administration",
           superAdmin: "Company Management",
           companies: "Companies",
           users: "Users",
@@ -780,16 +800,31 @@ const messages = {
             "All user data will be lost. Users' open chats will be moved to queue.",
         },
       },
+      cadastros: {
+        title: "Records",
+        description:
+          "The lists your company keeps so the system can work: what it sells, what it answers on the spot, how it labels chats and how it closes them.",
+        tabs: {
+          products: "Products",
+          quickAnswers: "Quick answers",
+          tags: "Tags",
+          autoMessages: "Automatic messages",
+          ticketStatuses: "Closing statuses",
+        },
+      },
+      tabbedPage: {
+        readOnly:
+          "You have read-only access to this screen. To change it, ask for edit permission.",
+      },
       settings: {
         success: "Settings saved successfully.",
         title: "Settings",
+        description:
+          "How the system behaves, where it speaks from, when it is open and how it looks. Tags, automatic messages and closing statuses live under Records; users, roles and queues are next to it.",
         tabs: {
           general: "General",
           connections: "Connections",
           businessHours: "Business Hours",
-          ticketStatuses: "Closing Statuses",
-          tags: "Tags",
-          autoMessages: "Automatic Messages",
           branding: "Branding",
         },
         general: {
@@ -949,7 +984,31 @@ const messages = {
           },
         },
       },
+      audioPlayer: {
+        play: "Play",
+        pause: "Pause",
+        speed: "Playback speed",
+        position: "Audio position",
+        download: "Download the audio",
+      },
       messagesList: {
+        openPdf: "Open the PDF",
+        retry: "Try again",
+        discard: "Discard",
+        sendFailed: "Not delivered",
+        quotedOtherTicket: "from another ticket",
+        quotedOtherTicketTooltip:
+          "This message belongs to another ticket with this contact. Click to open that conversation at the quoted message.",
+        quotedGoTo: "Go to the quoted message",
+        quotedNotLoaded: "Could not find the quoted message in this history.",
+        ack: {
+          sending: "Sending",
+          sent: "Sent to WhatsApp",
+          delivered: "Delivered to the contact",
+          read: "Read",
+          played: "Played",
+          failed: "Sending failed",
+        },
         internalNote: "Internal note",
         fromApp: "from phone",
         edited: "edited",
@@ -968,6 +1027,18 @@ const messages = {
         },
       },
       messagesInput: {
+        captionPlaceholder: "Write a caption (optional)",
+        filesSelected: "{{count}} files selected",
+        tooltips: {
+          emoji: "Emoji",
+          stickers: "Stickers",
+          attach: "Attach a file",
+          send: "Send (Enter)",
+          record: "Record audio",
+          cancelAttach: "Discard the attachments",
+          sendAttach: "Send the attachments",
+          removeAttach: "Remove this attachment",
+        },
         placeholderOpen: "Type a message or press ''/'' to use the registered quick responses",
         placeholderClosed: "Reopen or accept this chat to send a message.",
         signMessage: "Sign",
@@ -1022,6 +1093,7 @@ const messages = {
       },
       messageInput: {
         recording: {
+          label: "Audio",
           insecureContext:
             "Browsers only allow microphone access over a secure connection (HTTPS). Recording is unavailable when reaching the system by IP over plain HTTP.",
           unavailable: "Could not start the audio recorder.",

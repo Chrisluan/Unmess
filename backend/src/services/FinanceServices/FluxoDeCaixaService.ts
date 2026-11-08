@@ -1,10 +1,16 @@
 import { QueryTypes } from "sequelize";
 import sequelize from "../../database";
+import {
+  EscopoResolvido,
+  condicaoSql
+} from "../../helpers/permissions/escopos";
 
 interface Request {
   companyId: number;
   de: string;
   ate: string;
+  /** As contas que quem pediu alcança. Ausente é "sem restrição". */
+  escopoDeContas?: EscopoResolvido;
 }
 
 export interface FluxoDeCaixa {
@@ -40,9 +46,39 @@ const numero = (v: unknown): number => {
 const FluxoDeCaixaService = async ({
   companyId,
   de,
-  ate
+  ate,
+  escopoDeContas
 }: Request): Promise<FluxoDeCaixa> => {
   const replacements = { companyId, de, ate };
+
+  /**
+   * O escopo de contas entra como condição interpolada, e não como
+   * `replacement`.
+   *
+   * Os ids já passaram por `sanitizarIds` e são inteiros — nada vindo do
+   * corpo da requisição chega aqui como texto. Um `IN (:ids)` com lista vazia
+   * é erro de sintaxe em MySQL, e a condição precisa saber a diferença entre
+   * "sem restrição" e "nenhuma conta"; `condicaoSql` devolve as duas.
+   */
+  /**
+   * As transferências entram aqui, e isso não é esquecimento.
+   *
+   * Sangria e suprimento movem dinheiro entre contas da própria empresa. A
+   * pergunta desta tela é onde o dinheiro está — e para respondê-la, o
+   * movimento entre a gaveta e o cofre importa: sem ele, o saldo do caixa
+   * cresceria para sempre e nunca bateria com a gaveta.
+   *
+   * Métricas faz a pergunta oposta — se o negócio deu lucro — e por isso
+   * descarta `isTransfer`: contar sangria como despesa faria um mês de
+   * retiradas normais aparecer como um mês de prejuízo. As duas telas
+   * discordam de propósito, e cada uma está certa sobre a sua pergunta.
+   */
+
+  // Três apelidos para a mesma regra, porque as consultas abaixo chamam a
+  // coluna de nomes diferentes conforme a tabela que está no FROM.
+  const contaNoEscopo = condicaoSql(escopoDeContas, "accountId");
+  const contaNoEscopoIdSimples = condicaoSql(escopoDeContas, "id");
+  const contaNoEscopoA = condicaoSql(escopoDeContas, "a.id");
 
   /**
    * Saldo inicial: o que as contas trouxeram de abertura mais tudo que se
@@ -52,10 +88,11 @@ const FluxoDeCaixaService = async ({
   const [inicial] = await sequelize.query<Record<string, unknown>>(
     `SELECT
        (SELECT COALESCE(SUM(openingBalance), 0) FROM FinancialAccounts
-         WHERE companyId = :companyId)
+         WHERE companyId = :companyId AND ${contaNoEscopoIdSimples})
      + (SELECT COALESCE(SUM(CASE WHEN direction = 'in' THEN amount ELSE -amount END), 0)
           FROM FinancialEntries
-         WHERE companyId = :companyId AND occurredAt < :de) AS saldo`,
+         WHERE companyId = :companyId AND occurredAt < :de
+           AND ${contaNoEscopo}) AS saldo`,
     { replacements, type: QueryTypes.SELECT }
   );
 
@@ -65,6 +102,7 @@ const FluxoDeCaixaService = async ({
             COALESCE(SUM(CASE WHEN direction = 'out' THEN amount ELSE 0 END), 0) AS saidas
        FROM FinancialEntries
       WHERE companyId = :companyId AND occurredAt BETWEEN :de AND :ate
+        AND ${contaNoEscopo}
       GROUP BY occurredAt
       ORDER BY occurredAt ASC`,
     { replacements, type: QueryTypes.SELECT }
@@ -78,6 +116,7 @@ const FluxoDeCaixaService = async ({
                        WHERE e.accountId = a.id AND e.occurredAt <= :ate), 0) AS saldo
        FROM FinancialAccounts a
       WHERE a.companyId = :companyId AND a.active = true
+        AND ${contaNoEscopoA}
       ORDER BY a.name ASC`,
     { replacements, type: QueryTypes.SELECT }
   );

@@ -6,6 +6,9 @@ import DealActivity from "../../models/DealActivity";
 import PipelineStage from "../../models/PipelineStage";
 import ShowDealService from "./ShowDealService";
 import ListBoardsService from "../BoardServices/ListBoardsService";
+import DealTicket from "../../models/DealTicket";
+import Ticket from "../../models/Ticket";
+import clienteDoTicket from "./ClienteDoTicket";
 
 interface Request {
   title: string;
@@ -17,6 +20,8 @@ interface Request {
   customerId?: number;
   contactId?: number;
   responsibleUserId?: number;
+  /** Conversa que originou o negócio, quando ele nasce dentro do atendimento. */
+  ticketId?: number;
   companyId: number;
   userId?: number;
 }
@@ -31,9 +36,26 @@ const CreateDealService = async ({
   customerId,
   contactId,
   responsibleUserId,
+  ticketId,
   companyId,
   userId
 }: Request): Promise<Deal> => {
+  /**
+   * Negócio criado de dentro da conversa herda o cliente dela.
+   *
+   * A tela do atendimento manda só o título e o ticket — quem está no meio de
+   * uma conversa não vai reescolher o cliente que já está na frente dele. Sem
+   * esta herança o card nascia com contato e cliente nulos e aparecia sem
+   * nome no quadro.
+   */
+  const ticket = ticketId
+    ? await Ticket.findOne({ where: { id: ticketId, companyId } })
+    : null;
+
+  const doTicket = ticket
+    ? await clienteDoTicket(ticket, companyId)
+    : { contactId: null, customerId: null };
+
   /**
    * Sem coluna informada o card entra na primeira coluna do quadro pedido —
    * ou do primeiro quadro do fluxo, que é onde a jornada normalmente começa.
@@ -83,23 +105,40 @@ const CreateDealService = async ({
     where: { stageId: destino.id, companyId, status: "open" }
   });
 
-  // O número de orçamento só existe no funil de vendas: fora dele o card é
-  // trabalho em andamento, identificado pelo número do pedido.
+  /**
+   * Dois contadores, um para cada natureza de card.
+   *
+   * No funil de vendas o card é proposta, e o número é o do orçamento. Fora
+   * dele é trabalho a fazer, e o número é o da ordem de produção -- o que a
+   * produção escreve na etiqueta e o cliente cita no balcão.
+   *
+   * Os dois saem de Sequences, que conta separado para cada empresa. Antes o
+   * card nascido fora do funil não recebia número nenhum, e a tela mostrava o
+   * `Deals.id`: o contador da linha no banco, único para o sistema inteiro e
+   * portanto compartilhado entre as empresas.
+   */
   const quadro = await Board.findOne({ where: { id: destino.boardId, companyId } });
-  const quoteNumber = quadro?.isSalesFunnel
+  const noFunil = Boolean(quadro?.isSalesFunnel);
+
+  const quoteNumber = noFunil
     ? await ProximoNumeroService(companyId, "quote")
     : null;
 
+  const orderNumber = noFunil
+    ? null
+    : await ProximoNumeroService(companyId, "order");
+
   const deal = await Deal.create({
     quoteNumber,
+    orderNumber,
     title,
     value,
     expectedCloseAt: expectedCloseAt || null,
     notes,
     stageId: destino.id,
     boardId: destino.boardId,
-    customerId: customerId || null,
-    contactId: contactId || null,
+    customerId: customerId || doTicket.customerId || null,
+    contactId: contactId || doTicket.contactId || null,
     responsibleUserId: responsibleUserId || null,
     status: destino.type === "lost" ? "lost" : "open",
     order: 0,
@@ -113,6 +152,14 @@ const CreateDealService = async ({
     userId: userId || null,
     companyId
   });
+
+  // O vínculo com a conversa fecha aqui. A tela ainda o reforça com uma
+  // chamada própria, que passa a ser inofensiva: findOrCreate não duplica.
+  if (ticket) {
+    await DealTicket.findOrCreate({
+      where: { dealId: deal.id, ticketId: ticket.id }
+    });
+  }
 
   return ShowDealService(deal.id, companyId);
 };

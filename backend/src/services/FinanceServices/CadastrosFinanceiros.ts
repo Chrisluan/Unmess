@@ -1,6 +1,10 @@
 import AppError from "../../errors/AppError";
 import PaymentTerm from "../../models/PaymentTerm";
 import FinancialAccount from "../../models/FinancialAccount";
+import {
+  EscopoResolvido,
+  alcanca
+} from "../../helpers/permissions/escopos";
 import FinancialCategory from "../../models/FinancialCategory";
 import Receivable from "../../models/Receivable";
 import FinancialEntry from "../../models/FinancialEntry";
@@ -96,8 +100,24 @@ export const removerCondicao = async (
 
 // ── Contas (caixa, banco, cartão) ─────────────────────────────────────────
 
-export const listarContas = async (companyId: number): Promise<FinancialAccount[]> =>
-  FinancialAccount.findAll({ ...daEmpresa(companyId), order: [["name", "ASC"]] });
+/**
+ * As contas da empresa que quem pediu alcança.
+ *
+ * O escopo é filtrado aqui, e não na tela: esta lista alimenta os seletores de
+ * baixa, e oferecer uma conta que o servidor vai recusar é pior do que não
+ * oferecê-la — a pessoa preenche o formulário inteiro para levar um 403.
+ */
+export const listarContas = async (
+  companyId: number,
+  escopo?: EscopoResolvido
+): Promise<FinancialAccount[]> => {
+  const contas = await FinancialAccount.findAll({
+    ...daEmpresa(companyId),
+    order: [["name", "ASC"]]
+  });
+
+  return escopo ? contas.filter(conta => alcanca(escopo, conta.id)) : contas;
+};
 
 interface ContaData {
   id?: number;

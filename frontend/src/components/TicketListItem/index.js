@@ -5,6 +5,7 @@ import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
 
 import makeStyles from '@mui/styles/makeStyles';
+import { alpha } from "@mui/material/styles";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import Typography from "@mui/material/Typography";
@@ -12,6 +13,7 @@ import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ReplyIcon from "@mui/icons-material/ReplyOutlined";
 
 import { i18n } from "../../translate/i18n";
 import { formatWaitingTime, waitingLevel } from "../../helpers/waitingTime";
@@ -51,6 +53,33 @@ const useStyles = makeStyles(theme => ({
 		cursor: "pointer",
 	},
 
+	/**
+	 * Linha com mensagem que o cliente mandou e ninguém leu.
+	 *
+	 * O contador sozinho é um detalhe de 20px no meio de uma lista longa: quem
+	 * varre a lista de relance não o encontra. O que faz a linha saltar é o
+	 * conjunto — fundo tingido, nome e prévia em texto cheio, contador no
+	 * trilho. É a mesma gramática do e-mail não lido, que já se lê sem
+	 * precisar aprender.
+	 *
+	 * Especificidade de propósito baixa (uma classe só): tanto o `:hover` do
+	 * ListItemButton quanto o `&.Mui-selected` acima têm duas, então a linha
+	 * continua reagindo ao mouse e a conversa aberta continua se destacando
+	 * como aberta.
+	 */
+	naoLido: {
+		backgroundColor: alpha(theme.palette.success.main, 0.1),
+	},
+
+	nomeNaoLido: {
+		fontWeight: 800,
+		color: theme.palette.text.primary,
+	},
+
+	previaNaoLida: {
+		fontWeight: 600,
+	},
+
 	avatarBox: {
 		minWidth: "auto",
 		marginTop: 2,
@@ -81,16 +110,41 @@ const useStyles = makeStyles(theme => ({
 		"& p": { margin: 0 },
 	},
 
+	/**
+	 * Marca de "a última fala foi nossa".
+	 *
+	 * A prévia mostrava só o texto, então não dava para saber, sem abrir a
+	 * conversa, se o cliente estava esperando resposta ou se a bola já tinha
+	 * voltado para ele. A seta ocupa pouco e responde isso de relance.
+	 */
+	marcaRespondido: {
+		fontSize: 14,
+		marginRight: 4,
+		verticalAlign: "-2px",
+		flexShrink: 0,
+		color: theme.palette.text.disabled,
+	},
+
+	/**
+	 * Contador de não lidas, no trilho da direita.
+	 *
+	 * Ficava colado ao nome, dentro da coluna que trunca: em nome comprido ele
+	 * era o primeiro a sumir. No trilho a largura é fixa e o número nunca é
+	 * cortado. Verde, e não azul nem vermelho: azul aqui significa "clicável" e
+	 * vermelho já é do aviso de espera crítica, que precisa continuar sendo o
+	 * único elemento em vermelho da linha.
+	 */
 	naoLidas: {
 		flexShrink: 0,
-		minWidth: 18,
-		height: 18,
-		padding: "0 5px",
+		minWidth: 20,
+		height: 20,
+		padding: "0 6px",
 		borderRadius: 0,
-		backgroundColor: theme.palette.primary.main,
-		color: theme.palette.primary.contrastText,
-		fontSize: "0.68rem",
-		fontWeight: 700,
+		backgroundColor: theme.palette.success.main,
+		color: theme.palette.success.contrastText || "#fff",
+		fontSize: "0.72rem",
+		fontWeight: 800,
+		lineHeight: 1,
 		display: "inline-flex",
 		alignItems: "center",
 		justifyContent: "center",
@@ -267,6 +321,9 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 		return () => clearInterval(t);
 	}, [ticket.status]);
 
+	// Quantas mensagens o cliente mandou desde a última vez que alguém leu.
+	const naoLidas = ticket.unreadMessages > 0 ? ticket.unreadMessages : 0;
+
 	const espera =
 		ticket.status === "pending"
 			? formatWaitingTime(ticketDate(ticket), agora)
@@ -318,6 +375,7 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 				selected={ticketId && +ticketId === ticket.id}
 				className={clsx(classes.ticket, {
 					[classes.pendingTicket]: ticket.status === "pending",
+					[classes.naoLido]: naoLidas > 0,
 				})}
 			>
 				<Tooltip
@@ -338,23 +396,42 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 				    o texto ser cortado em vez de empurrar a coluna da direita. */}
 				<div className={classes.miolo}>
 					<div className={classes.linhaNome}>
-						<Typography noWrap component="span" variant="body2" className={classes.nome}>
+						<Typography
+							noWrap
+							component="span"
+							variant="body2"
+							className={clsx(classes.nome, {
+								[classes.nomeNaoLido]: naoLidas > 0,
+							})}
+						>
 							{ticket.contact.name}
 						</Typography>
-						{ticket.unreadMessages > 0 && (
-							<span className={classes.naoLidas}>{ticket.unreadMessages}</span>
-						)}
 					</div>
 
 					<Typography
 						noWrap
 						component="div"
 						variant="body2"
-						color="textSecondary"
-						className={classes.previa}
+						// Texto cheio quando há algo por ler: é o mesmo truque do
+						// e-mail, e não precisa de `!important` para vencer a classe
+						// de cor do Typography.
+						color={naoLidas > 0 ? "textPrimary" : "textSecondary"}
+						className={clsx(classes.previa, {
+							[classes.previaNaoLida]: naoLidas > 0,
+						})}
 					>
 						{ticket.lastMessage ? (
-							<MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
+							<>
+								{ticket.lastMessageFromMe && (
+									<Tooltip
+										title={i18n.t("ticketsList.lastMessageFromMe")}
+										arrow
+									>
+										<ReplyIcon className={classes.marcaRespondido} />
+									</Tooltip>
+								)}
+								<MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
+							</>
 						) : (
 							" "
 						)}
@@ -415,6 +492,17 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 							</span>
 						)}
 					</div>
+
+					{/* Logo abaixo da hora, alinhado à direita: é onde o olho já
+					    procura o contador em qualquer aplicativo de mensagem. */}
+					{naoLidas > 0 && (
+						<span
+							className={classes.naoLidas}
+							title={i18n.t("ticketsList.unread", { count: naoLidas })}
+						>
+							{naoLidas > 99 ? "99+" : naoLidas}
+						</span>
+					)}
 
 					{/* Só quando não é meu: repetir o próprio nome em toda linha da
 					    aba "Minhas" não informa nada. */}

@@ -15,9 +15,11 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
+import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import getCompanyId from "../helpers/GetCompanyId";
 import { TAB_RULES } from "../helpers/TicketTabRules";
 import { usuarioPode } from "../helpers/permissions/resolve";
+import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
 import AppError from "../errors/AppError";
 
 type IndexQuery = {
@@ -108,6 +110,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   }
 
   const { tickets, count, hasMore } = await ListTicketsService({
+    escopoDeConexoes: await escopoDaRequisicao(req, "connection"),
     searchParam,
     pageNumber,
     status,
@@ -159,6 +162,28 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   const contact = await ShowTicketService(ticketId, getCompanyId(req));
 
   return res.status(200).json(contact);
+};
+
+/**
+ * Zera o contador de não lidas da conversa.
+ *
+ * Existe porque a marcação de leitura só acontecia ao carregar o histórico
+ * (`GET /messages/:ticketId`) ou ao responder. Com o contador funcionando de
+ * verdade, a conversa que o atendente já está lendo passaria a acumular
+ * "1, 2, 3..." na frente dele até que saísse e voltasse. Esta rota é o
+ * caminho barato para dizer "estou olhando isto agora".
+ */
+export const markAsRead = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+
+  const ticket = await ShowTicketService(ticketId, getCompanyId(req));
+
+  await SetTicketMessagesAsRead(ticket);
+
+  return res.status(200).json({ ticketId: +ticketId, unreadMessages: 0 });
 };
 
 export const update = async (

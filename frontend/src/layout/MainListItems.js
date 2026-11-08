@@ -1,32 +1,24 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 
+import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import ListSubheader from "@mui/material/ListSubheader";
 import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
 import { Badge } from "@mui/material";
 import makeStyles from "@mui/styles/makeStyles";
-import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
-import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
-import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
-import ContactPhoneOutlinedIcon from "@mui/icons-material/ContactPhoneOutlined";
-import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
-import QuestionAnswerOutlinedIcon from "@mui/icons-material/QuestionAnswerOutlined";
-import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
-import SecurityIcon from "@mui/icons-material/Security";
-import GroupWorkOutlinedIcon from "@mui/icons-material/GroupWorkOutlined";
-import ViewKanbanOutlinedIcon from "@mui/icons-material/ViewKanbanOutlined";
-import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 import { i18n } from "../translate/i18n";
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
 import usePermissions from "../hooks/usePermissions";
+import { MODULOS, SECOES } from "./modulos";
 
 const useStyles = makeStyles(theme => ({
   /**
@@ -99,6 +91,47 @@ const useStyles = makeStyles(theme => ({
   // contra a borda reta da lateral.
   divisor: {
     margin: theme.spacing(1, 0, 0.5)
+  },
+
+  /**
+   * A linha inteira, com a estrela por cima.
+   *
+   * A estrela precisa de um <ListItem> em volta porque um botão não pode
+   * conter outro botão: o `secondaryAction` do MUI existe justamente para
+   * isso, e desenha a ação fora do alvo de clique do link.
+   */
+  linha: {
+    display: "block",
+    padding: 0
+  },
+
+  /**
+   * A estrela só aparece quando a pessoa está mirando a linha.
+   *
+   * Doze estrelas acesas o tempo todo competiriam com o item ativo, que é a
+   * única coisa que a barra precisa destacar. `focus-within` entra junto do
+   * hover para quem navega pelo teclado não perder a ação — sem ele a estrela
+   * receberia o foco invisível.
+   */
+  estrela: {
+    opacity: 0,
+    padding: 4,
+    marginRight: 2,
+    color: theme.palette.text.secondary,
+    transition: theme.transitions.create("opacity", { duration: 120 }),
+    "$linha:hover &, $linha:focus-within &": { opacity: 1 },
+    "&:hover": { color: theme.palette.warning.main }
+  },
+
+  // Favorito é estado, não passagem do mouse: fica visível sempre.
+  estrelaAcesa: {
+    opacity: 1,
+    color: theme.palette.warning.main
+  },
+
+  // Espaço para a estrela não cobrir o fim de um rótulo comprido.
+  textoComEstrela: {
+    paddingRight: 28
   }
 }));
 
@@ -109,9 +142,17 @@ const useStyles = makeStyles(theme => ({
  * v6 — mantê-lo deixava o item sem hover, foco nem ripple.
  *
  * Com a barra recolhida só o ícone aparece, então o rótulo vira tooltip: sem
- * isso a navegação fechada é adivinhação.
+ * isso a navegação fechada é adivinhação. A estrela também some: não há
+ * largura para ela, e favoritar é uma decisão que se toma com a barra aberta.
  */
-function ListItemLink({ icon, primary, to, recolhida }) {
+function ListItemLink({
+  icon,
+  primary,
+  to,
+  recolhida,
+  favorito,
+  onAlternarFavorito
+}) {
   const classes = useStyles();
   const { pathname } = useLocation();
 
@@ -130,7 +171,7 @@ function ListItemLink({ icon, primary, to, recolhida }) {
     return Link;
   }, [to]);
 
-  const item = (
+  const botao = (
     <ListItemButton
       component={renderLink}
       selected={ativo}
@@ -139,24 +180,59 @@ function ListItemLink({ icon, primary, to, recolhida }) {
       {icon ? <ListItemIcon className={classes.icone}>{icon}</ListItemIcon> : null}
       <ListItemText
         primary={primary}
-        className={`${classes.texto} ${ativo ? classes.textoAtivo : ""}`}
+        className={`${classes.texto} ${ativo ? classes.textoAtivo : ""} ${
+          onAlternarFavorito ? classes.textoComEstrela : ""
+        }`}
       />
     </ListItemButton>
   );
 
-  if (!recolhida) return item;
+  if (recolhida) {
+    return (
+      <Tooltip title={primary} placement="right" arrow>
+        <span>{botao}</span>
+      </Tooltip>
+    );
+  }
+
+  if (!onAlternarFavorito) return botao;
+
+  const rotuloEstrela = favorito
+    ? i18n.t("mainDrawer.favorites.remove")
+    : i18n.t("mainDrawer.favorites.add");
 
   return (
-    <Tooltip title={primary} placement="right" arrow>
-      <span>{item}</span>
-    </Tooltip>
+    <ListItem
+      className={classes.linha}
+      disablePadding
+      secondaryAction={
+        <Tooltip title={rotuloEstrela} placement="right" arrow>
+          <IconButton
+            size="small"
+            edge="end"
+            aria-label={`${rotuloEstrela}: ${primary}`}
+            aria-pressed={favorito}
+            className={`${classes.estrela} ${favorito ? classes.estrelaAcesa : ""}`}
+            onClick={onAlternarFavorito}
+          >
+            {favorito ? (
+              <StarIcon fontSize="small" />
+            ) : (
+              <StarBorderIcon fontSize="small" />
+            )}
+          </IconButton>
+        </Tooltip>
+      }
+    >
+      {botao}
+    </ListItem>
   );
 }
 
 const MainListItems = ({ drawerClose, recolhida = false }) => {
   const classes = useStyles();
   const { whatsApps } = useContext(WhatsAppsContext);
-  const { user } = useContext(AuthContext);
+  const { user, favoritos, alternarFavorito } = useContext(AuthContext);
   const { can, canAny } = usePermissions();
   const [connectionWarning, setConnectionWarning] = useState(false);
 
@@ -172,25 +248,49 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
     return () => clearTimeout(timer);
   }, [whatsApps]);
 
+  // O super só passa a ver a operação depois de entrar em alguma empresa.
+  const foraDeEmpresa = user?.profile === "super" && !user?.companyId;
+  const ehSuper = user?.profile === "super";
+
   /**
-   * Item da barra que só aparece para quem tem a permissão.
+   * O que esta pessoa alcança.
    *
-   * Não existe mais exceção para administrador: o cargo de Administrador tem
-   * todas as permissões, então ele passa por aqui pelo caminho normal, como
-   * todo mundo. Enquanto havia um atalho, um cargo com `queues:view` não fazia
-   * o item Filas aparecer — a seção inteira de administração era mostrada por
-   * "é admin?", e quem não fosse admin simplesmente não a via, por mais
-   * permissões que tivesse.
+   * Não existe mais atalho de administrador: o cargo de Administrador tem
+   * todas as permissões e passa por aqui pelo caminho normal, como todo
+   * mundo. Enquanto havia um atalho, um cargo com `queues:view` não fazia o
+   * item Setores aparecer — a seção inteira era mostrada por "é admin?", e
+   * quem não fosse admin não a via, por mais permissões que tivesse.
    */
-  const PermissionedItem = ({ permission, children }) => {
-    if (foraDeEmpresa) return null;
-    if (!permission || can(permission)) return children;
-    return null;
+  const alcanca = (modulo) => {
+    if (modulo.superOnly) return ehSuper;
+    if (foraDeEmpresa) return false;
+    if (modulo.permissoes) return canAny(modulo.permissoes);
+    if (modulo.permissao) return can(modulo.permissao);
+    return true;
   };
+
+  const visiveis = MODULOS.filter(alcanca);
+
+  /**
+   * Favorito tira o módulo da seção de origem em vez de duplicá-lo.
+   *
+   * Numa barra de doze linhas, repetir "Conversas" em Favoritos e em Operação
+   * lê como defeito, não como atalho — e o que os favoritos existem para
+   * fazer é encurtar a barra, não alongá-la. A estrela acesa continua ali
+   * dentro de Favoritos, então desfazer é o mesmo gesto que fez.
+   */
+  const listaDeFavoritos = Array.isArray(favoritos) ? favoritos : [];
+  const ehFavorito = (chave) => listaDeFavoritos.includes(chave);
+
+  // Na ordem em que a pessoa favoritou, não na ordem do registro: os
+  // favoritos são a lista dela.
+  const favoritados = listaDeFavoritos
+    .map((chave) => visiveis.find((m) => m.chave === chave))
+    .filter(Boolean);
 
   // Com a barra recolhida o título de seção não cabe; a linha divisória
   // sozinha já separa os grupos.
-  const Secao = ({ children, primeira = false }) => {
+  const Secao = ({ children, primeira }) => {
     if (recolhida) return primeira ? null : <Divider className={classes.divisor} />;
     return (
       <>
@@ -202,192 +302,74 @@ const MainListItems = ({ drawerClose, recolhida = false }) => {
     );
   };
 
-  // Um bloco inteiro sem nenhum item permitido não pode deixar o título e a
-  // divisória sozinhos na barra.
-  // O super só passa a ver a operação depois de entrar em alguma empresa.
-  const foraDeEmpresa = user?.profile === "super" && !user?.companyId;
+  const renderizar = (modulo) => {
+    const { Icone } = modulo;
+    const comAlerta = modulo.alerta === "conexoes" && connectionWarning;
 
-  const podeComercial =
-    !foraDeEmpresa &&
-    canAny([
-      "crm:view",
-      "clients:view",
-      "contacts:view",
-      "products:view",
-      "finance:view",
-    ]);
+    return (
+      <ListItemLink
+        key={modulo.chave}
+        to={modulo.to}
+        primary={i18n.t(modulo.rotulo)}
+        icon={
+          comAlerta ? (
+            <Badge badgeContent="!" color="error">
+              <Icone />
+            </Badge>
+          ) : (
+            <Icone />
+          )
+        }
+        recolhida={recolhida}
+        favorito={ehFavorito(modulo.chave)}
+        // Sem a barra aberta não há onde desenhar a estrela.
+        onAlternarFavorito={
+          recolhida
+            ? undefined
+            : (e) => {
+                // O clique acontece dentro da linha do link, e o container
+                // fecha a gaveta em qualquer clique: sem parar a propagação,
+                // favoritar navegaria para o módulo e fecharia o menu.
+                e.preventDefault();
+                e.stopPropagation();
+                alternarFavorito(modulo.chave);
+              }
+        }
+      />
+    );
+  };
 
-  const podeAdministrar =
-    !foraDeEmpresa &&
-    canAny([
-      "users:view",
-      "roles:view",
-      "queues:view",
-      "quickAnswers:view",
-      "tags:view",
-      "settings:view",
-      "connections:view",
-    ]);
+  /**
+   * As seções, na ordem do registro, já sem as que ficaram vazias.
+   *
+   * Um bloco inteiro sem nenhum item permitido não pode deixar o título e a
+   * divisória sozinhos na barra — era o que acontecia quando a condição da
+   * seção e a dos itens dentro dela eram escritas separadamente e uma delas
+   * saía de sincronia.
+   */
+  const blocos = SECOES.map((secao) => ({
+    ...secao,
+    itens: visiveis.filter(
+      (m) => m.secao === secao.chave && !ehFavorito(m.chave)
+    )
+  })).filter((secao) => secao.itens.length > 0);
 
-  const ehSuper = user?.profile === "super";
+  if (favoritados.length > 0) {
+    blocos.unshift({
+      chave: "favorites",
+      rotulo: "mainDrawer.sections.favorites",
+      itens: favoritados
+    });
+  }
 
   return (
     <div onClick={drawerClose}>
-      {!foraDeEmpresa && (
-        <Secao primeira>{i18n.t("mainDrawer.sections.operation")}</Secao>
-      )}
-
-      <PermissionedItem permission="dashboard:view">
-        <ListItemLink
-          to="/"
-          primary={i18n.t("mainDrawer.listItems.dashboard")}
-          icon={<DashboardOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
-
-      <PermissionedItem permission="tickets:view">
-        <ListItemLink
-          to="/tickets"
-          primary={i18n.t("mainDrawer.listItems.tickets")}
-          icon={<ForumOutlinedIcon />}
-          recolhida={recolhida}
-        />
-      </PermissionedItem>
-
-      {podeComercial && (
-        <>
-          <Secao>{i18n.t("mainDrawer.sections.commercial")}</Secao>
-
-          <PermissionedItem permission="crm:view">
-            <ListItemLink
-              to="/crm"
-              primary={i18n.t("mainDrawer.listItems.crm")}
-              icon={<ViewKanbanOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="clients:view">
-            <ListItemLink
-              to="/customers"
-              primary={i18n.t("mainDrawer.listItems.customers")}
-              icon={<GroupWorkOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="contacts:view">
-            <ListItemLink
-              to="/contacts"
-              primary={i18n.t("mainDrawer.listItems.contacts")}
-              icon={<ContactPhoneOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="products:view">
-            <ListItemLink
-              to="/products"
-              primary={i18n.t("mainDrawer.listItems.products")}
-              icon={<Inventory2OutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="finance:view">
-            <ListItemLink
-              to="/finance"
-              primary={i18n.t("mainDrawer.listItems.finance")}
-              icon={<PaymentsOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-        </>
-      )}
-
-      {/*
-        Administração, item a item.
-
-        Antes o bloco inteiro era um "é admin?": quem não fosse admin não via
-        nada aqui, por mais permissões que tivesse — com uma única exceção
-        costurada à mão para Respostas Rápidas. Era o sintoma mais visível do
-        profile decidindo o que o cargo deveria decidir. Agora cada linha
-        pergunta pela sua própria permissão, e a seção só aparece se sobrar ao
-        menos uma.
-      */}
-      {podeAdministrar && (
-        <>
-          <Secao>{i18n.t("mainDrawer.sections.administration")}</Secao>
-
-          <PermissionedItem permission="users:view">
-            <ListItemLink
-              to="/users"
-              primary={i18n.t("mainDrawer.listItems.users")}
-              icon={<PeopleAltOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="roles:view">
-            <ListItemLink
-              to="/roles"
-              primary={i18n.t("mainDrawer.listItems.roles")}
-              icon={<SecurityIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="queues:view">
-            <ListItemLink
-              to="/Queues"
-              primary={i18n.t("mainDrawer.listItems.queues")}
-              icon={<AccountTreeOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          <PermissionedItem permission="quickAnswers:view">
-            <ListItemLink
-              to="/quickAnswers"
-              primary={i18n.t("mainDrawer.listItems.quickAnswers")}
-              icon={<QuestionAnswerOutlinedIcon />}
-              recolhida={recolhida}
-            />
-          </PermissionedItem>
-
-          {/* Conexões e Etiquetas vivem dentro de Configurações, cada uma com
-              permissão própria — por isso a entrada aceita as três. O badge de
-              alerta subiu para cá para quem cuida das conexões continuar vendo
-              número caído sem abrir a tela. */}
-          {canAny(["settings:view", "connections:view", "tags:view"]) && (
-            <ListItemLink
-              to="/Settings"
-              primary={i18n.t("mainDrawer.listItems.settings")}
-              icon={
-                <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
-                  <SettingsOutlinedIcon />
-                </Badge>
-              }
-              recolhida={recolhida}
-            />
-          )}
-        </>
-      )}
-
-      {ehSuper && (
-        <>
-          <Secao primeira={foraDeEmpresa}>
-            {i18n.t("mainDrawer.sections.platform")}
-          </Secao>
-          <ListItemLink
-            to="/companies"
-            primary={i18n.t("mainDrawer.listItems.companies")}
-            icon={<BusinessOutlinedIcon />}
-            recolhida={recolhida}
-          />
-        </>
-      )}
+      {blocos.map((bloco, i) => (
+        <React.Fragment key={bloco.chave}>
+          <Secao primeira={i === 0}>{i18n.t(bloco.rotulo)}</Secao>
+          {bloco.itens.map(renderizar)}
+        </React.Fragment>
+      ))}
     </div>
   );
 };

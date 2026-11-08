@@ -1,8 +1,15 @@
 import Board from "../../models/Board";
 import Deal from "../../models/Deal";
 
+import {
+  EscopoResolvido,
+  filtroDeEscopo
+} from "../../helpers/permissions/escopos";
+
 interface Request {
   responsibleUserId?: string;
+  /** Os quadros que quem pediu alcança. Ausente é "sem restrição". */
+  escopoDeQuadros?: EscopoResolvido;
   companyId: number;
 }
 
@@ -31,6 +38,7 @@ interface Response {
  */
 const ShowPipelineSummaryService = async ({
   responsibleUserId,
+  escopoDeQuadros,
   companyId
 }: Request): Promise<Response> => {
   const where: any = { companyId };
@@ -38,6 +46,11 @@ const ShowPipelineSummaryService = async ({
   if (responsibleUserId) {
     where.responsibleUserId = responsibleUserId;
   }
+
+  // O cabeçalho soma o que a pessoa enxerga. Um total que inclua quadros fora
+  // do alcance dela contradiz a própria tela logo abaixo dele.
+  const restricao = filtroDeEscopo(escopoDeQuadros, "boardId");
+  if (restricao) Object.assign(where, restricao);
 
   const primeiroBoard = await Board.findOne({
     where: { companyId },

@@ -65,7 +65,13 @@ const createContact = async (
     }
   }
 
-  const createTicket = await FindOrCreateTicketService(contact, whatsapp.id, 1);
+  // Fomos nós que iniciamos a conversa pela API, então ela nasce sem nada por
+  // ler (o SetTicketMessagesAsRead logo abaixo já dizia isso).
+  const createTicket = await FindOrCreateTicketService(
+    contact,
+    whatsapp.id,
+    "zerar"
+  );
 
   const ticket = await ShowTicketService(createTicket.id, companyId);
 

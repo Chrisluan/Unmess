@@ -1,4 +1,13 @@
-import React, { useState, useEffect, useReducer, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import { useHistory, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import { isSameDay, parseISO, format } from "date-fns";
 import openSocket from "../../services/socket-io";
@@ -25,6 +34,10 @@ import {
   Search as SearchIcon,
   ChatBubbleOutline as ChatBubbleOutlineIcon,
   ArrowDownward as ArrowDownwardIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  InsertDriveFileOutlined as InsertDriveFileIcon,
+  Refresh as RefreshIcon,
+  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 
 import { i18n } from "../../translate/i18n";
@@ -40,6 +53,7 @@ import toastError from "../../errors/toastError";
 import Audio from "../Audio";
 import { messageDate } from "../../helpers/messageDate";
 import { mediaUrl } from "../../helpers/mediaUrl";
+import { useOutgoingMessages } from "../../context/OutgoingMessages/OutgoingMessagesContext";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -401,6 +415,128 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     padding: 10,
   },
+
+  ackErroIcon: {
+    color: theme.palette.error.main,
+    fontSize: 18,
+    verticalAlign: "middle",
+    marginLeft: 4,
+  },
+
+  // Balão de uma mensagem que ainda está saindo. O leve apagamento é o que
+  // separa, à primeira vista, o que já é história do que ainda depende da
+  // rede.
+  balaoEnviando: {
+    opacity: 0.72,
+  },
+
+  barraFalha: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    paddingTop: 4,
+    borderTop: `1px solid ${theme.palette.divider}`,
+    fontSize: "0.72rem",
+    color: theme.palette.error.main,
+  },
+
+  botaoTentarNovamente: {
+    fontSize: "0.72rem",
+    minWidth: 0,
+    padding: "0 6px",
+  },
+
+  previaEnvio: {
+    display: "flex",
+    gap: 4,
+    flexWrap: "wrap",
+    marginBottom: 4,
+  },
+
+  miniaturaEnvio: {
+    width: 120,
+    maxWidth: "100%",
+    borderRadius: 4,
+    display: "block",
+  },
+
+  anexoEnvio: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: "0.75rem",
+    opacity: 0.8,
+  },
+
+  // Citação clicável: o alvo é a mensagem original, esteja ela nesta conversa
+  // ou em um atendimento já encerrado do mesmo contato.
+  citacaoClicavel: {
+    cursor: "pointer",
+    width: "100%",
+    textAlign: "left",
+    border: "none",
+    background: "transparent",
+    // Sem "padding", de propósito: quem manda no espaçamento é quotedMsg, que
+    // vem junto nesta mesma classe.
+    font: "inherit",
+    color: "inherit",
+    "&:hover": { backgroundColor: "rgba(0,0,0,0.06)" },
+  },
+
+  marcaOutroTicket: {
+    display: "inline-block",
+    marginBottom: 2,
+    padding: "0 6px",
+    borderRadius: 10,
+    fontSize: "0.65rem",
+    fontWeight: 600,
+    color: theme.palette.getContrastText(theme.palette.warning.light),
+    backgroundColor: theme.palette.warning.light,
+  },
+
+  // Realce temporário de quem foi alcançado por uma citação: sem ele, a tela
+  // rolava até a mensagem certa e o atendente não sabia qual das linhas era.
+  mensagemDestacada: {
+    animation: "$pulsoDestaque 2.2s ease-out",
+  },
+
+  "@keyframes pulsoDestaque": {
+    "0%": { backgroundColor: theme.palette.warning.light },
+    "70%": { backgroundColor: theme.palette.warning.light },
+    "100%": { backgroundColor: "transparent" },
+  },
+
+  molduraPdf: {
+    width: "100%",
+    height: 380,
+    border: "none",
+    display: "block",
+    backgroundColor: theme.palette.background.default,
+  },
+
+  visualizadorPdf: {
+    width: "min(420px, 70vw)",
+    borderRadius: 4,
+    overflow: "hidden",
+    border: `1px solid ${theme.palette.divider}`,
+  },
+
+  rodapePdf: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    padding: "4px 8px",
+    fontSize: "0.75rem",
+    backgroundColor: theme.palette.background.paper,
+  },
+
+  nomePdf: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
 }));
 
 const reducer = (state, action) => {
@@ -468,6 +604,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const [mostrarIrParaFim, setMostrarIrParaFim] = useState(false);
   const [novasAbaixo, setNovasAbaixo] = useState(0);
 
+  // Mensagem realçada por ter sido alcançada a partir de uma citação.
+  const [destacada, setDestacada] = useState(null);
+  const fimRef = useRef();
+  const hasMoreRef = useRef(false);
+  const history = useHistory();
+  const location = useLocation();
+  const { pendentes, reenviar, descartar, enviar } = useOutgoingMessages();
+
   const [selectedMessage, setSelectedMessage] = useState({});
   const [anchorEl, setAnchorEl] = useState(null);
   const messageOptionsMenuOpen = Boolean(anchorEl);
@@ -479,6 +623,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
   useEffect(() => {
     searchOpenRef.current = Boolean(debouncedSearch);
   }, [debouncedSearch]);
+
+  // Em ref porque quem consulta é a busca pela mensagem citada, que roda em
+  // laço fora do ciclo de render e enxergaria sempre o valor de partida.
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -578,19 +728,134 @@ const MessagesList = ({ ticketId, isGroup }) => {
     };
   }, [ticketId]);
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     setPageNumber((prevPageNumber) => prevPageNumber + 1);
-  };
+  }, []);
+
+  const idsNaLista = useMemo(
+    () => new Set(messagesList.map((m) => m.id)),
+    [messagesList]
+  );
+
+  /**
+   * Mensagens desta conversa que ainda estão saindo — ou que falharam.
+   *
+   * A que já foi confirmada some daqui assim que a versão real chega pelo
+   * socket. Enquanto não chega, a otimista continua na tela: sem isso o balão
+   * piscava, desaparecendo entre a resposta do servidor e o eco do WhatsApp.
+   */
+  const pendentesDaConversa = useMemo(
+    () =>
+      pendentes.filter((item) => {
+        if (item.ticketId !== String(ticketId)) return false;
+        if (searchOpenRef.current) return false;
+        if (item.status !== "enviada") return true;
+
+        return !(
+          item.idsReais.length > 0 &&
+          item.idsReais.every((id) => idsNaLista.has(id))
+        );
+      }),
+    [pendentes, ticketId, idsNaLista]
+  );
+
+  // Enviar leva a conversa para o fim: a mensagem que acabou de sair é o que
+  // o atendente quer ver, mesmo que estivesse lendo o histórico.
+  const quantasPendentes = pendentesDaConversa.length;
+  const pendentesAnteriores = useRef(0);
+  useEffect(() => {
+    if (quantasPendentes > pendentesAnteriores.current) {
+      scrollToBottom();
+    }
+    pendentesAnteriores.current = quantasPendentes;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quantasPendentes]);
 
   const scrollToBottom = (suave = false) => {
-    if (lastMessageRef.current) {
-      lastMessageRef.current.scrollIntoView(
+    // A âncora fica depois de tudo, inclusive das mensagens que ainda estão
+    // saindo. Usar a última mensagem carregada parava a rolagem um balão
+    // antes do fim quando havia algo na fila de envio.
+    const alvo = fimRef.current || lastMessageRef.current;
+
+    if (alvo) {
+      alvo.scrollIntoView(
         suave ? { behavior: "smooth", block: "end" } : { block: "end" }
       );
     }
     naFrenteRef.current = true;
     setNovasAbaixo(0);
   };
+
+  /**
+   * Leva a conversa até uma mensagem específica e a realça.
+   *
+   * Se ela ainda não foi carregada, vai buscando páginas mais antigas até
+   * encontrá-la. O limite existe para uma citação a uma mensagem de meses
+   * atrás não virar uma varredura sem fim do histórico.
+   */
+  const focarMensagem = useCallback(
+    async (messageId) => {
+      for (let tentativa = 0; tentativa < 12; tentativa += 1) {
+        const elemento = document.getElementById(`mensagem-${messageId}`);
+
+        if (elemento) {
+          elemento.scrollIntoView({ behavior: "smooth", block: "center" });
+          setDestacada(messageId);
+          setTimeout(() => setDestacada(null), 2500);
+          return true;
+        }
+
+        if (!hasMoreRef.current) break;
+
+        loadMore();
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => setTimeout(r, 900));
+      }
+
+      toast.info(i18n.t("messagesList.quotedNotLoaded"));
+      return false;
+    },
+    [loadMore]
+  );
+
+  /**
+   * Clique na citação.
+   *
+   * Quando a mensagem citada pertence a outro atendimento — o contato
+   * respondeu algo de uma conversa já encerrada — abre aquele ticket e rola
+   * até lá. A conversa atual só muda neste clique: antes daqui, a citação era
+   * um texto morto e o atendente não tinha como chegar ao original.
+   */
+  const irParaCitada = useCallback(
+    (citada) => {
+      if (!citada?.id) return;
+
+      const outroTicket =
+        citada.ticketId && Number(citada.ticketId) !== Number(ticketId);
+
+      if (outroTicket) {
+        history.push(`/tickets/${citada.ticketId}`, {
+          mensagemAlvo: citada.id,
+        });
+        return;
+      }
+
+      focarMensagem(citada.id);
+    },
+    [focarMensagem, history, ticketId]
+  );
+
+  // Chegou por uma citação de outro atendimento: assim que a conversa carrega,
+  // procura a mensagem que motivou a vinda.
+  const alvoDaRota = location.state?.mensagemAlvo;
+  useEffect(() => {
+    if (!alvoDaRota || loading || messagesList.length === 0) return;
+
+    focarMensagem(alvoDaRota);
+    // Limpa o estado da rota para o realce não se repetir a cada recarga.
+    history.replace(location.pathname, {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alvoDaRota, loading, messagesList.length]);
 
   // Margem generosa: quem está a cem pixels do fim ainda está "acompanhando",
   // e para essa pessoa a rolagem automática ajuda em vez de atrapalhar.
@@ -636,6 +901,20 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const ehFigurinha = (message) =>
     message.mediaType === "sticker" ||
     /(^|\/)sticker-/i.test(message.mediaUrl || "");
+
+  const ehAudio = (message) =>
+    message.mediaType === "audio" || message.mediaType === "ptt";
+
+  /**
+   * Se o corpo da mensagem deve aparecer embaixo do anexo.
+   *
+   * Numa mensagem de voz o corpo é o nome do arquivo — um carimbo de tempo
+   * como "1756938287793.ogg" —, que não diz nada embaixo do player. O
+   * backend parou de gravá-lo, e esta checagem cobre também o que já está no
+   * histórico. A exceção é a mensagem apagada: aí o corpo é o aviso de que
+   * ela foi apagada, e é a única coisa que resta para ler.
+   */
+  const mostrarCorpo = (message) => !ehAudio(message) || message.isDeleted;
 
   const checkMessageMedia = (message) => {
     if (message.mediaType === "location" && message.body.split('|').length >= 2) {
@@ -727,6 +1006,53 @@ const MessagesList = ({ ticketId, isGroup }) => {
           controls
         />
       );
+    }
+    // PDF abre na própria conversa. Antes virava um botão "Download": para
+    // conferir um orçamento ou um comprovante o atendente precisava baixar o
+    // arquivo, sair do navegador e voltar.
+    else if (/\.pdf(\?|$)/i.test(message.mediaUrl || "")) {
+      const endereco = mediaUrl(message.mediaUrl);
+      const nome = message.body || "PDF";
+
+      return (
+        <div className={classes.visualizadorPdf}>
+          <object
+            data={endereco}
+            type="application/pdf"
+            className={classes.molduraPdf}
+            aria-label={nome}
+          >
+            {/* Navegador sem leitor embutido — celular, na maior parte das
+                vezes: em vez da moldura vazia, o caminho para abrir. */}
+            <div className={classes.downloadMedia}>
+              <Button
+                startIcon={<GetApp />}
+                color="primary"
+                variant="outlined"
+                target="_blank"
+                rel="noopener noreferrer"
+                href={endereco}
+              >
+                {i18n.t("messagesList.openPdf")}
+              </Button>
+            </div>
+          </object>
+          <div className={classes.rodapePdf}>
+            <span className={classes.nomePdf} title={nome}>
+              {nome}
+            </span>
+            <Button
+              size="small"
+              color="primary"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={endereco}
+            >
+              {i18n.t("messagesList.openPdf")}
+            </Button>
+          </div>
+        </div>
+      );
     } else {
       return (
         <>
@@ -748,18 +1074,86 @@ const MessagesList = ({ ticketId, isGroup }) => {
   };
 
   const renderMessageAck = (message) => {
+    // Falha de envio: o WhatsApp recusou a mensagem. Marcada em vermelho
+    // porque, sem isso, ela ficava indistinguível de uma mensagem entregue —
+    // era o caso do "aparece como enviada mas não chega ao contato".
+    if (message.ack === -1) {
+      return (
+        <Tooltip title={i18n.t("messagesList.ack.failed")} arrow>
+          <ErrorOutlineIcon
+            fontSize="small"
+            className={classes.ackErroIcon}
+          />
+        </Tooltip>
+      );
+    }
     if (message.ack === 0) {
-      return <AccessTime fontSize="small" className={classes.ackIcons} />;
+      return (
+        <Tooltip title={i18n.t("messagesList.ack.sending")} arrow>
+          <AccessTime fontSize="small" className={classes.ackIcons} />
+        </Tooltip>
+      );
     }
     if (message.ack === 1) {
-      return <Done fontSize="small" className={classes.ackIcons} />;
+      return (
+        <Tooltip title={i18n.t("messagesList.ack.sent")} arrow>
+          <Done fontSize="small" className={classes.ackIcons} />
+        </Tooltip>
+      );
     }
     if (message.ack === 2) {
-      return <DoneAll fontSize="small" className={classes.ackIcons} />;
+      return (
+        <Tooltip title={i18n.t("messagesList.ack.delivered")} arrow>
+          <DoneAll fontSize="small" className={classes.ackIcons} />
+        </Tooltip>
+      );
     }
     if (message.ack === 3 || message.ack === 4) {
-      return <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />;
+      return (
+        <Tooltip
+          title={i18n.t(
+            message.ack === 4
+              ? "messagesList.ack.played"
+              : "messagesList.ack.read"
+          )}
+          arrow
+        >
+          <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />
+        </Tooltip>
+      );
     }
+  };
+
+  /**
+   * Aviso de falha, com a opção de mandar de novo.
+   *
+   * Vale para a mensagem que já está gravada e foi recusada pelo WhatsApp. O
+   * reenvio passa pela mesma fila de sempre, com chave nova: a anterior falhou
+   * de verdade, então não há risco de o contato receber duas vezes.
+   */
+  const renderFalhaMensagem = (message) => {
+    if (message.ack !== -1) return null;
+
+    return (
+      <div className={classes.barraFalha}>
+        <span>{i18n.t("messagesList.ack.failed")}</span>
+        <Button
+          size="small"
+          color="inherit"
+          className={classes.botaoTentarNovamente}
+          startIcon={<RefreshIcon fontSize="inherit" />}
+          onClick={() =>
+            enviar({
+              ticketId,
+              body: message.body,
+              quotedMsg: message.quotedMsg || null,
+            })
+          }
+        >
+          {i18n.t("messagesList.retry")}
+        </Button>
+      </div>
+    );
   };
 
   const renderDailyTimestamps = (message, index) => {
@@ -817,6 +1211,14 @@ const MessagesList = ({ ticketId, isGroup }) => {
   };
 
   const renderQuotedMessage = (message) => {
+    const citada = message.quotedMsg;
+    // A citada pode ser de outro atendimento do mesmo contato: o cliente
+    // respondeu a algo dito antes de a conversa anterior ser encerrada. A
+    // prévia aparece igual, mas marcada — e o clique leva ao ticket certo em
+    // vez de trocar a conversa por baixo do atendente.
+    const deOutroTicket =
+      citada?.ticketId && Number(citada.ticketId) !== Number(ticketId);
+
     return (
       <div
         className={clsx(classes.quotedContainerLeft, {
@@ -825,20 +1227,112 @@ const MessagesList = ({ ticketId, isGroup }) => {
       >
         <span
           className={clsx(classes.quotedSideColorLeft, {
-            [classes.quotedSideColorRight]: message.quotedMsg?.fromMe,
+            [classes.quotedSideColorRight]: citada?.fromMe,
           })}
         ></span>
-        <div className={classes.quotedMsg}>
-          {!message.quotedMsg?.fromMe && (
-            <span className={classes.messageContactName}>
-              {message.quotedMsg?.contact?.name}
+        <button
+          type="button"
+          className={clsx(classes.quotedMsg, classes.citacaoClicavel)}
+          onClick={() => irParaCitada(citada)}
+          title={i18n.t(
+            deOutroTicket
+              ? "messagesList.quotedOtherTicketTooltip"
+              : "messagesList.quotedGoTo"
+          )}
+        >
+          {deOutroTicket && (
+            <span className={classes.marcaOutroTicket}>
+              {i18n.t("messagesList.quotedOtherTicket")}
             </span>
           )}
-          {message.quotedMsg?.body}
-        </div>
+          {!citada?.fromMe && (
+            <span className={classes.messageContactName}>
+              {citada?.contact?.name}
+            </span>
+          )}
+          {citada?.body}
+        </button>
       </div>
     );
   };
+
+  /**
+   * Balões das mensagens que ainda estão saindo.
+   *
+   * Ficam depois das já gravadas, sempre no fim da conversa, e desaparecem
+   * quando a versão real chega pelo socket.
+   */
+  const renderPendentes = () =>
+    pendentesDaConversa.map((item) => (
+      <div
+        key={item.id}
+        className={clsx(classes.messageRight, {
+          [classes.balaoEnviando]: item.status !== "falha",
+        })}
+      >
+        <div className={classes.textContentItem}>
+          {item.previas?.length > 0 && (
+            <div className={classes.previaEnvio}>
+              {item.previas.map((previa, indice) =>
+                previa.url ? (
+                  <img
+                    key={`${item.id}-${indice}`}
+                    src={previa.url}
+                    alt={previa.nome}
+                    className={classes.miniaturaEnvio}
+                  />
+                ) : (
+                  <span
+                    key={`${item.id}-${indice}`}
+                    className={classes.anexoEnvio}
+                  >
+                    <InsertDriveFileIcon fontSize="small" />
+                    {previa.nome}
+                  </span>
+                )
+              )}
+            </div>
+          )}
+
+          <MarkdownWrapper>{item.body}</MarkdownWrapper>
+
+          <span className={classes.timestamp}>
+            {format(parseISO(item.criadoEm), "HH:mm")}
+            {item.status === "falha" ? (
+              <ErrorOutlineIcon
+                fontSize="small"
+                className={classes.ackErroIcon}
+              />
+            ) : (
+              <ScheduleIcon fontSize="small" className={classes.ackIcons} />
+            )}
+          </span>
+
+          {item.status === "falha" && (
+            <div className={classes.barraFalha}>
+              <span>{i18n.t("messagesList.sendFailed")}</span>
+              <Button
+                size="small"
+                color="inherit"
+                className={classes.botaoTentarNovamente}
+                startIcon={<RefreshIcon fontSize="inherit" />}
+                onClick={() => reenviar(item.id)}
+              >
+                {i18n.t("messagesList.retry")}
+              </Button>
+              <Button
+                size="small"
+                color="inherit"
+                className={classes.botaoTentarNovamente}
+                onClick={() => descartar(item.id)}
+              >
+                {i18n.t("messagesList.discard")}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    ));
 
   const renderMessages = () => {
     if (messagesList.length > 0) {
@@ -849,7 +1343,12 @@ const MessagesList = ({ ticketId, isGroup }) => {
           return (
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
-              <div className={classes.internalNoteWrapper}>
+              <div
+                id={`mensagem-${message.id}`}
+                className={clsx(classes.internalNoteWrapper, {
+                  [classes.mensagemDestacada]: destacada === message.id,
+                })}
+              >
                 <div className={classes.internalNote}>
                   <span className={classes.internalNoteLabel}>
                     {i18n.t("messagesList.internalNote")}
@@ -871,8 +1370,10 @@ const MessagesList = ({ ticketId, isGroup }) => {
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
               <div
+                id={`mensagem-${message.id}`}
                 className={clsx(classes.messageLeft, {
                   [classes.balaoFigurinha]: ehFigurinha(message),
+                  [classes.mensagemDestacada]: destacada === message.id,
                 })}
               >
                 <IconButton
@@ -906,7 +1407,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
                 ) : (
                   <div className={classes.textContentItem}>
                     {message.quotedMsg && renderQuotedMessage(message)}
-                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                    {mostrarCorpo(message) && (
+                      <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                    )}
                     <span className={classes.timestamp}>
                       {format(parseISO(messageDate(message)), "HH:mm")}
                     </span>
@@ -921,11 +1424,13 @@ const MessagesList = ({ ticketId, isGroup }) => {
               {renderDailyTimestamps(message, index)}
               {renderMessageDivider(message, index)}
               <div
+                id={`mensagem-${message.id}`}
                 className={clsx(classes.messageRight, {
                   // Mensagem apagada mantém o balão: o "esta mensagem foi
                   // apagada" é texto e precisa do fundo para ser legível.
                   [classes.balaoFigurinha]:
                     ehFigurinha(message) && !message.isDeleted,
+                  [classes.mensagemDestacada]: destacada === message.id,
                 })}
               >
                 <IconButton
@@ -964,7 +1469,9 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     />
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  {mostrarCorpo(message) && (
+                    <MarkdownWrapper>{message.body}</MarkdownWrapper>
+                  )}
                   <span className={classes.timestamp}>
                     {message.fromApp && (
                       <span
@@ -983,6 +1490,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
                     {format(parseISO(messageDate(message)), "HH:mm")}
                     {renderMessageAck(message)}
                   </span>
+                  {renderFalhaMensagem(message)}
                 </div>
                 )}
               </div>
@@ -992,6 +1500,10 @@ const MessagesList = ({ ticketId, isGroup }) => {
       });
       return viewMessagesList;
     } else {
+      // Conversa nova com a primeira mensagem ainda saindo: o balão dela já
+      // está na tela, e o "nenhuma mensagem" ao lado seria contraditório.
+      if (quantasPendentes > 0) return null;
+
       return (
         <EmptyState
           icon={ChatBubbleOutlineIcon}
@@ -1059,7 +1571,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
         className={classes.messagesList}
         onScroll={handleScroll}
       >
-        {messagesList.length > 0 ? renderMessages() : []}
+        {renderMessages()}
+        {renderPendentes()}
+        {/* Âncora do fim: fica depois de tudo, inclusive do que ainda está
+            saindo, para a rolagem automática parar no lugar certo. */}
+        <div ref={fimRef} style={{ float: "left", clear: "both" }} />
       </div>
       {mostrarIrParaFim && (
         <Button

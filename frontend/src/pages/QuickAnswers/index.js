@@ -121,7 +121,13 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const QuickAnswers = () => {
+/**
+ * Respostas rápidas.
+ *
+ * Renderizada como aba dentro de Cadastro (embedded). O modo página inteira
+ * segue existindo para não quebrar link nem favorito antigo de /quickAnswers.
+ */
+const QuickAnswers = ({ embedded = false }) => {
   const classes = useStyles();
 
   const [loading, setLoading] = useState(false);
@@ -223,8 +229,12 @@ const QuickAnswers = () => {
     }
   };
 
+  // Dentro da aba o MainContainer sobra: ele mede 100% da altura e esconde o
+  // transbordo, o que num painel de aba corta a listagem pela metade.
+  const Envelope = embedded ? React.Fragment : MainContainer;
+
   return (
-    <MainContainer>
+    <Envelope>
       <ConfirmationModal
         title={
           deletingQuickAnswers &&
@@ -247,7 +257,7 @@ const QuickAnswers = () => {
         quickAnswerId={selectedQuickAnswers && selectedQuickAnswers.id}
       ></QuickAnswersModal>
       <MainHeader>
-        <Title>{i18n.t("quickAnswers.title")}</Title>
+        {!embedded && <Title>{i18n.t("quickAnswers.title")}</Title>}
         <MainHeaderButtonsWrapper>
           <SearchField
             value={searchParam}
@@ -362,7 +372,7 @@ const QuickAnswers = () => {
           </TableBody>
         </Table>
       </Paper>
-    </MainContainer>
+    </Envelope>
   );
 };
 

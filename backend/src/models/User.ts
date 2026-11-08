@@ -91,6 +91,29 @@ class User extends Model<User> {
   @Column(DataType.TEXT)
   accessExceptions: string;
 
+  /**
+   * Exceções de escopo desta pessoa, por cima do cargo:
+   * `{"board":{"allow":[3],"deny":[1]}}`
+   *
+   * Mesma ideia de `accessExceptions`, e pelo mesmo motivo: dois vendedores
+   * com o cargo "Vendedor" costumam trabalhar quadros diferentes, e criar um
+   * cargo por combinação de quadro é a explosão que o sistema de cargos
+   * existe para evitar.
+   */
+  @Column(DataType.TEXT)
+  scopeExceptions: string;
+
+  /**
+   * Escolhas de tela desta pessoa, em JSON: { "favoritos": ["tickets"] }.
+   *
+   * Não é acesso nem configuração da empresa — é só o jeito que ela gosta de
+   * ver o sistema, e por isso ela mesma grava, sem passar por `users:edit`.
+   * Fica num campo só porque nada aqui é consultado pelo banco: entra e sai
+   * inteiro, e preferência nova não pede coluna nova.
+   */
+  @Column(DataType.TEXT)
+  preferences: string;
+
   // Teto de chats abertos simultâneos. 0 = sem limite.
   @Default(0)
   @Column

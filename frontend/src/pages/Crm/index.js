@@ -756,6 +756,19 @@ const Crm = () => {
           <div className={classes.vazio}>
             <CircularProgress />
           </div>
+        ) : boards.length === 0 ? (
+          /*
+           * Nenhum quadro no alcance desta pessoa.
+           *
+           * É diferente de "a empresa não tem quadros" — o servidor semeia o
+           * fluxo padrão nesse caso, então a lista só volta vazia quando o
+           * escopo a esvaziou. Sem esta mensagem a tela abriria em branco e a
+           * pessoa procuraria um defeito onde há uma configuração; quem
+           * resolve é quem administra o sistema, e a frase diz isso.
+           */
+          <div className={classes.vazio}>
+            <Typography>{i18n.t("crm.emptyBoards")}</Typography>
+          </div>
         ) : stages.length === 0 ? (
           <div className={classes.vazio}>
             <Typography>{i18n.t("crm.emptyStages")}</Typography>

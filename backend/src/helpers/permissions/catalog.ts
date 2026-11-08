@@ -192,9 +192,31 @@ export const MODULES: Record<string, ModuloDePermissao> = {
       },
       move: {
         label: "Mover entre colunas",
-        descricao: "Avança e recua a oportunidade no funil, inclusive marcar como ganha ou perdida.",
+        descricao:
+          "Arrasta o card pelas colunas de trabalho do quadro. Encerrar como ganha ou perdida é outra permissão.",
         nivel: "operar",
         requer: ["crm:view"]
+      },
+      close: {
+        label: "Encerrar como ganha ou perdida",
+        descricao:
+          "Fecha a venda ou a dá por perdida. É a ação que gera cobrança, manda o pedido para produção e entra nos indicadores — separada de mover porque cotar e fechar costumam ser de pessoas diferentes.",
+        nivel: "operar",
+        requer: ["crm:move"]
+      },
+      discount: {
+        label: "Dar desconto",
+        descricao:
+          "Abate valor do orçamento, na linha ou no total. Sem ela a pessoa monta a proposta com a tabela de preços e mais nada — que é como se cota sem poder queimar margem.",
+        nivel: "operar",
+        requer: ["crm:edit"]
+      },
+      assign: {
+        label: "Definir o responsável",
+        descricao:
+          "Passa a oportunidade para outra pessoa. Sem ela, o card só sai das mãos de quem o tem por decisão de quem coordena.",
+        nivel: "operar",
+        requer: ["crm:edit"]
       },
       viewAll: {
         label: "Ver as oportunidades de todo mundo",
@@ -237,6 +259,13 @@ export const MODULES: Record<string, ModuloDePermissao> = {
           "Necessário para escolher produtos ao montar um orçamento. Quem vende precisa disto.",
         nivel: "ver"
       },
+      viewCost: {
+        label: "Ver custo e margem",
+        descricao:
+          "Mostra quanto cada produto custa para a empresa, e não só por quanto se vende. É o número que revela a formação do preço — e o que um vendedor não precisa saber para vender.",
+        nivel: "gerenciar",
+        requer: ["products:view"]
+      },
       manage: {
         label: "Cadastrar e editar produtos",
         descricao:
@@ -273,6 +302,20 @@ export const MODULES: Record<string, ModuloDePermissao> = {
         descricao:
           "Declara que o dinheiro entrou ou saiu. É a ação que mexe no saldo — conceda a poucas pessoas.",
         nivel: "operar",
+        requer: ["finance:view"]
+      },
+      pos: {
+        label: "Operar o PDV",
+        descricao:
+          "Abrir e fechar o caixa, vender no balcão, registrar sangria e suprimento. É quem fica no atendimento — não precisa ver o resto do financeiro.",
+        nivel: "operar",
+        requer: ["finance:view"]
+      },
+      posAudit: {
+        label: "Conferir os turnos de caixa",
+        descricao:
+          "Vê o histórico de todos os turnos, com as diferenças de fechamento de cada operador. É a permissão de quem confere, não de quem opera.",
+        nivel: "gerenciar",
         requer: ["finance:view"]
       },
       cashflow: {
@@ -589,6 +632,97 @@ export const ALL_PERMISSIONS: readonly Permission[] = modulosOrdenados.reduce(
     acc.concat(Object.keys(modulo.acoes).map(acao => `${moduloKey}:${acao}`)),
   []
 );
+
+// ── Escopos ─────────────────────────────────────────────────────────────────
+
+/**
+ * Uma dimensão de escopo: *sobre quais coisas* a permissão vale.
+ *
+ * A permissão responde "pode mover card?"; o escopo responde "em quais
+ * quadros?". São perguntas independentes, e tratá-las como uma só produz a
+ * explosão de cargos que este sistema existe para evitar — "Vendedor Funil",
+ * "Vendedor Produção", "Vendedor Funil e Expedição".
+ *
+ * Cada dimensão é declarada aqui e em nenhum outro lugar, do mesmo jeito que
+ * as permissões. Ligar uma dimensão nova a um módulo é acrescentar uma entrada
+ * abaixo e usar o filtro correspondente na consulta.
+ */
+export interface DimensaoDeEscopo {
+  /** Módulo do catálogo a que pertence, para agrupar na tela. */
+  modulo: string;
+  label: string;
+  /** O que a pessoa deixa de ver quando o item fica de fora. */
+  descricao: string;
+  /**
+   * A permissão sem a qual não faz sentido perguntar pelo escopo: quem não vê
+   * o módulo não precisa ter quadros escolhidos.
+   */
+  requer: string;
+  /** Endpoint que lista as opções, para a tela montar as caixinhas. */
+  fonte: string;
+  /**
+   * Campo do corpo da resposta onde a lista está, quando ela não é o corpo
+   * inteiro. Está no catálogo, e não numa tabelinha no frontend, porque é o
+   * mesmo tipo de fato que `fonte`: muda quando o endpoint muda, e a tela não
+   * tem como adivinhá-lo.
+   */
+  campo?: string;
+}
+
+export const ESCOPOS: Record<string, DimensaoDeEscopo> = {
+  board: {
+    modulo: "crm",
+    label: "Quadros do CRM",
+    descricao:
+      "Quais quadros a pessoa enxerga no funil. Um quadro fora do escopo não aparece no seletor, e os cards dele não entram em nenhuma listagem nem em nenhum total.",
+    requer: "crm:view",
+    fonte: "/crm/boards"
+  },
+  account: {
+    modulo: "finance",
+    label: "Contas e caixas",
+    descricao:
+      "Quais contas financeiras a pessoa alcança. Fora do escopo, a conta some do seletor de baixa e os lançamentos dela não entram no fluxo de caixa nem nas métricas.",
+    requer: "finance:view",
+    fonte: "/finance/cadastros",
+    campo: "accounts"
+  },
+  connection: {
+    modulo: "connections",
+    label: "Conexões de WhatsApp",
+    descricao:
+      "Por quais números a pessoa atende. Útil quando a empresa opera marcas ou unidades diferentes no mesmo sistema.",
+    requer: "connections:view",
+    fonte: "/whatsapp"
+  }
+};
+
+export type ChaveDeEscopo = keyof typeof ESCOPOS;
+
+export const CHAVES_DE_ESCOPO = Object.keys(ESCOPOS);
+
+const CONJUNTO_DE_ESCOPOS = new Set<string>(CHAVES_DE_ESCOPO);
+
+export const existeEscopo = (chave: string): boolean =>
+  CONJUNTO_DE_ESCOPOS.has(chave);
+
+/**
+ * Limpa uma lista de ids vinda de fora.
+ *
+ * Só números inteiros positivos passam, sem repetição e em ordem. Id que
+ * aponta para um quadro já excluído continua gravado sem fazer mal: o filtro
+ * o inclui num IN que não casa com nada. Limpá-lo exigiria consultar cada
+ * tabela a cada gravação, e o ganho seria estético.
+ */
+export const sanitizarIds = (ids: unknown): number[] => {
+  if (!Array.isArray(ids)) return [];
+  const limpos = new Set<number>();
+  ids.forEach(item => {
+    const n = Number(item);
+    if (Number.isInteger(n) && n > 0) limpos.add(n);
+  });
+  return Array.from(limpos).sort((a, b) => a - b);
+};
 
 const CONJUNTO_VALIDO = new Set<string>(ALL_PERMISSIONS);
 

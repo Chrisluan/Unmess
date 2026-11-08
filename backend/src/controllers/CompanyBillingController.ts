@@ -50,7 +50,7 @@ export const alterarUsuario = async (
   res: Response
 ): Promise<Response> => {
   const { companyId, userId } = req.params;
-  const { roleId, exceptions } = req.body;
+  const { roleId, exceptions, scopeExceptions } = req.body;
 
   const user = await UpdateCompanyUserService({
     companyId: Number(companyId),
@@ -61,7 +61,8 @@ export const alterarUsuario = async (
         : roleId !== undefined
         ? Number(roleId)
         : undefined,
-    exceptions
+    exceptions,
+    scopeExceptions
   });
 
   const acesso = await resolverAcessoDoUsuario(user.id);

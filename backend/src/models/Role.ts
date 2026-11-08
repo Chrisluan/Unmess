@@ -15,7 +15,17 @@ import {
 } from "sequelize-typescript";
 import Company from "./Company";
 import User from "./User";
-import { ALL_PERMISSIONS, sanitizar, Permission } from "../helpers/permissions/catalog";
+import {
+  ALL_PERMISSIONS,
+  CHAVES_DE_ESCOPO,
+  sanitizar,
+  Permission
+} from "../helpers/permissions/catalog";
+import {
+  EscopoDoCargo,
+  gravarEscoposDoCargo,
+  lerEscoposDoCargo
+} from "../helpers/permissions/escopos";
 import { SLUG_ADMINISTRADOR } from "../helpers/permissions/roleTemplates";
 
 /**
@@ -53,6 +63,17 @@ class Role extends Model<Role> {
   @Default("[]")
   @Column(DataType.TEXT)
   permissions: string;
+
+  /**
+   * O escopo padrão deste cargo, em JSON:
+   * `{"board":{"todos":true},"account":{"ids":[1,2]}}`
+   *
+   * Fica ao lado de `permissions` porque responde a outra metade da mesma
+   * pergunta: aquela diz o que o cargo pode fazer, esta diz sobre o quê. A
+   * pessoa pode ter exceções por cima, em `Users.scopeExceptions`.
+   */
+  @Column(DataType.TEXT)
+  scopes: string | null;
 
   /**
    * Cargo criado e mantido pelo sistema. Só o Administrador é assim: não pode
@@ -107,6 +128,28 @@ class Role extends Model<Role> {
 
   set permissionsList(value: Permission[]) {
     this.setDataValue("permissions", JSON.stringify(sanitizar(value)));
+  }
+
+  /**
+   * O escopo do cargo, já limpo.
+   *
+   * O Administrador não lê a coluna, pelo mesmo motivo que não lê a de
+   * permissões: ele alcança tudo em tempo de execução, e uma dimensão de
+   * escopo criada amanhã já nasce na mão de quem administra a empresa.
+   */
+  get scopesMap(): Record<string, EscopoDoCargo> {
+    if (this.ehAdministrador) {
+      const todos: Record<string, EscopoDoCargo> = {};
+      CHAVES_DE_ESCOPO.forEach(chave => {
+        todos[chave] = { todos: true };
+      });
+      return todos;
+    }
+    return lerEscoposDoCargo(this.getDataValue("scopes"));
+  }
+
+  set scopesMap(value: Record<string, EscopoDoCargo>) {
+    this.setDataValue("scopes", gravarEscoposDoCargo(value));
   }
 }
 

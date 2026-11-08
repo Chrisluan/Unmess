@@ -5,6 +5,7 @@ import * as Yup from "yup";
 import Product from "../models/Product";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
+import { usuarioPode } from "../helpers/permissions/resolve";
 
 const schema = Yup.object().shape({
   name: Yup.string().required().min(1).max(255),
@@ -12,6 +13,33 @@ const schema = Yup.object().shape({
   price: Yup.number().min(0),
   cost: Yup.number().min(0)
 });
+
+/**
+ * Tira o custo e a margem da resposta de quem não pode vê-los.
+ *
+ * O custo é o que revela a formação do preço, e vendedor não precisa dele
+ * para vender. Escondê-lo só na tela não esconderia nada: a lista de produtos
+ * é o que alimenta o autocompletar do orçamento, e o número viajaria inteiro
+ * para o navegador de quem soubesse abrir a aba de rede.
+ *
+ * Vira `null`, e não zero. Zero é um custo possível — produto de brinde, item
+ * de serviço puro —, e devolvê-lo faria a margem aparecer como 100% na tela de
+ * quem não deveria estar vendo margem nenhuma.
+ */
+const semCustoParaQuemNaoPode = async (
+  req: Request,
+  products: Product[]
+): Promise<unknown[]> => {
+  const pode = await usuarioPode(Number(req.user.id), "products:viewCost");
+
+  if (pode) return products;
+
+  return products.map(produto => ({
+    ...produto.toJSON(),
+    cost: null,
+    margin: null
+  }));
+};
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { searchParam, category, includeInactive } = req.query as Record<string, string>;
@@ -41,7 +69,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     limit: termo ? 30 : 300
   });
 
-  return res.json({ products });
+  return res.json({ products: await semCustoParaQuemNaoPode(req, products) });
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {

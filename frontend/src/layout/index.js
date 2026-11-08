@@ -20,6 +20,7 @@ import makeStyles from '@mui/styles/makeStyles';
 import MenuIcon from "@mui/icons-material/Menu";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import CloseIcon from "@mui/icons-material/Close";
 import AccountCircle from "@mui/icons-material/AccountCircle";
 import LightModeIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeIcon from "@mui/icons-material/DarkModeOutlined";
@@ -40,9 +41,13 @@ const drawerWidth = 240;
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
+    // 100dvh no celular: o desconto fixo de 56px vinha de uma barra inferior
+    // que não existe mais, e sobrava uma faixa morta no pé de toda tela. A
+    // unidade dinâmica acompanha a barra de endereço aparecendo e sumindo, que
+    // é o que aquele desconto tentava imitar.
     height: "100vh",
-    [theme.breakpoints.down('md')]: {
-      height: "calc(100vh - 56px)",
+    [theme.breakpoints.down("md")]: {
+      height: "100dvh",
     },
   },
   toolbar: {
@@ -147,19 +152,57 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  drawerPaper: {
-    position: "relative",
+  /**
+   * Superfície da barra lateral, comum aos dois modos.
+   *
+   * Sem `position` aqui de propósito: as duas variantes do Drawer se apoiam
+   * em posicionamentos incompatíveis -- a fixa participa do fluxo da linha, a
+   * temporária flutua sobre a tela -- e declarar um só no lugar comum era
+   * exatamente o que quebrava no celular.
+   */
+  drawerSuperficie: {
     whiteSpace: "nowrap",
     width: drawerWidth,
+    backgroundColor: theme.palette.background.paper,
+    borderRight: `1px solid ${theme.palette.divider}`,
+    ...theme.scrollbarStyles,
+  },
+
+  /**
+   * Barra fixa do desktop.
+   *
+   * `relative` porque ela é uma coluna da linha flex: é assim que o conteúdo
+   * ao lado sabe onde começar, e é o que faz recolher empurrar a página em vez
+   * de passar por cima dela.
+   */
+  drawerFixa: {
+    position: "relative",
     transition: theme.transitions.create("width", {
       // easeInOut em vez de sharp: recolher/expandir fica menos brusco.
       easing: theme.transitions.easing.easeInOut,
       duration: theme.transitions.duration.standard,
     }),
-    backgroundColor: theme.palette.background.paper,
-    borderRight: `1px solid ${theme.palette.divider}`,
-    ...theme.scrollbarStyles,
   },
+
+  /**
+   * Barra sobreposta do celular.
+   *
+   * A folha vive dentro do Modal, colada no alto e ocupando a altura inteira.
+   * É o padrão do próprio Drawer temporário -- o que faltava era não
+   * sobrescrevê-lo com o posicionamento da barra fixa.
+   */
+  drawerSobreposta: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    // 100dvh: com 100% a barra media a janela inteira e as últimas entradas
+    // ficavam atrás da barra de endereço do navegador do celular.
+    height: "100dvh",
+    // Trava para telas muito estreitas: a barra tem que deixar à mostra uma
+    // tira da página, que é o que diz que dá para tocar fora e fechar.
+    maxWidth: "84vw",
+  },
+
   drawerPaperClose: {
     overflowX: "hidden",
     transition: theme.transitions.create("width", {
@@ -227,7 +270,6 @@ const LoggedInLayout = ({ children }) => {
   const { handleLogout, handleLeaveCompany, loading, user } = useContext(AuthContext);
   const { name: brandName, logo: brandLogo } = useBranding();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerVariant, setDrawerVariant] = useState("permanent");
   const { darkMode, toggleTheme } = useThemeContext();
   const theme = useTheme();
   const { pathname } = useLocation();
@@ -240,12 +282,25 @@ const LoggedInLayout = ({ children }) => {
    * "temporária" numa janela que já tinha voltado a ser larga. O media query
    * reavalia sozinho, que é o que se esperava desde o começo.
    */
-  const telaPequena = useMediaQuery(theme.breakpoints.down("sm"));
+  // Abaixo de 900px a barra sobrepõe em vez de dividir a linha: numa tela de
+  // tablet em pé, 240px fixos comiam um terço da largura útil do quadro.
+  const telaPequena = useMediaQuery(theme.breakpoints.down("md"));
 
   const isSuperInCompany = user?.profile === "super" && !!user?.companyId;
 
+  /**
+   * A variante é derivada, e não guardada em estado.
+   *
+   * Guardada, ela chegava um render atrasada em relação à largura: o primeiro
+   * quadro no celular desenhava a barra fixa ocupando a tela, e só depois ela
+   * virava sobreposta. O piscar era pequeno, mas era ele que dava a impressão
+   * de que a barra "pulava" ao abrir.
+   */
+  const drawerVariant = telaPequena ? "temporary" : "permanent";
+
+  // Ao trocar de faixa de largura a barra volta ao padrão da faixa: aberta no
+  // desktop, fechada no celular -- onde aberta significaria tapar a página.
   useEffect(() => {
-    setDrawerVariant(telaPequena ? "temporary" : "permanent");
     setDrawerOpen(!telaPequena);
   }, [telaPequena]);
 
@@ -286,16 +341,25 @@ const LoggedInLayout = ({ children }) => {
 
   return (
     <div className={classes.root}>
+      {/* No celular a barra é temporária: ela flutua sobre a página e fecha ao
+          tocar fora. A versão anterior mandava as regras da barra fixa também
+          para a raiz do Drawer -- e no modo temporário essa raiz é o Modal.
+          Tirar o `fixed` dele jogava a barra inteira para o fim do documento:
+          era isso que aparecia deslocado para baixo ou fora da tela. */}
       <Drawer
         variant={drawerVariant}
-        className={drawerOpen ? classes.drawerPaper : classes.drawerPaperClose}
+        open={drawerOpen}
+        onClose={drawerClose}
+        // Mantida montada: remontar o menu a cada abertura perdia a posição da
+        // rolagem e piscava a lista inteira em quem tem muitos itens.
+        ModalProps={{ keepMounted: true }}
         classes={{
           paper: clsx(
-            classes.drawerPaper,
-            !drawerOpen && classes.drawerPaperClose
+            classes.drawerSuperficie,
+            telaPequena ? classes.drawerSobreposta : classes.drawerFixa,
+            !telaPequena && !drawerOpen && classes.drawerPaperClose
           ),
         }}
-        open={drawerOpen}
       >
         {/* Cabeçalho da lateral: identidade da empresa à esquerda, recolher à
             direita. Antes era só o botão solto, sem nada identificando o
@@ -319,8 +383,20 @@ const LoggedInLayout = ({ children }) => {
               </Typography>
             </div>
           )}
-          <IconButton onClick={() => setDrawerOpen(!drawerOpen)} size="small">
-            {drawerOpen ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+          {/* Recolher é conceito de barra fixa. Na sobreposta a única ação
+              possível é fechar, e o X diz isso sem ambiguidade. */}
+          <IconButton
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            size="small"
+            aria-label={telaPequena ? "Fechar menu" : "Recolher menu"}
+          >
+            {telaPequena ? (
+              <CloseIcon />
+            ) : drawerOpen ? (
+              <ChevronLeftIcon />
+            ) : (
+              <ChevronRightIcon />
+            )}
           </IconButton>
         </div>
         <Divider />
@@ -336,7 +412,12 @@ const LoggedInLayout = ({ children }) => {
       />
       <AppBar
         position="absolute"
-        className={clsx(classes.appBar, drawerOpen && classes.appBarShift)}
+        className={clsx(
+          classes.appBar,
+          // Só a barra fixa empurra o topo. A sobreposta passa por cima, e
+          // deslocar a barra superior junto tirava o título da tela.
+          !telaPequena && drawerOpen && classes.appBarShift
+        )}
       >
         {/* Banner de contexto — visível apenas quando super está operando em empresa */}
         {isSuperInCompany && (
@@ -361,7 +442,7 @@ const LoggedInLayout = ({ children }) => {
             onClick={() => setDrawerOpen(!drawerOpen)}
             className={clsx(
               classes.menuButton,
-              drawerOpen && classes.menuButtonHidden
+              !telaPequena && drawerOpen && classes.menuButtonHidden
             )}
             size="large">
             <MenuIcon />

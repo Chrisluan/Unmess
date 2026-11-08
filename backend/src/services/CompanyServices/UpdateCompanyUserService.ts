@@ -3,6 +3,10 @@ import Role from "../../models/Role";
 import User from "../../models/User";
 import { sanitizar } from "../../helpers/permissions/catalog";
 import { gravarExcecoes } from "../../helpers/permissions/resolve";
+import {
+  gravarExcecoesDeEscopo,
+  lerExcecoesDeEscopo
+} from "../../helpers/permissions/escopos";
 
 interface Request {
   companyId: number;
@@ -10,6 +14,8 @@ interface Request {
   /** null tira o cargo da pessoa — e, com ele, todo o acesso dela. */
   roleId?: number | null;
   exceptions?: { allow?: unknown; deny?: unknown };
+  /** `{"board":{"allow":[3],"deny":[1]}}` — exceções de alcance. */
+  scopeExceptions?: unknown;
 }
 
 /**
@@ -34,7 +40,8 @@ const UpdateCompanyUserService = async ({
   companyId,
   userId,
   roleId,
-  exceptions
+  exceptions,
+  scopeExceptions
 }: Request): Promise<User> => {
   const user = await User.findByPk(userId);
 
@@ -77,7 +84,25 @@ const UpdateCompanyUserService = async ({
             allow: sanitizar(exceptions.allow),
             deny: sanitizar(exceptions.deny)
           })
-        : user.accessExceptions
+        : user.accessExceptions,
+    /**
+     * O alcance passa pela mesma porta que as permissões.
+     *
+     * Sem isto, a tela do painel da plataforma — que é a mesma tela usada
+     * dentro da empresa — mandaria o campo e ele seria descartado em silêncio:
+     * quem configurasse por ali veria o formulário salvar e o alcance não
+     * mudar, sem nenhuma pista do motivo.
+     *
+     * Aqui não passa por `garantirQuePodeConcederEscopos`: esta rota é do
+     * super-admin, que alcança tudo por definição, e a regra existe para
+     * impedir que alguém conceda além do próprio alcance.
+     */
+    scopeExceptions:
+      scopeExceptions !== undefined
+        ? gravarExcecoesDeEscopo(
+            lerExcecoesDeEscopo(JSON.stringify(scopeExceptions ?? {}))
+          )
+        : user.scopeExceptions
   });
 
   /**

@@ -1,4 +1,5 @@
 import Role from "../../models/Role";
+import { EscopoDoCargo } from "../../helpers/permissions/escopos";
 import User from "../../models/User";
 import EnsureAdminRoleService from "./EnsureAdminRoleService";
 
@@ -9,6 +10,8 @@ export interface CargoListado {
   description: string | null;
   isSystem: boolean;
   permissions: string[];
+  /** Sobre quais coisas essas permissões valem. */
+  scopes: Record<string, EscopoDoCargo>;
   /** Quantas pessoas estão neste cargo — a tela avisa antes de excluir. */
   userCount: number;
 }
@@ -39,6 +42,7 @@ const ListRolesService = async (companyId: number): Promise<CargoListado[]> => {
     description: cargo.description ?? null,
     isSystem: cargo.isSystem,
     permissions: cargo.permissionsList,
+    scopes: cargo.scopesMap,
     userCount: cargo.users?.length ?? 0
   }));
 };

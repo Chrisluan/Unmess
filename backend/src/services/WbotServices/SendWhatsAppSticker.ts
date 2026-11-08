@@ -54,7 +54,10 @@ const SendWhatsAppSticker = async ({
       { asSticker: true }
     );
 
-    await ticket.update({ lastMessage: `🏷️ ${sticker.name}` });
+    await ticket.update({
+      lastMessage: `🏷️ ${sticker.name}`,
+      lastMessageFromMe: true
+    });
 
     return enviada;
   } catch (err) {

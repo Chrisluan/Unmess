@@ -4,7 +4,15 @@ import AppError from "../../errors/AppError";
 import Role from "../../models/Role";
 import { comDependencias, sanitizar } from "../../helpers/permissions/catalog";
 import { AcessoResolvido } from "../../helpers/permissions/resolve";
-import { garantirQuePodeConceder } from "../../helpers/permissions/guards";
+import {
+  garantirQuePodeConceder,
+  garantirQuePodeConcederEscopos
+} from "../../helpers/permissions/guards";
+import {
+  EscopoDoCargo,
+  lerEscoposDoCargo,
+  resolverEscopos
+} from "../../helpers/permissions/escopos";
 import ShowRoleService from "./ShowRoleService";
 
 interface Request {
@@ -12,6 +20,8 @@ interface Request {
   name?: string;
   description?: string;
   permissions?: unknown;
+  /** `{"board":{"todos":true},"account":{"ids":[1,2]}}` */
+  scopes?: unknown;
   companyId: number;
   ator: AcessoResolvido;
 }
@@ -21,6 +31,7 @@ const UpdateRoleService = async ({
   name,
   description,
   permissions,
+  scopes,
   companyId,
   ator
 }: Request): Promise<Role> => {
@@ -68,6 +79,26 @@ const UpdateRoleService = async ({
     const permissoesFinais = comDependencias(sanitizar(permissions));
     garantirQuePodeConceder(ator, permissoesFinais);
     cargo.permissionsList = permissoesFinais;
+  }
+
+  if (scopes !== undefined) {
+    // Passa pela mesma leitura que o resolvedor usa, e não pelo que veio no
+    // corpo: chave desconhecida e id inválido caem fora antes da conferência,
+    // e o que é conferido é exatamente o que será gravado.
+    const escoposFinais: Record<string, EscopoDoCargo> = lerEscoposDoCargo(
+      JSON.stringify(scopes ?? {})
+    );
+
+    garantirQuePodeConcederEscopos(
+      ator,
+      resolverEscopos({
+        isSuper: false,
+        escoposDoCargo: escoposFinais,
+        excecoes: {}
+      })
+    );
+
+    cargo.scopesMap = escoposFinais;
   }
 
   await cargo.save();

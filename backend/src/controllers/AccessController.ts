@@ -5,7 +5,7 @@ import { companyRoom } from "../libs/socketRooms";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
 import User from "../models/User";
-import { MODULES, NIVEIS } from "../helpers/permissions/catalog";
+import { ESCOPOS, MODULES, NIVEIS } from "../helpers/permissions/catalog";
 import { MODELOS_DE_CARGO } from "../helpers/permissions/roleTemplates";
 import { resolverAcessoDoUsuario } from "../helpers/permissions/resolve";
 
@@ -53,7 +53,14 @@ export const catalog = async (
   return res.status(200).json({
     modules: MODULES,
     levels: NIVEIS,
-    templates: MODELOS_DE_CARGO
+    templates: MODELOS_DE_CARGO,
+    /**
+     * As dimensões de escopo. Vêm no mesmo lugar que os módulos porque
+     * respondem à mesma pergunta em outra dimensão, e porque a tela precisa
+     * das duas juntas para montar um cargo: "pode ver o CRM" ao lado de "em
+     * quais quadros".
+     */
+    scopes: ESCOPOS
   });
 };
 
@@ -84,7 +91,8 @@ export const showRole = async (
     slug: cargo.slug ?? null,
     description: cargo.description ?? null,
     isSystem: cargo.isSystem,
-    permissions: cargo.permissionsList
+    permissions: cargo.permissionsList,
+    scopes: cargo.scopesMap
   });
 };
 
@@ -93,12 +101,13 @@ export const storeRole = async (
   res: Response
 ): Promise<Response> => {
   const companyId = getCompanyId(req);
-  const { name, description, permissions } = req.body;
+  const { name, description, permissions, scopes } = req.body;
 
   const cargo = await CreateRoleService({
     name,
     description,
     permissions,
+    scopes,
     companyId,
     ator: await acessoDoAtor(req)
   });
@@ -111,7 +120,8 @@ export const storeRole = async (
     slug: cargo.slug ?? null,
     description: cargo.description ?? null,
     isSystem: cargo.isSystem,
-    permissions: cargo.permissionsList
+    permissions: cargo.permissionsList,
+    scopes: cargo.scopesMap
   });
 };
 
@@ -120,13 +130,14 @@ export const updateRole = async (
   res: Response
 ): Promise<Response> => {
   const companyId = getCompanyId(req);
-  const { name, description, permissions } = req.body;
+  const { name, description, permissions, scopes } = req.body;
 
   const cargo = await UpdateRoleService({
     roleId: req.params.roleId,
     name,
     description,
     permissions,
+    scopes,
     companyId,
     ator: await acessoDoAtor(req)
   });
@@ -140,7 +151,8 @@ export const updateRole = async (
     slug: cargo.slug ?? null,
     description: cargo.description ?? null,
     isSystem: cargo.isSystem,
-    permissions: cargo.permissionsList
+    permissions: cargo.permissionsList,
+    scopes: cargo.scopesMap
   });
 };
 
@@ -202,12 +214,13 @@ export const updateUserAccess = async (
   res: Response
 ): Promise<Response> => {
   const companyId = getCompanyId(req);
-  const { roleId, exceptions } = req.body;
+  const { roleId, exceptions, scopeExceptions } = req.body;
 
   const acesso = await SetUserAccessService({
     userId: req.params.userId,
     roleId,
     exceptions,
+    scopeExceptions,
     companyId,
     atorId: Number(req.user.id),
     ator: await acessoDoAtor(req)

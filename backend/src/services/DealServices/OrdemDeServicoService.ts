@@ -99,12 +99,28 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
    * diferentes, nenhum dos dois igual ao que a empresa numera.
    */
   const pedido = deal.salesOrder;
-  const eOrcamento = !pedido && deal.board?.isSalesFunnel !== false;
+
+  /**
+   * O número que vai impresso.
+   *
+   * Fora do funil o documento é ordem de produção, e o número é o da contagem
+   * da empresa -- gravado no card justamente para acompanhar o trabalho de
+   * Produção até Expedição, onde o registro em Orders já ficou para trás.
+   *
+   * O `deal.id` no fim da fila é herança: vale só para o que foi gravado
+   * antes desta numeração existir. É o id da linha no banco, comum a todas as
+   * empresas, e imprimi-lo faz duas empresas terem ordens com o mesmo número
+   * -- ou nenhuma delas ter a de nº 1.
+   */
+  const numeroDeProducao = deal.orderNumber || pedido?.number || null;
+  const eOrcamento = !numeroDeProducao && deal.board?.isSalesFunnel !== false;
 
   const tipoDoDocumento = eOrcamento ? "Orçamento" : "Pedido";
-  const numeroDoDocumento =
-    pedido?.number || deal.quoteNumber || deal.id;
-  const orcamentoDeOrigem = pedido?.quoteNumber || null;
+  const numeroDoDocumento = eOrcamento
+    ? deal.quoteNumber || deal.id
+    : numeroDeProducao || deal.quoteNumber || deal.id;
+  const orcamentoDeOrigem =
+    pedido?.quoteNumber || (eOrcamento ? null : deal.quoteNumber) || null;
   const telefone = deal.contact?.number || "";
 
   const linhas = itens

@@ -30,6 +30,8 @@ import api from "../../../services/api";
 import toastError from "../../../errors/toastError";
 import usePermissions from "../../../hooks/usePermissions";
 import { comDependencias, semDependentes } from "../../../helpers/permissoes";
+import EscopoEditor from "../EscopoEditor";
+import useOpcoesDeEscopo from "../../../hooks/useOpcoesDeEscopo";
 
 const useStyles = makeStyles((theme) => ({
   bloco: { marginBottom: theme.spacing(2.5) },
@@ -123,6 +125,10 @@ const UserAccessModal = ({
   const [cargos, setCargos] = useState([]);
   const [roleId, setRoleId] = useState("");
   const [excecoes, setExcecoes] = useState({ allow: [], deny: [] });
+  const [excecoesDeEscopo, setExcecoesDeEscopo] = useState({});
+
+  const { opcoes, disponiveis, carregando: carregandoOpcoes } =
+    useOpcoesDeEscopo(catalogo?.listaDeEscopos, { ativo: open });
 
   const { indice, rotuloDaPermissao, descricaoDaPermissao } = catalogo;
 
@@ -145,6 +151,7 @@ const UserAccessModal = ({
             allow: acessoInicial?.exceptions?.allow ?? [],
             deny: acessoInicial?.exceptions?.deny ?? [],
           });
+          setExcecoesDeEscopo(acessoInicial?.scopeExceptions ?? {});
           return;
         }
 
@@ -154,6 +161,7 @@ const UserAccessModal = ({
           allow: data.exceptions?.allow ?? [],
           deny: data.exceptions?.deny ?? [],
         });
+        setExcecoesDeEscopo(data.scopeExceptions ?? {});
       } catch (err) {
         toastError(err);
         onClose();
@@ -217,6 +225,7 @@ const UserAccessModal = ({
       await api.put(rota, {
         roleId: roleId === "" ? null : roleId,
         exceptions: excecoes,
+        scopeExceptions: excecoesDeEscopo,
       });
       toast.success("Acesso atualizado.");
       onSaved?.();
@@ -229,6 +238,11 @@ const UserAccessModal = ({
   };
 
   const totalExcecoes = excecoes.allow.length + excecoes.deny.length;
+
+  const totalExcecoesDeEscopo = Object.values(excecoesDeEscopo).reduce(
+    (soma, item) => soma + (item?.allow?.length ?? 0) + (item?.deny?.length ?? 0),
+    0
+  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth scroll="paper">
@@ -426,6 +440,34 @@ const UserAccessModal = ({
 
             <Divider />
 
+            {/* ── Alcance ──────────────────────────────────────────────── */}
+            <Box className={classes.bloco} style={{ marginTop: 20 }}>
+              <Typography className={classes.tituloBloco}>
+                Alcance desta pessoa
+              </Typography>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                style={{ marginBottom: 12 }}
+              >
+                O cargo já define sobre quais quadros, contas e conexões as
+                permissões valem. Aqui se ajusta só o que for exceção — dois
+                vendedores no mesmo cargo costumam trabalhar quadros
+                diferentes, e isso não é motivo para criar um cargo novo.
+              </Typography>
+              <EscopoEditor
+                modo="pessoa"
+                dimensoes={disponiveis}
+                opcoes={opcoes}
+                carregando={carregandoOpcoes}
+                valor={excecoesDeEscopo}
+                escoposDoCargo={cargoEscolhido?.scopes}
+                onChange={setExcecoesDeEscopo}
+              />
+            </Box>
+
+            <Divider />
+
             {/* ── O resultado ──────────────────────────────────────────── */}
             <Box className={classes.bloco} style={{ marginTop: 20 }}>
               <Typography className={classes.tituloBloco}>
@@ -456,9 +498,12 @@ const UserAccessModal = ({
       </DialogContent>
 
       <DialogActions>
-        {totalExcecoes > 0 && (
+        {(totalExcecoes > 0 || totalExcecoesDeEscopo > 0) && (
           <Button
-            onClick={() => setExcecoes({ allow: [], deny: [] })}
+            onClick={() => {
+              setExcecoes({ allow: [], deny: [] });
+              setExcecoesDeEscopo({});
+            }}
             color="secondary"
             size="small"
             style={{ marginRight: "auto" }}
