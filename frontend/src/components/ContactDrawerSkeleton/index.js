@@ -1,43 +1,16 @@
 import React from "react";
 import Skeleton from '@mui/material/Skeleton';
-import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
-import { i18n } from "../../translate/i18n";
 
-const ContactDrawerSkeleton = ({ classes }) => {
+const ContactDrawerSkeleton = () => {
 	return (
-        <div className={classes.content}>
-            <Paper square variant="outlined" className={classes.contactHeader}>
-				<Skeleton
-					animation="wave"
-					variant="circular"
-					width={160}
-					height={160}
-					className={classes.contactAvatar}
-				/>
-				<Skeleton animation="wave" height={25} width={90} />
-				<Skeleton animation="wave" height={25} width={80} />
-				<Skeleton animation="wave" height={25} width={80} />
-			</Paper>
-            <Paper square className={classes.contactDetails}>
-				<Typography variant="subtitle1">
-					{i18n.t("contactDrawer.extraInfo")}
-				</Typography>
-				<Paper square variant="outlined" className={classes.contactExtraInfo}>
-					<Skeleton animation="wave" height={20} width={60} />
-					<Skeleton animation="wave" height={20} width={160} />
-				</Paper>
-				<Paper square variant="outlined" className={classes.contactExtraInfo}>
-					<Skeleton animation="wave" height={20} width={60} />
-					<Skeleton animation="wave" height={20} width={160} />
-				</Paper>
-				<Paper square variant="outlined" className={classes.contactExtraInfo}>
-					<Skeleton animation="wave" height={20} width={60} />
-					<Skeleton animation="wave" height={20} width={160} />
-				</Paper>
-			</Paper>
-        </div>
-    );
+		<div style={{ padding: "28px 20px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+			<Skeleton animation="wave" variant="circular" width={72} height={72} />
+			<Skeleton animation="wave" height={24} width={140} />
+			<Skeleton animation="wave" height={20} width={110} />
+			<Skeleton animation="wave" variant="rounded" height={90} width="100%" style={{ marginTop: 16 }} />
+			<Skeleton animation="wave" variant="rounded" height={90} width="100%" />
+		</div>
+	);
 };
 
 export default ContactDrawerSkeleton;

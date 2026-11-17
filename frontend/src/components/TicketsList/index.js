@@ -3,7 +3,6 @@ import openSocket from "../../services/socket-io";
 
 import makeStyles from '@mui/styles/makeStyles';
 import List from "@mui/material/List";
-import Paper from "@mui/material/Paper";
 
 import TicketListItem from "../TicketListItem";
 import TicketsListSkeleton from "../TicketsListSkeleton";
@@ -18,55 +17,40 @@ const useStyles = makeStyles(theme => ({
 	ticketsListWrapper: {
 		position: "relative",
 		display: "flex",
-		height: "100%",
+		flex: 1,
+		minHeight: 0,
 		flexDirection: "column",
 		overflow: "hidden",
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
+		backgroundColor: theme.palette.unmess.superficie,
 	},
 
 	ticketsList: {
 		flex: 1,
-		overflowY: "scroll",
+		overflowY: "auto",
 		...theme.scrollbarStyles,
-		borderTop: "2px solid rgba(0, 0, 0, 0.12)",
-	},
-
-	ticketsListHeader: {
-		color: "rgb(67, 83, 105)",
-		zIndex: 2,
-		backgroundColor: "white",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "space-between",
-	},
-
-	ticketsCount: {
-		fontWeight: "normal",
-		color: "rgb(104, 121, 146)",
-		marginLeft: "8px",
-		fontSize: "14px",
 	},
 
 	noTicketsText: {
 		textAlign: "center",
-		color: "rgb(104, 121, 146)",
-		fontSize: "14px",
-		lineHeight: "1.4",
+		color: theme.palette.unmess.textoApagado,
+		fontSize: "0.875rem",
+		lineHeight: 1.45,
+		margin: 0,
+		maxWidth: 260,
 	},
 
 	noTicketsTitle: {
 		textAlign: "center",
-		fontSize: "16px",
-		fontWeight: "600",
-		margin: "0px",
+		fontSize: "1rem",
+		fontWeight: 600,
+		margin: 0,
+		color: theme.palette.unmess.texto,
 	},
 
 	noTicketsDiv: {
 		display: "flex",
-		height: "100px",
-		margin: 40,
+		gap: 6,
+		padding: theme.spacing(6, 3),
 		flexDirection: "column",
 		alignItems: "center",
 		justifyContent: "center",
@@ -166,6 +150,7 @@ const reducer = (state, action) => {
 			selectedUserIds = [],
 			groups,
 			updateCount,
+			updateTickets,
 			style,
 		} = props;
 	const classes = useStyles();
@@ -328,6 +313,9 @@ const reducer = (state, action) => {
     if (typeof updateCount === "function") {
       updateCount(ticketsList.length);
     }
+    if (typeof updateTickets === "function") {
+      updateTickets(ticketsList);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketsList]);
 
@@ -347,11 +335,8 @@ const reducer = (state, action) => {
 	};
 
 	return (
-    <Paper className={classes.ticketsListWrapper} style={style}>
-			<Paper
-				square
-				name="closed"
-				elevation={0}
+    <div className={classes.ticketsListWrapper} style={style}>
+			<div
 				className={classes.ticketsList}
 				onScroll={handleScroll}
 			>
@@ -380,8 +365,8 @@ const reducer = (state, action) => {
 					)}
 					{loading && <TicketsListSkeleton />}
 				</List>
-			</Paper>
-    </Paper>
+			</div>
+    </div>
 	);
 };
 

@@ -11,7 +11,7 @@ import toastError from "../../errors/toastError";
 import { Can } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
+const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransferir, onDevolver }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const isMounted = useRef(true);
@@ -37,8 +37,12 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	};
 
 	const handleOpenTransferModal = e => {
-		setTransferTicketModalOpen(true);
 		handleClose();
+		if (onTransferir) {
+			onTransferir();
+			return;
+		}
+		setTransferTicketModalOpen(true);
 	};
 
 	const handleCloseTransferTicketModal = () => {
@@ -52,7 +56,6 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			<Menu
 				id="menu-appbar"
 				anchorEl={anchorEl}
-				getContentAnchorEl={null}
 				anchorOrigin={{
 					vertical: "bottom",
 					horizontal: "right",
@@ -68,6 +71,16 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				<MenuItem onClick={handleOpenTransferModal}>
 					{i18n.t("ticketOptionsMenu.transfer")}
 				</MenuItem>
+				{onDevolver && (
+					<MenuItem
+						onClick={() => {
+							handleClose();
+							onDevolver();
+						}}
+					>
+						{i18n.t("messagesList.header.buttons.return")}
+					</MenuItem>
+				)}
 				<Can
 					role={user.profile}
 					perform="ticket-options:deleteTicket"
@@ -90,6 +103,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			>
 				{i18n.t("ticketOptionsMenu.confirmationModal.message")}
 			</ConfirmationModal>
+			{!onTransferir && (
 			<TransferTicketModal
 				modalOpen={transferTicketModalOpen}
 				onClose={handleCloseTransferTicketModal}
@@ -98,6 +112,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				currentQueueId={ticket.queueId}
 				currentUserId={ticket.userId}
 			/>
+			)}
 		</>
 	);
 };

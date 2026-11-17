@@ -5,13 +5,13 @@ import openSocket from "../../services/socket-io";
 import useSound from "use-sound";
 
 import Popover from "@mui/material/Popover";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import makeStyles from '@mui/styles/makeStyles';
-import Badge from "@mui/material/Badge";
-import ChatIcon from "@mui/icons-material/Chat";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+
+import { ItemTrilho } from "../../layout/MainListItems";
 
 import TicketListItem from "../TicketListItem";
 import { i18n } from "../../translate/i18n";
@@ -195,16 +195,15 @@ const NotificationsPopOver = () => {
 
 	return (
         <>
-            <IconButton
-                onClick={handleClick}
-                ref={anchorEl}
-                aria-label="Open Notifications"
-                className={classes.iconButton}
-                size="large">
-				<Badge badgeContent={notifications.length} color="secondary">
-					<ChatIcon />
-				</Badge>
-			</IconButton>
+            <div ref={anchorEl}>
+				<ItemTrilho
+					rotulo="Avisos"
+					Icone={NotificationsNoneIcon}
+					contador={notifications.length}
+					onClick={handleClick}
+					dica={notifications.length ? `${notifications.length} conversas com mensagens novas` : "Nenhuma mensagem nova"}
+				/>
+			</div>
             <Popover
 				disableScrollLock
 				open={isOpen}
@@ -214,8 +213,8 @@ const NotificationsPopOver = () => {
 					horizontal: "right",
 				}}
 				transformOrigin={{
-					vertical: "top",
-					horizontal: "right",
+					vertical: "bottom",
+					horizontal: "left",
 				}}
 				classes={{ paper: classes.popoverPaper }}
 				onClose={handleClickAway}

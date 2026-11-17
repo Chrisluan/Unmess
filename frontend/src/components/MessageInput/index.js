@@ -10,7 +10,6 @@ import makeStyles from '@mui/styles/makeStyles';
 import Paper from "@mui/material/Paper";
 import InputBase from "@mui/material/InputBase";
 import CircularProgress from "@mui/material/CircularProgress";
-import { green } from "@mui/material/colors";
 import Tooltip from "@mui/material/Tooltip";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import NoteIcon from "@mui/icons-material/Assignment";
@@ -50,44 +49,48 @@ const gravador = new VoiceRecorder();
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
-    background: "#eee",
+    background: theme.palette.unmess.fundoConversa,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    padding: "0 6% 12px",
     [theme.breakpoints.down('md')]: {
-      position: "fixed",
-      bottom: 0,
-      width: "100%",
+      padding: "0 8px 8px",
     },
   },
 
   newMessageBox: {
-    background: "#eee",
+    background: theme.palette.unmess.superficie,
     width: "100%",
     display: "flex",
-    padding: "7px",
+    padding: "4px 6px",
     alignItems: "center",
+    border: `1px solid ${theme.palette.unmess.linha}`,
+    borderRadius: 16,
+    gap: 2,
+    "&:focus-within": { borderColor: theme.palette.unmess.primaria, boxShadow: theme.palette.unmess.foco },
   },
 
   messageInputWrapper: {
-    padding: 6,
-    marginRight: 7,
-    background: "#fff",
+    padding: "6px 4px",
+    marginRight: 4,
+    background: "transparent",
     display: "flex",
-    borderRadius: 20,
+    borderRadius: 12,
     flex: 1,
     position: "relative",
   },
 
   messageInput: {
-    paddingLeft: 10,
+    paddingLeft: 6,
     flex: 1,
     border: "none",
+    fontSize: "0.9375rem",
+    "& textarea::placeholder": { color: theme.palette.unmess.textoApagado, opacity: 1 },
   },
 
   sendMessageIcons: {
-    color: "grey",
+    color: theme.palette.unmess.textoApagado,
   },
 
   uploadInput: {
@@ -100,15 +103,15 @@ const useStyles = makeStyles(theme => ({
     position: "relative",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    backgroundColor: theme.palette.unmess.superficie,
+    borderTop: `1px solid ${theme.palette.unmess.linha}`,
   },
 
   emojiBox: {
     position: "absolute",
     bottom: 63,
     width: 40,
-    borderTop: "1px solid #e8e8e8",
+    borderTop: `1px solid ${theme.palette.unmess.linha}`,
   },
 
   // A gaveta tem largura própria, diferente da caixa de emoji: ela mostra uma
@@ -121,7 +124,7 @@ const useStyles = makeStyles(theme => ({
   },
 
   circleLoading: {
-    color: green[500],
+    color: theme.palette.unmess.primaria,
     opacity: "70%",
     position: "absolute",
     top: "20%",
@@ -130,7 +133,7 @@ const useStyles = makeStyles(theme => ({
   },
 
   audioLoading: {
-    color: green[500],
+    color: theme.palette.unmess.primaria,
     opacity: "70%",
   },
 
@@ -141,11 +144,11 @@ const useStyles = makeStyles(theme => ({
   },
 
   cancelAudioIcon: {
-    color: "red",
+    color: theme.palette.unmess.erro,
   },
 
   sendAudioIcon: {
-    color: "green",
+    color: theme.palette.unmess.sucesso,
   },
 
   replyginMsgWrapper: {
@@ -154,16 +157,16 @@ const useStyles = makeStyles(theme => ({
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 8,
-    paddingLeft: 73,
-    paddingRight: 7,
+    paddingBottom: 8,
   },
 
   replyginMsgContainer: {
     flex: 1,
     marginRight: 5,
     overflowY: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderRadius: "7.5px",
+    backgroundColor: theme.palette.unmess.superficie,
+    border: `1px solid ${theme.palette.unmess.linha}`,
+    borderRadius: 12,
     display: "flex",
     position: "relative",
   },
@@ -179,39 +182,43 @@ const useStyles = makeStyles(theme => ({
   replyginContactMsgSideColor: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#35cd96",
+    backgroundColor: theme.palette.unmess.primaria,
   },
 
   replyginSelfMsgSideColor: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: theme.palette.unmess.textoApagado,
   },
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: theme.palette.unmess.primariaSuaveTexto,
+    fontWeight: 600,
   },
   messageQuickAnswersWrapper: {
     margin: 0,
     position: "absolute",
-    bottom: "50px",
-    background: "#ffffff",
-    padding: "2px",
-    border: "1px solid #CCC",
+    bottom: "calc(100% + 8px)",
+    background: theme.palette.unmess.superficie,
+    padding: 6,
+    border: `1px solid ${theme.palette.unmess.linha}`,
+    borderRadius: 12,
+    boxShadow: theme.palette.unmess.sombraFlutuante,
+    zIndex: 10,
     left: 0,
     width: "100%",
     "& li": {
       listStyle: "none",
       "& a": {
         display: "block",
-        padding: "8px",
+        padding: "8px 10px",
+        borderRadius: 8,
         textOverflow: "ellipsis",
         overflow: "hidden",
-        maxHeight: "32px",
+        maxHeight: "38px",
         "&:hover": {
-          background: "#F1F1F1",
+          background: theme.palette.unmess.primariaSuave,
           cursor: "pointer",
         },
       },
@@ -596,7 +603,7 @@ const MessageInput = ({ ticketStatus }) => {
                   size="large">
                   <NoteIcon
                     className={classes.sendMessageIcons}
-                    style={internalNote ? { color: "#d4a017" } : undefined}
+                    style={internalNote ? { color: "#C27C0E" } : undefined}
                   />
                 </IconButton>
               </span>
@@ -687,7 +694,7 @@ const MessageInput = ({ ticketStatus }) => {
             className={classes.messageInputWrapper}
             style={
               internalNote
-                ? { backgroundColor: "#fff8c4", border: "1px solid #f0e2a0" }
+                ? { backgroundColor: "rgba(240,184,90,.16)" }
                 : undefined
             }
           >

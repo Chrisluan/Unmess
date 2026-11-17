@@ -51,13 +51,13 @@ const messages = {
         },
         messages: {
           inAttendance: {
-            title: "Em Atendimento"
+            title: "Em atendimento agora"
           },
           waiting: {
-            title: "Aguardando"
+            title: "Esperando na fila"
           },
           closed: {
-            title: "Finalizado"
+            title: "Resolvidas"
           }
         },
         metrics: {
@@ -240,7 +240,7 @@ const messages = {
         },
       },
       crm: {
-        title: "CRM",
+        title: "Funil de vendas",
         searchPlaceholder: "Pesquisar por negócio ou cliente...",
         emptyStages: "Nenhuma coluna configurada neste quadro.",
         emptyStage: "Nenhum negócio nesta coluna",
@@ -523,7 +523,7 @@ const messages = {
         success: "Grupo salvo com sucesso!",
       },
       chat: {
-        noTicketMessage: "Selecione um chat para começar a conversar.",
+        noTicketMessage: "Escolha uma conversa na lista para começar.",
       },
       ticketsManager: {
         buttons: {
@@ -556,7 +556,7 @@ const messages = {
           search: { title: "Busca" },
         },
         search: {
-          placeholder: "Buscar por nome, mensagem ou protocolo",
+          placeholder: "Buscar nome, mensagem ou protocolo",
         },
         buttons: {
           showAll: "Todos",
@@ -585,9 +585,9 @@ const messages = {
         attendingHeader: "Em Atendimento",
         waitingHeader: "Oportunidades",
         knownHeader: "Conhecidos",
-        noTicketsTitle: "Nada aqui!",
+        noTicketsTitle: "Nada por aqui",
         noTicketsMessage:
-          "Nenhum chat encontrado com esse status ou termo pesquisado",
+          "Nenhuma conversa nesta lista agora.",
         connectionTitle: "Conexão que está sendo utilizada atualmente.",
         waitingFor: "Tempo que o cliente está aguardando",
         protocol: "Protocolo do atendimento",
@@ -677,7 +677,7 @@ const messages = {
         listItems: {
           dashboard: "Dashboard",
           connections: "Conexões",
-          tickets: "Chats",
+          tickets: "Conversas",
           contacts: "Contatos",
           customers: "Clientes",
           crm: "CRM",
@@ -829,7 +829,7 @@ const messages = {
         title: "Configurações",
         tabs: {
           general: "Geral",
-          connections: "Conexões",
+          connections: "Números de WhatsApp",
           businessHours: "Horário de Atendimento",
           ticketStatuses: "Status de Finalização",
           tags: "Etiquetas",
@@ -1004,7 +1004,7 @@ const messages = {
         header: {
           assignedTo: "Atribuído à:",
           buttons: {
-            return: "Retornar",
+            return: "Devolver para a fila",
             resolve: "Resolver",
             reopen: "Reabrir",
             accept: "Aceitar",
@@ -1012,13 +1012,13 @@ const messages = {
         },
       },
       messagesInput: {
-        placeholderOpen: "Digite uma mensagem ou tecle ''/'' para utilizar as respostas rápidas cadastrada",
+        placeholderOpen: "Escreva uma mensagem · digite / para respostas rápidas",
         placeholderClosed:
-          "Reabra ou aceite esse chat para enviar uma mensagem.",
+          "Atenda ou reabra a conversa para responder.",
         signMessage: "Assinar",
         internalNoteTooltip: "Nota interna (só a equipe vê)",
         placeholderInternalNote:
-          "Nota interna — não será enviada ao cliente",
+          "Nota interna: só a equipe vê",
       },
       contactDrawer: {
         header: "Dados do contato",

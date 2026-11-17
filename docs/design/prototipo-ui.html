@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unmess · Protótipo de interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F4F6;--surface:#FCFCFD;--surface-2:#F7F8FA;--hover:#EEF0F3;
+  --line:#E3E6EA;--line-strong:#D0D5DB;
+  --ink:#1D2129;--ink-2:#3D4450;--muted:#646B76;
+  --primary:#5B45D6;--primary-hover:#4A35C2;--primary-ink:#FFFFFF;--primary-soft:#EEEBFC;--primary-soft-ink:#3F2DAE;
+  --signal:#12804A;--signal-ink:#FFFFFF;--brand-dot:#B0FB02;
+  --success:#12804A;--success-soft:#E3F4EA;
+  --warning:#8A5300;--warning-soft:#FDF1DC;
+  --danger:#C0352B;--danger-soft:#FCE8E6;
+  --bubble-in:#FFFFFF;--bubble-out:#E9E5FB;--chat-bg:#EEF0F2;
+  --shadow:0 1px 2px rgba(29,33,41,.06);
+  --shadow-pop:0 8px 28px rgba(29,33,41,.14);
+  --focus:0 0 0 3px rgba(91,69,214,.35);
+  --r-sm:10px;--r:12px;--r-lg:16px;--r-pill:999px;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#121418;--surface:#1A1D23;--surface-2:#20242B;--hover:#272B33;
+  --line:#2C3139;--line-strong:#3A404A;
+  --ink:#E4E6EA;--ink-2:#C4C8CF;--muted:#9AA1AC;
+  --primary:#9D8CFF;--primary-hover:#B1A3FF;--primary-ink:#121418;--primary-soft:#2A2650;--primary-soft-ink:#CBC2FF;
+  --signal:#3CCB7F;--signal-ink:#0B1A12;
+  --success:#5FD394;--success-soft:#173024;
+  --warning:#F0B85A;--warning-soft:#33280F;
+  --danger:#FF8A80;--danger-soft:#3A1D1B;
+  --bubble-in:#20242B;--bubble-out:#2E2A55;--chat-bg:#15181C;
+  --shadow:0 1px 2px rgba(0,0,0,.3);--shadow-pop:0 8px 28px rgba(0,0,0,.5);
+  --focus:0 0 0 3px rgba(157,140,255,.45);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","tnum"}
+:root[data-size="lg"] .app{zoom:1.15}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:none;box-shadow:var(--focus);border-radius:var(--r-sm)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:18px;height:18px}
+kbd{font-family:var(--font);font-size:11px;font-weight:600;padding:1px 6px;border-radius:5px;border:1px solid var(--line-strong);background:var(--surface-2);color:var(--muted)}
+.app{display:grid;grid-template-columns:84px 1fr;height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:16px 0 12px;gap:4px;overflow-y:auto}
+.rail .mark{font-weight:700;font-size:24px;letter-spacing:-.03em;margin-bottom:16px;line-height:1;color:var(--ink)}
+.mark .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--brand-dot);margin-left:1px;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.rail-btn{position:relative;width:68px;min-height:56px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);font-size:11.5px;font-weight:600;transition:background .15s,color .15s}
+.rail-btn:hover{background:var(--hover);color:var(--ink)}
+.rail-btn.on{background:var(--primary-soft);color:var(--primary-soft-ink)}
+.rail-btn .badge{position:absolute;top:4px;right:10px}
+.rail .spacer{flex:1}
+.rail .me{width:38px;height:38px;border-radius:50%;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center;font-weight:700;font-size:13px;position:relative;margin-top:6px}
+.rail .me::after{content:"";position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:var(--signal);border:2px solid var(--surface)}
+.rail .sep{width:32px;height:1px;background:var(--line);margin:6px 0}
+.main{min-width:0;overflow:hidden;display:flex;flex-direction:column}
+.page{display:none;height:100%;min-height:0}
+.page.on{display:flex}
+.badge{min-width:20px;height:20px;padding:0 6px;border-radius:var(--r-pill);background:var(--signal);color:var(--signal-ink);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+.badge.muted{background:var(--hover);color:var(--muted)}
+.label{font-size:13px;font-weight:600;color:var(--muted)}
+h1.title{font-weight:700;font-size:22px;letter-spacing:-.015em;line-height:1.25}
+.btn{height:40px;padding:0 16px;border-radius:var(--r-sm);display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;white-space:nowrap;transition:background .15s,border-color .15s}
+.btn.primary{background:var(--primary);color:var(--primary-ink)}
+.btn.primary:hover{background:var(--primary-hover)}
+.btn.ghost{border:1px solid var(--line-strong);background:var(--surface)}
+.btn.ghost:hover{background:var(--hover)}
+.btn.quiet{color:var(--primary-soft-ink)}
+.btn.quiet:hover{background:var(--primary-soft)}
+.btn.sm{height:34px;padding:0 12px;font-size:13px}
+.btn.lg{height:44px;padding:0 18px;font-size:15px}
+.icon-btn{width:40px;height:40px;border-radius:var(--r-sm);display:inline-grid;place-items:center;color:var(--ink-2)}
+.icon-btn:hover{background:var(--hover);color:var(--ink)}
+.icon-btn.on{background:var(--primary-soft);color:var(--primary-soft-ink)}
+.chip{height:26px;padding:0 10px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;background:var(--hover);color:var(--ink-2);white-space:nowrap}
+.chip .sw{width:8px;height:8px;border-radius:50%}
+.chip.deal{background:var(--primary-soft);color:var(--primary-soft-ink)}
+.chip.ok{background:var(--success-soft);color:var(--success)}
+.chip.warn{background:var(--warning-soft);color:var(--warning)}
+.chip.bad{background:var(--danger-soft);color:var(--danger)}
+.search{display:flex;align-items:center;gap:8px;height:42px;padding:0 12px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.search input{border:0;outline:0;background:transparent;flex:1;min-width:0;color:var(--ink);font-size:15px}
+.search input::placeholder{color:var(--muted)}
+.search:focus-within{border-color:var(--primary);box-shadow:var(--focus)}
+.seg{display:flex;background:var(--hover);border-radius:12px;padding:4px;gap:2px}
+.seg button{flex:1;height:34px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;white-space:nowrap}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:15px;flex:none;position:relative}
+.av.s{width:34px;height:34px;font-size:12.5px}
+.av.xs{width:26px;height:26px;font-size:10.5px}
+.c1{background:#E6E1FA;color:#3F2DAE}.c2{background:#D9EFEC;color:#1F5E59}.c3{background:#FBE3D3;color:#8A3A0B}.c4{background:#DCE6FB;color:#1E40AF}.c5{background:#F8DDE8;color:#8A1D4A}.c6{background:#E1F0D5;color:#3F6212}.c7{background:#E7E8EB;color:#4B5160}
+:root[data-theme="dark"] .c1{background:#352F63;color:#D6CEFF}:root[data-theme="dark"] .c2{background:#1E3F3C;color:#A6E3DB}:root[data-theme="dark"] .c3{background:#4A2C1A;color:#FFC9A3}:root[data-theme="dark"] .c4{background:#1F2F55;color:#B5CBFF}:root[data-theme="dark"] .c5{background:#4A2133;color:#FFB8D2}:root[data-theme="dark"] .c6{background:#2A3D1B;color:#C9EBA8}:root[data-theme="dark"] .c7{background:#30343C;color:#C4C8CF}
+.conv{display:grid;grid-template-columns:380px 1fr auto;height:100%;width:100%}
+.list{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.list-head{padding:20px 16px 12px;display:flex;flex-direction:column;gap:12px}
+.list-head .row{display:flex;align-items:center;justify-content:space-between}
+.queue-call{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);background:var(--warning-soft);color:var(--ink)}
+.queue-call .tx{flex:1;min-width:0;font-size:14px;line-height:1.35}
+.queue-call .tx b{display:block}
+.queue-call .tx span{color:var(--warning);font-weight:600;font-size:13px}
+.items{overflow:auto;flex:1}
+.item{display:flex;gap:12px;padding:14px 16px;cursor:pointer;position:relative;align-items:center}
+.item+.item{border-top:1px solid var(--line)}
+.item:hover{background:var(--surface-2)}
+.item.on{background:var(--primary-soft)}
+.item.on::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--primary)}
+.item .body{flex:1;min-width:0}
+.item .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.item .name{font-weight:600;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .time{font-size:12.5px;color:var(--muted);flex:none}
+.item .time.new{color:var(--signal);font-weight:700}
+.item .bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px}
+.item .last{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.item.unread .last{color:var(--ink-2);font-weight:500}
+.item .meta{margin-top:6px;display:flex;gap:6px}
+.item .meta .chip{height:22px;font-size:12px;padding:0 8px}
+.wait{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:700;color:var(--warning)}
+.chat{display:flex;flex-direction:column;min-width:0;background:var(--chat-bg)}
+.chat-head{min-height:72px;padding:0 16px 0 20px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.chat-head .who{flex:1;min-width:0}
+.chat-head .who b{font-size:16px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-head .who span{font-size:13px;color:var(--muted)}
+.chat-head .acts{display:flex;align-items:center;gap:8px}
+.back{display:none}
+.msgs{flex:1;overflow:auto;padding:24px 7% 12px;display:flex;flex-direction:column;gap:8px}
+.day{align-self:center;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface);padding:4px 12px;border-radius:var(--r-pill);margin:8px 0}
+.sys{align-self:center;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px;margin:6px 0}
+.sys::before,.sys::after{content:"";width:28px;height:1px;background:var(--line-strong)}
+.bub{max-width:min(560px,74%);padding:9px 13px 7px;border-radius:14px;background:var(--bubble-in);box-shadow:var(--shadow);font-size:15px;line-height:1.5;position:relative}
+.bub.out{align-self:flex-end;background:var(--bubble-out)}
+.bub .t{font-size:11.5px;color:var(--muted);float:right;margin:7px 0 0 12px;display:flex;align-items:center;gap:3px}
+.bub .by{font-size:12.5px;font-weight:600;color:var(--primary-soft-ink);display:block;margin-bottom:2px}
+.bub.note{background:var(--warning-soft);align-self:flex-end;border:1px dashed var(--warning);box-shadow:none}
+.bub.note .by{color:var(--warning)}
+.bub.order{padding:0;overflow:hidden;width:310px}
+.order .oh{padding:11px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.order .ol{padding:8px 13px;display:flex;justify-content:space-between;font-size:14px;color:var(--ink-2)}
+.order .of{padding:9px 13px 11px;display:flex;justify-content:space-between;font-weight:700;border-top:1px solid var(--line)}
+.composer-wrap{padding:8px 7% 16px;position:relative}
+.composer{display:flex;align-items:flex-end;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:6px}
+.composer:focus-within{border-color:var(--primary);box-shadow:var(--focus)}
+.composer textarea{flex:1;border:0;outline:0;background:transparent;resize:none;padding:9px 6px;height:42px;max-height:140px;font-size:15px;box-shadow:none}
+.composer textarea::placeholder{color:var(--muted)}
+.composer .send{width:42px;height:42px;border-radius:12px;background:var(--primary);color:var(--primary-ink);display:grid;place-items:center}
+.composer-tabs{display:flex;gap:4px;margin-bottom:8px;align-items:center}
+.composer-tabs button{font-size:13px;font-weight:600;padding:6px 12px;border-radius:var(--r-pill);color:var(--muted)}
+.composer-tabs button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.composer-tabs .hint{margin-left:auto;font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.slash{position:absolute;left:7%;right:7%;bottom:calc(100% - 4px);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-pop);padding:6px;display:none}
+.slash.on{display:block}
+.slash .hd{padding:6px 10px 8px}
+.slash .opt{display:flex;gap:12px;padding:10px;border-radius:9px;cursor:pointer;align-items:baseline}
+.slash .opt:hover,.slash .opt.on{background:var(--primary-soft)}
+.slash .opt code{font-family:var(--font);font-weight:600;color:var(--primary-soft-ink);min-width:110px}
+.slash .opt span{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctx{width:340px;background:var(--surface);border-left:1px solid var(--line);overflow:auto;display:flex;flex-direction:column}
+.ctx.off{display:none}
+.ctx-head{padding:24px 20px 18px;text-align:center;border-bottom:1px solid var(--line)}
+.ctx-head .av{width:72px;height:72px;font-size:24px;margin:0 auto 10px}
+.ctx-head b{font-size:17px;display:block}
+.ctx-head span{color:var(--muted);font-size:13.5px}
+.ctx-head .quick{display:flex;justify-content:center;gap:8px;margin-top:14px}
+.sec{padding:18px 20px;border-bottom:1px solid var(--line)}
+.sec .sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec .sh .label{color:var(--ink);font-size:14px}
+.sec .sh a{font-size:13px;font-weight:600;color:var(--primary-soft-ink);cursor:pointer;padding:4px 8px;margin:-4px -8px;border-radius:8px}
+.sec .sh a:hover{background:var(--primary-soft)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{text-align:right;font-weight:500}
+.stages{display:flex;gap:4px;margin:8px 0 10px}
+.stages i{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.stages i.done{background:var(--primary)}
+.deal-row{display:flex;justify-content:space-between;align-items:center}
+.deal-row .v{font-weight:700;font-size:22px;letter-spacing:-.01em}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.empty-hint{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:var(--r-sm);font-size:13.5px}
+.wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:auto}
+.pagehead{padding:24px 32px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.pagehead .l{display:flex;flex-direction:column;gap:4px}
+.pagehead .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.board{display:flex;gap:14px;padding:4px 32px 28px;overflow:auto;flex:1;align-items:flex-start}
+.col{width:296px;flex:none;background:var(--hover);border-radius:var(--r-lg);display:flex;flex-direction:column;max-height:100%}
+.col-h{padding:14px 14px 10px}
+.col-h .t{display:flex;justify-content:space-between;align-items:center;font-weight:600}
+.col-h .t span{display:flex;align-items:center;gap:8px}
+.col-h .t .sw{width:10px;height:10px;border-radius:50%}
+.col-h .sum{font-size:13px;color:var(--muted);margin-top:2px;padding-left:18px}
+.cards{padding:4px 10px 10px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:6px;cursor:grab}
+.card:hover{border-color:var(--line-strong)}
+.card .ct{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card .ct b{font-size:15px;font-weight:600}
+.card .val{font-weight:700;font-size:17px}
+.card .cf{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted);margin-top:2px}
+.card .cf .l{display:flex;align-items:center;gap:6px}
+.card .cf .l.late{color:var(--danger);font-weight:600}
+.add-card{height:40px;border-radius:var(--r-sm);color:var(--muted);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.add-card:hover{background:var(--surface);color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);margin:0 32px 28px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:13px;color:var(--muted);font-weight:600;padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--surface-2)}
+.person{display:flex;align-items:center;gap:12px}
+.person b{display:block;font-weight:600}
+.person span{font-size:13px;color:var(--muted)}
+.toolbar{display:flex;gap:8px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.toolbar .search{width:340px;max-width:100%}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 32px 14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+.kpi .n{font-weight:700;font-size:30px;margin:6px 0 2px;letter-spacing:-.02em}
+.kpi .d{font-size:13px;display:flex;gap:6px;align-items:center;color:var(--muted)}
+.kpi.hl{background:var(--primary-soft);border-color:transparent}
+.kpi.hl .label,.kpi.hl .n{color:var(--primary-soft-ink)}
+.up{color:var(--success);font-weight:600}
+.down{color:var(--danger);font-weight:600}
+.grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;padding:0 32px 28px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px}
+.box .bh{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.box .bh .label{color:var(--ink);font-size:15px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:180px;padding-top:8px}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bars i{width:100%;border-radius:6px 6px 2px 2px;background:var(--primary-soft);display:block}
+.bars i.now{background:var(--primary)}
+.bars small{font-size:12px;color:var(--muted)}
+.rank{display:flex;flex-direction:column;gap:14px}
+.rank .r{display:flex;align-items:center;gap:10px}
+.rank .r .nm{flex:1;min-width:0}
+.rank .r .nm b{font-size:14px;font-weight:600;display:block}
+.meter{height:6px;border-radius:3px;background:var(--hover);overflow:hidden;margin-top:5px}
+.meter i{display:block;height:100%;background:var(--primary);border-radius:3px}
+.funnel{display:flex;flex-direction:column;gap:10px}
+.funnel .f{display:grid;grid-template-columns:120px 1fr 100px;align-items:center;gap:12px;font-size:14px}
+.funnel .f .fb{height:30px;border-radius:8px;background:var(--primary-soft);display:flex;align-items:center;padding-left:12px;color:var(--primary-soft-ink);font-weight:700;font-size:13px}
+.funnel .f:last-child .fb{background:var(--primary);color:var(--primary-ink)}
+.funnel .f .fv{text-align:right;font-weight:600}
+.settings{display:grid;grid-template-columns:250px 1fr;height:100%;width:100%}
+.snav{background:var(--surface);border-right:1px solid var(--line);padding:24px 12px;display:flex;flex-direction:column;gap:2px;overflow:auto}
+.snav .label{padding:16px 12px 6px;font-size:12.5px}
+.snav .label:first-child{padding-top:0}
+.snav button{text-align:left;padding:10px 12px;border-radius:var(--r-sm);font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:10px}
+.snav button:hover{background:var(--hover)}
+.snav button.on{background:var(--primary-soft);color:var(--primary-soft-ink);font-weight:600}
+.conns{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;padding:0 32px 28px}
+.conn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px;display:flex;flex-direction:column;gap:14px}
+.conn.down{border-color:var(--danger)}
+.conn .ch{display:flex;gap:12px;align-items:center}
+.conn .ch .small{white-space:nowrap}
+.conn .ch .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--success-soft);color:var(--success)}
+.conn .ch .ic.bad{background:var(--danger-soft);color:var(--danger)}
+.conn .cf{display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.live.ok{color:var(--success)}
+.live.bad{color:var(--danger)}
+.guide{padding:0 32px 48px;display:flex;flex-direction:column;gap:16px;max-width:1180px}
+.g-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:24px}
+.g-card h2{font-weight:700;font-size:19px;letter-spacing:-.01em;margin:2px 0 16px}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.principle{border-radius:var(--r);padding:16px;background:var(--surface-2);border:1px solid var(--line)}
+.principle .num{font-weight:700;color:var(--primary-soft-ink);font-size:13px}
+.principle b{display:block;margin:6px 0 4px;font-size:15px}
+.principle p{font-size:14px;color:var(--muted)}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.sw-c{border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+.sw-c .s{height:76px;display:flex;align-items:flex-end;padding:10px;font-weight:600;font-size:13px}
+.sw-c .m{padding:10px;font-size:13px;background:var(--surface);color:var(--muted)}
+.sw-c .m b{display:block;font-size:13.5px;color:var(--ink)}
+.type-row{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)}
+.type-row:last-child{border-bottom:0}
+.type-row .k{width:150px;color:var(--muted);font-size:13px}
+.demo-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:8px 0}
+.map{width:100%;font-size:14px}
+.map td,.map th{padding:11px 12px}
+.map td:first-child{color:var(--muted)}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 24px;font-size:14px}
+.checks div{display:flex;gap:10px;align-items:flex-start}
+.checks svg{color:var(--success);margin-top:2px}
+@media (max-width:1180px){.ctx{position:absolute;right:0;top:0;bottom:0;z-index:5;box-shadow:var(--shadow-pop)}.conv{position:relative;grid-template-columns:340px 1fr}.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:1fr 68px;height:100dvh}
+  .rail{grid-row:2;flex-direction:row;justify-content:space-around;padding:4px 6px;gap:0;border-right:0;border-top:1px solid var(--line)}
+  .rail .mark,.rail .spacer,.rail .sep,.rail .me,.rail .opt-m{display:none}
+  .rail-btn{width:64px;min-height:56px}
+  .conv{grid-template-columns:minmax(0,1fr)}
+  .list{min-width:0}
+  .conv .chat{display:none}
+  .conv.reading .list{display:none}
+  .conv.reading .chat{display:flex}
+  .back{display:inline-grid}
+  .hide-m{display:none!important}
+  .msgs,.composer-wrap{padding-left:12px;padding-right:12px}
+  .slash{left:12px;right:12px}
+  .ctx{width:100%}
+  .pagehead{padding:18px 16px 12px}
+  .board{padding:4px 16px 20px}
+  .kpis,.grid2,.conns,.guide{padding-left:16px;padding-right:16px}
+  .panel{margin:0 16px 20px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .kpi .n{font-size:24px}
+  .settings{grid-template-columns:1fr}
+  .snav{display:none}
+  .funnel .f{grid-template-columns:90px 1fr 76px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12Z"/></symbol>
+  <symbol id="i-funnel" viewBox="0 0 24 24"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6.5A2.5 2.5 0 0 0 4 21.5v-2ZM4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18M6 12h12M10 19h4"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12 3 4l18 8-18 8 2-8Zm0 0h8"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.3 3.3 0 0 1 4.7 4.7L10.2 17a1.7 1.7 0 0 1-2.4-2.4L15.5 7"/></symbol>
+  <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-checks" viewBox="0 0 24 24"><path d="m2 12.5 4.5 4.5L16 7.5M12 16l1 1 9.5-9.5"/></symbol>
+  <symbol id="i-transfer" viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 7h12l1 13H5L6 7Z"/><path d="M9 10V6a3 3 0 0 1 6 0v4"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></symbol>
+  <symbol id="i-wa" viewBox="0 0 24 24"><path d="M3 21l1.7-5A8.5 8.5 0 1 1 8 19.3L3 21Z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.5-2-1-1 .8a4 4 0 0 1-1.8-1.8l.8-1-1-2L9 9.5Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M3 19 8 6l5 13M4.8 15h6.4M15 19l3-8 3 8M15.9 16.5h4.2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></symbol>
+</svg>
+
+<div class="app">
+  <nav class="rail" aria-label="Navegação principal">
+    <div class="mark" aria-label="Unmess">u<span class="dot"></span></div>
+    <button class="rail-btn on" data-go="conversas"><svg class="i"><use href="#i-chat"/></svg>Conversas<span class="badge" aria-label="7 não lidas">7</span></button>
+    <button class="rail-btn" data-go="funil"><svg class="i"><use href="#i-funnel"/></svg>Funil</button>
+    <button class="rail-btn" data-go="contatos"><svg class="i"><use href="#i-users"/></svg>Contatos</button>
+    <button class="rail-btn" data-go="painel"><svg class="i"><use href="#i-chart"/></svg>Painel</button>
+    <div class="sep"></div>
+    <button class="rail-btn" data-go="ajustes"><svg class="i"><use href="#i-gear"/></svg>Ajustes</button>
+    <div class="spacer"></div>
+    <button class="rail-btn opt-m" data-go="guia"><svg class="i"><use href="#i-book"/></svg>Guia</button>
+    <button class="rail-btn opt-m" id="sizeBtn" title="Aumentar o texto"><svg class="i"><use href="#i-text"/></svg><span>Texto</span></button>
+    <button class="rail-btn opt-m" id="themeBtn" title="Alternar tema claro e escuro"><svg class="i"><use href="#i-moon"/></svg><span>Escuro</span></button>
+    <div class="me" title="Ana Souza · disponível">AS</div>
+  </nav>
+
+  <main class="main">
+
+    <section class="page on" id="p-conversas">
+      <div class="conv" id="conv">
+        <aside class="list">
+          <div class="list-head">
+            <div class="row">
+              <h1 class="title">Conversas</h1>
+              <div style="display:flex;gap:4px">
+                <button class="icon-btn" title="Filtrar por fila, etiqueta ou conexão"><svg class="i"><use href="#i-filter"/></svg></button>
+                <button class="icon-btn" title="Nova conversa"><svg class="i"><use href="#i-plus"/></svg></button>
+              </div>
+            </div>
+            <div class="queue-call" id="queueCall">
+              <svg class="i" style="color:var(--warning)"><use href="#i-clock"/></svg>
+              <div class="tx"><b>2 pessoas esperando</b><span>a mais antiga há 6 min</span></div>
+              <button class="btn primary sm" id="nextBtn">Atender <svg class="i sm"><use href="#i-next"/></svg></button>
+            </div>
+            <label class="search"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Buscar nome ou número"></label>
+            <div class="seg" id="seg">
+              <button class="on" data-tab="minhas">Minhas</button>
+              <button data-tab="fila">Na fila <span class="badge">2</span></button>
+              <button data-tab="todas">Todas</button>
+            </div>
+          </div>
+          <div class="items" id="items"></div>
+        </aside>
+
+        <section class="chat">
+          <header class="chat-head">
+            <button class="icon-btn back" id="back" title="Voltar"><svg class="i"><use href="#i-back"/></svg></button>
+            <div class="av c1" id="h-av">MC</div>
+            <div class="who"><b id="h-name">Mariana Costa</b><span id="h-sub">Comercial · com você</span></div>
+            <div class="acts">
+              <span class="chip deal hide-m" title="Negócio vinculado"><svg class="i sm"><use href="#i-funnel"/></svg>Proposta · R$ 4.800</span>
+              <button class="btn ghost hide-m"><svg class="i sm"><use href="#i-transfer"/></svg>Transferir</button>
+              <button class="btn primary" title="Resolver (Ctrl + Enter)"><svg class="i sm"><use href="#i-check"/></svg>Resolver</button>
+              <button class="icon-btn on" id="ctxBtn" title="Mostrar ou esconder detalhes do cliente"><svg class="i"><use href="#i-panel"/></svg></button>
+            </div>
+          </header>
+
+          <div class="msgs" id="msgs">
+            <div class="day">Hoje</div>
+            <div class="bub">Oi! Vi o anúncio de vocês. Vocês fazem a instalação também?<span class="t">09:12</span></div>
+            <div class="sys">Ana aceitou a conversa · Comercial</div>
+            <div class="bub out"><span class="by">Ana</span>Bom dia, Mariana! Fazemos sim, a instalação já vai inclusa no pacote. Quantas unidades você precisa?<span class="t">09:14 <svg class="i sm" style="width:15px;height:15px;color:var(--primary)"><use href="#i-checks"/></svg></span></div>
+            <div class="bub">Seriam 12, para o escritório novo. Dá para entregar até o fim do mês?<span class="t">09:20</span></div>
+            <div class="bub note"><span class="by">Nota interna · só a equipe vê</span>Cliente com CNPJ, prioridade. Confirmar estoque com o Bruno antes de prometer prazo.<span class="t">09:21</span></div>
+            <div class="bub out order"><div class="order"><div class="oh"><span>Pedido #1042</span><span class="chip warn" style="height:24px">Aguardando pagamento</span></div><div class="ol"><span>12 × Cadeira Ergo Pro</span><span>R$ 4.200</span></div><div class="ol"><span>Instalação</span><span>R$ 600</span></div><div class="of"><span>Total</span><span>R$ 4.800</span></div></div></div>
+            <div class="bub out"><span class="by">Ana</span>Te enviei o orçamento. Entrega garantida até dia 28.<span class="t">09:31 <svg class="i sm" style="width:15px;height:15px;color:var(--primary)"><use href="#i-checks"/></svg></span></div>
+            <div class="bub">Perfeito, vou passar para o financeiro e te retorno hoje ainda.<span class="t">10:02</span></div>
+          </div>
+
+          <div class="composer-wrap">
+            <div class="slash" id="slash">
+              <div class="hd label">Respostas rápidas</div>
+              <div class="opt on"><code>/boas-vindas</code><span>Olá! Aqui é a Ana, da equipe comercial. Como posso ajudar?</span></div>
+              <div class="opt"><code>/prazo</code><span>Nosso prazo de entrega é de 5 a 7 dias úteis após a confirmação.</span></div>
+              <div class="opt"><code>/pix</code><span>Segue a nossa chave PIX: financeiro@empresa.com.br</span></div>
+              <div class="opt"><code>/pedido</code><span>Montar pedido com os produtos do catálogo</span></div>
+            </div>
+            <div class="composer-tabs" id="ctabs">
+              <button class="on" data-m="msg">Mensagem</button>
+              <button data-m="nota">Nota interna</button>
+              <span class="hint hide-m"><kbd>/</kbd> respostas rápidas</span>
+            </div>
+            <div class="composer">
+              <button class="icon-btn" title="Emoji"><svg class="i"><use href="#i-smile"/></svg></button>
+              <button class="icon-btn" title="Anexar arquivo"><svg class="i"><use href="#i-clip"/></svg></button>
+              <textarea id="ta" placeholder="Escreva uma mensagem"></textarea>
+              <button class="icon-btn" title="Gravar áudio"><svg class="i"><use href="#i-mic"/></svg></button>
+              <button class="send" title="Enviar (Enter)"><svg class="i"><use href="#i-send"/></svg></button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="ctx" id="ctx">
+          <div class="ctx-head">
+            <div class="av c1">MC</div>
+            <b>Mariana Costa</b>
+            <span>Costa Arquitetura · +55 11 98765-4321</span>
+            <div class="quick">
+              <button class="btn ghost sm"><svg class="i sm"><use href="#i-phone"/></svg>Ligar</button>
+              <button class="btn ghost sm"><svg class="i sm"><use href="#i-bag"/></svg>Novo pedido</button>
+            </div>
+          </div>
+          <div class="sec">
+            <div class="sh"><span class="label">Negócio</span><a>Ver no funil</a></div>
+            <div class="deal-row"><span class="v">R$ 4.800</span><span class="chip deal">Proposta</span></div>
+            <div class="stages" aria-label="Etapa 3 de 5"><i class="done"></i><i class="done"></i><i class="done"></i><i></i><i></i></div>
+            <div class="small muted">Etapa 3 de 5 · previsão 28/11</div>
+          </div>
+          <div class="sec">
+            <div class="sh"><span class="label">Pedidos</span><a>Ver todos</a></div>
+            <div class="kv"><dt>#1042</dt><dd>R$ 4.800 · <span style="color:var(--warning)">aguardando</span></dd><dt>#0981</dt><dd>R$ 1.150 · <span style="color:var(--success)">pago</span></dd></div>
+          </div>
+          <div class="sec">
+            <div class="sh"><span class="label">Etiquetas</span><a>Editar</a></div>
+            <div class="tags"><span class="chip"><span class="sw" style="background:#5B45D6"></span>Lead quente</span><span class="chip"><span class="sw" style="background:#1F8A80"></span>CNPJ</span></div>
+          </div>
+          <div class="sec" style="border-bottom:0">
+            <div class="sh"><span class="label">Histórico</span></div>
+            <dl class="kv"><dt>Conversas</dt><dd>8</dd><dt>Última compra</dt><dd>12/09</dd><dt>Total comprado</dt><dd>R$ 6.430</dd></dl>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="page" id="p-funil">
+      <div class="wrap">
+        <div class="pagehead">
+          <div class="l"><span class="label">Funil de vendas</span><h1 class="title">R$ 59.630 em aberto</h1></div>
+          <div class="r">
+            <label class="search hide-m" style="width:240px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Buscar negócio"></label>
+            <button class="btn ghost">Vendas <svg class="i sm"><use href="#i-chev"/></svg></button>
+            <button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>Novo negócio</button>
+          </div>
+        </div>
+        <div class="board" id="board"></div>
+      </div>
+    </section>
+
+    <section class="page" id="p-contatos">
+      <div class="wrap">
+        <div class="pagehead">
+          <div class="l"><h1 class="title">Contatos</h1><span class="muted small">1.284 pessoas e 96 empresas</span></div>
+          <div class="r">
+            <button class="btn ghost hide-m">Importar</button>
+            <button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>Novo contato</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="toolbar">
+            <div class="seg" style="width:220px"><button class="on">Pessoas</button><button>Empresas</button></div>
+            <label class="search"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Nome, número ou empresa"></label>
+          </div>
+          <div style="overflow:auto">
+          <table>
+            <thead><tr><th>Nome</th><th class="hide-m">Empresa</th><th class="hide-m">Última conversa</th><th class="hide-m">Responsável</th><th></th></tr></thead>
+            <tbody id="ctable"></tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="p-painel">
+      <div class="wrap">
+        <div class="pagehead">
+          <div class="l"><span class="label">Painel</span><h1 class="title">Como está o dia</h1></div>
+          <div class="r"><div class="seg"><button class="on">Hoje</button><button>7 dias</button><button>30 dias</button></div></div>
+        </div>
+        <div class="kpis">
+          <div class="kpi hl"><span class="label">Em atendimento agora</span><div class="n">23</div><div class="d">6 atendentes online</div></div>
+          <div class="kpi"><span class="label">Esperando na fila</span><div class="n">4</div><div class="d"><span class="down">mais antiga: 6 min</span></div></div>
+          <div class="kpi"><span class="label">Tempo da 1ª resposta</span><div class="n">2m 40s</div><div class="d"><span class="up">18% mais rápido</span> que ontem</div></div>
+          <div class="kpi"><span class="label">Vendido hoje</span><div class="n">R$ 18,4 mil</div><div class="d"><span class="up">+12%</span> · 9 pedidos</div></div>
+        </div>
+        <div class="grid2">
+          <div class="box">
+            <div class="bh"><span class="label">Conversas por hora</span><span class="small muted">pico às 11h</span></div>
+            <div class="bars" id="bars"></div>
+          </div>
+          <div class="box">
+            <div class="bh"><span class="label">Resolvidas por atendente</span></div>
+            <div class="rank" id="rank"></div>
+          </div>
+          <div class="box" style="grid-column:1/-1">
+            <div class="bh"><span class="label">Funil do mês</span><span class="small muted">14% viram venda</span></div>
+            <div class="funnel" id="funnel"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="p-ajustes">
+      <div class="settings">
+        <nav class="snav">
+          <span class="label">Atendimento</span>
+          <button class="on"><svg class="i sm"><use href="#i-wa"/></svg>Números de WhatsApp</button>
+          <button><svg class="i sm"><use href="#i-chat"/></svg>Filas</button>
+          <button><svg class="i sm"><use href="#i-bolt"/></svg>Respostas rápidas</button>
+          <button><svg class="i sm"><use href="#i-tag"/></svg>Etiquetas</button>
+          <span class="label">Vendas</span>
+          <button><svg class="i sm"><use href="#i-bag"/></svg>Produtos</button>
+          <button><svg class="i sm"><use href="#i-funnel"/></svg>Etapas do funil</button>
+          <span class="label">Equipe</span>
+          <button><svg class="i sm"><use href="#i-users"/></svg>Pessoas e permissões</button>
+          <span class="label">Conta</span>
+          <button><svg class="i sm"><use href="#i-gear"/></svg>Empresa e plano</button>
+        </nav>
+        <div class="wrap">
+          <div class="pagehead">
+            <div class="l"><h1 class="title">Números de WhatsApp</h1><span class="muted small">1 número precisa de atenção.</span></div>
+            <div class="r"><button class="btn primary"><svg class="i sm"><use href="#i-plus"/></svg>Conectar número</button></div>
+          </div>
+          <div class="conns">
+            <div class="conn down">
+              <div class="ch"><div class="ic bad"><svg class="i"><use href="#i-alert"/></svg></div><div style="flex:1"><b>Financeiro</b><div class="small muted">+55 11 4002-8944</div></div><span class="live bad">Desconectado</span></div>
+              <div class="empty-hint" style="background:var(--danger-soft);color:var(--danger)">Caiu há 40 min. Mensagens novas não estão chegando.</div>
+              <button class="btn primary lg" style="justify-content:center"><svg class="i sm"><use href="#i-qr"/></svg>Reconectar com QR code</button>
+            </div>
+            <div class="conn">
+              <div class="ch"><div class="ic"><svg class="i"><use href="#i-wa"/></svg></div><div style="flex:1"><b>Comercial</b><div class="small muted">+55 11 4002-8922</div></div><span class="live ok">Conectado</span></div>
+              <div class="kv"><dt>Filas</dt><dd>Comercial, Pós-venda</dd><dt>Conversas abertas</dt><dd>18</dd></div>
+              <div class="cf"><span class="small muted">Número padrão</span><button class="btn quiet sm">Gerenciar</button></div>
+            </div>
+            <div class="conn">
+              <div class="ch"><div class="ic"><svg class="i"><use href="#i-wa"/></svg></div><div style="flex:1"><b>Suporte</b><div class="small muted">+55 11 4002-8933</div></div><span class="live ok">Conectado</span></div>
+              <div class="kv"><dt>Filas</dt><dd>Suporte</dd><dt>Conversas abertas</dt><dd>5</dd></div>
+              <div class="cf"><span class="small muted">Desde 14/11</span><button class="btn quiet sm">Gerenciar</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="p-guia">
+      <div class="wrap">
+        <div class="pagehead">
+          <div class="l"><span class="label">Guia de interface</span><h1 class="title">Leve para os olhos, rápido para a mão</h1><span class="muted small" style="max-width:680px">O padrão de UX e UI do Unmess, um produto soudain. Pensado para quem atende o dia inteiro e com pressa.</span></div>
+        </div>
+        <div class="guide">
+          <div class="g-card">
+            <span class="label">Princípios</span>
+            <h2>Seis regras para decidir o que entra na tela</h2>
+            <div class="principles">
+              <div class="principle"><span class="num">01</span><b>Ler sem esforço</b><p>Nada de preto puro nem branco puro. Fundo cinza bem claro, texto grafite, fonte de 15 px e espaço entre as linhas.</p></div>
+              <div class="principle"><span class="num">02</span><b>Uma ação principal por tela</b><p>Só um botão cheio por tela: Resolver, Atender, Novo negócio. O resto fica com contorno ou sem fundo.</p></div>
+              <div class="principle"><span class="num">03</span><b>O que é urgente aparece primeiro</b><p>Fila esperando, número caído e cliente sem resposta ganham destaque no topo, com o botão que resolve.</p></div>
+              <div class="principle"><span class="num">04</span><b>Tudo a um clique, nada no passar do mouse</b><p>Botões de 40 px no mínimo, sempre visíveis e com texto. Nada escondido que só aparece no hover.</p></div>
+              <div class="principle"><span class="num">05</span><b>Cor nunca sozinha</b><p>Todo status tem cor e palavra: "Desconectado", "Aguardando pagamento". Funciona para daltônicos e em tela ruim.</p></div>
+              <div class="principle"><span class="num">06</span><b>O poder fica em contexto</b><p>Negócio, pedido e etiquetas ficam no painel da conversa. A lista mostra só o necessário para escolher quem atender.</p></div>
+            </div>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Acessibilidade</span>
+            <h2>O mínimo que toda tela cumpre</h2>
+            <div class="checks">
+              <div><svg class="i sm"><use href="#i-check"/></svg>Contraste de texto acima de 4,5:1 nos dois temas</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Área de toque de pelo menos 40 × 40 px</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Foco visível ao navegar pelo teclado</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Botão "Texto" aumenta tudo em 15%</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Tema escuro sem preto puro, que cansa menos à noite</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Sem animação para quem pede movimento reduzido no sistema</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Ícones importantes sempre com texto ao lado</div>
+              <div><svg class="i sm"><use href="#i-check"/></svg>Atalhos: <kbd>/</kbd> respostas · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> resolver</div>
+            </div>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Navegação</span>
+            <h2>De 14 itens de menu para 5</h2>
+            <table class="map">
+              <thead><tr><th>Hoje</th><th>Proposta</th></tr></thead>
+              <tbody>
+                <tr><td>Atendimentos (Abertos, Pendentes, Fechados, Grupos, Busca)</td><td><b>Conversas</b> · Minhas, Na fila e Todas. O resto vira filtro</td></tr>
+                <tr><td>CRM e pedidos dentro do ticket</td><td><b>Funil</b> + painel lateral da conversa</td></tr>
+                <tr><td>Contatos e Clientes</td><td><b>Contatos</b> · Pessoas e Empresas</td></tr>
+                <tr><td>Dashboard</td><td><b>Painel</b> · os números do dia em linguagem simples</td></tr>
+                <tr><td>Conexões, Filas, Respostas rápidas, Produtos, Usuários, Permissões, Configurações, Empresas</td><td><b>Ajustes</b> · tudo num lugar, só para quem tem permissão</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Cores</span>
+            <h2>Paleta calma, com pouca saturação</h2>
+            <div class="swatches">
+              <div class="sw-c"><div class="s" style="background:#F3F4F6;color:#1D2129">Fundo</div><div class="m"><b>#F3F4F6</b>Cinza claro, sem brilho</div></div>
+              <div class="sw-c"><div class="s" style="background:#FCFCFD;color:#1D2129">Superfície</div><div class="m"><b>#FCFCFD</b>Listas, painéis, cards</div></div>
+              <div class="sw-c"><div class="s" style="background:#1D2129;color:#F3F4F6">Texto</div><div class="m"><b>#1D2129</b>Grafite, não preto</div></div>
+              <div class="sw-c"><div class="s" style="background:#5B45D6;color:#fff">Principal</div><div class="m"><b>#5B45D6</b>Botão principal, seleção</div></div>
+              <div class="sw-c"><div class="s" style="background:#12804A;color:#fff">Não lidas e sucesso</div><div class="m"><b>#12804A</b>O verde que lembra o WhatsApp</div></div>
+              <div class="sw-c"><div class="s" style="background:#FDF1DC;color:#8A5300">Espera</div><div class="m"><b>#8A5300</b>Fila, nota interna, pendente</div></div>
+              <div class="sw-c"><div class="s" style="background:#FCE8E6;color:#C0352B">Problema</div><div class="m"><b>#C0352B</b>Desconectado, atrasado</div></div>
+            </div>
+            <p class="small muted" style="margin-top:14px">A marca soudain entra no logo e no ponto verde-elétrico. O resto do app usa tons mais calmos, que cansam menos depois de horas de uso.</p>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Tipografia</span>
+            <h2>Uma fonte só: Inter</h2>
+            <div class="type-row"><span class="k">Título de página</span><span style="font-weight:700;font-size:22px">Conversas</span><span class="muted small">700 · 22 px · como frase</span></div>
+            <div class="type-row"><span class="k">Número de destaque</span><span style="font-weight:700;font-size:30px">R$ 18,4 mil</span><span class="muted small">700 · 22 a 30 px · algarismos alinhados</span></div>
+            <div class="type-row"><span class="k">Nome na lista</span><span style="font-weight:600;font-size:15.5px">Mariana Costa</span><span class="muted small">600 · 15,5 px</span></div>
+            <div class="type-row"><span class="k">Mensagem e texto</span><span>Bom dia, Mariana! Fazemos sim.</span><span class="muted small">400 · 15 px · entrelinha 1,5</span></div>
+            <div class="type-row"><span class="k">Rótulo</span><span class="label">Etiquetas</span><span class="muted small">600 · 13 px · sem caixa alta</span></div>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Componentes</span>
+            <h2>O mesmo jeito em todo lugar</h2>
+            <div class="demo-row"><button class="btn primary"><svg class="i sm"><use href="#i-check"/></svg>Principal</button><button class="btn ghost">Secundário</button><button class="btn quiet">Discreto</button><span class="small muted">40 px de altura · ícone à esquerda · sempre com texto</span></div>
+            <div class="demo-row"><span class="badge">7</span><span class="chip deal">Proposta · R$ 4.800</span><span class="chip ok">Pago</span><span class="chip warn">Aguardando</span><span class="chip bad">Atrasado</span><span class="live ok">Conectado</span><span class="live bad">Desconectado</span></div>
+            <div class="demo-row"><label class="search" style="width:300px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Busca"></label><div class="seg" style="width:280px"><button class="on">Minhas</button><button>Na fila</button><button>Todas</button></div></div>
+          </div>
+
+          <div class="g-card">
+            <span class="label">Textos</span>
+            <h2>Frases curtas, verbo na frente</h2>
+            <table class="map">
+              <thead><tr><th>Evitar</th><th>Usar</th></tr></thead>
+              <tbody>
+                <tr><td>"Deseja realmente finalizar este atendimento?"</td><td>"Resolver a conversa com Mariana?"</td></tr>
+                <tr><td>"Ocorreu um erro inesperado ao processar sua solicitação."</td><td>"O número Financeiro caiu. Leia o QR code para voltar."</td></tr>
+                <tr><td>"Nenhum registro encontrado."</td><td>"Ninguém na fila agora."</td></tr>
+                <tr><td>"Ticket", "Pendente", "Queue"</td><td>"Conversa", "Na fila", "Fila"</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const conversas = {
+  minhas: [
+    {n:"Mariana Costa",i:"MC",c:"c1",m:"Perfeito, vou passar para o financeiro e te retorno hoje ainda.",t:"10:02",u:0,deal:"Proposta · R$ 4.800",q:"Comercial"},
+    {n:"Rafael Lima",i:"RL",c:"c2",m:"Consegue me mandar a nota fiscal do último pedido?",t:"09:58",u:3,q:"Pós-venda"},
+    {n:"Padaria Bom Grão",i:"PB",c:"c3",m:"Áudio · 0:42",t:"09:40",u:1,deal:"Qualificado · R$ 1.250",q:"Comercial"},
+    {n:"Juliana Prado",i:"JP",c:"c5",m:"Você: Combinado, te aviso quando sair para entrega.",t:"Ontem",u:0,q:"Comercial"},
+    {n:"Thiago Mendes",i:"TM",c:"c4",m:"Foto",t:"Ontem",u:3,q:"Suporte"},
+    {n:"Construtora Alfa",i:"CA",c:"c6",m:"Você: Proposta enviada, qualquer dúvida estou aqui.",t:"Seg",u:0,deal:"Proposta · R$ 22.000",q:"Comercial"}
+  ],
+  fila: [
+    {n:"+55 21 99812-0045",i:"?",c:"c7",m:"Boa tarde, quero saber o preço da cadeira",t:"10:05",u:2,wait:"Esperando há 6 min",q:"Comercial",p:1},
+    {n:"Carlos Henrique",i:"CH",c:"c4",m:"Meu pedido ainda não chegou",t:"10:03",u:1,wait:"Esperando há 2 min",q:"Suporte",p:1}
+  ]
+};
+conversas.todas = [...conversas.minhas, ...conversas.fila];
+
+function renderItems(tab){
+  const el = document.getElementById("items");
+  el.innerHTML = conversas[tab].map((c,k)=>{
+    const meta = c.wait ? `<span class="wait"><svg class="i sm" style="width:15px;height:15px"><use href="#i-clock"/></svg>${c.wait}</span>` : (c.deal ? `<span class="chip deal">${c.deal}</span>` : "");
+    return `<div class="item ${c.u?'unread':''} ${tab==='minhas'&&k===0?'on':''}" data-i="${k}" data-tab="${tab}" tabindex="0">
+      <div class="av ${c.c}">${c.i}</div>
+      <div class="body">
+        <div class="top"><span class="name">${c.n}</span><span class="time ${c.u?'new':''}">${c.t}</span></div>
+        <div class="bottom"><span class="last">${c.m}</span>${c.u&&!c.p?`<span class="badge">${c.u}</span>`:''}</div>
+        ${meta?`<div class="meta">${meta}</div>`:''}
+      </div>
+      ${c.p?'<button class="btn primary sm">Atender</button>':''}
+    </div>`;
+  }).join("");
+}
+renderItems("minhas");
+
+function abrir(c){
+  document.getElementById("h-name").textContent = c.n;
+  document.getElementById("h-sub").textContent = c.q + " · com você";
+  const av = document.getElementById("h-av"); av.className = "av "+c.c; av.textContent = c.i;
+  document.getElementById("conv").classList.add("reading");
+}
+document.getElementById("seg").addEventListener("click",e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("#seg button").forEach(x=>x.classList.toggle("on",x===b));
+  renderItems(b.dataset.tab);
+});
+document.getElementById("items").addEventListener("click",e=>{
+  const it = e.target.closest(".item"); if(!it) return;
+  document.querySelectorAll(".item").forEach(x=>x.classList.toggle("on",x===it));
+  abrir(conversas[it.dataset.tab][+it.dataset.i]);
+});
+document.getElementById("nextBtn").onclick = ()=>abrir(conversas.fila[0]);
+document.getElementById("back").onclick = ()=>document.getElementById("conv").classList.remove("reading");
+document.getElementById("ctxBtn").onclick = function(){
+  const off = document.getElementById("ctx").classList.toggle("off");
+  this.classList.toggle("on",!off);
+};
+if (window.innerWidth < 1180){document.getElementById("ctx").classList.add("off");document.getElementById("ctxBtn").classList.remove("on")}
+
+const ta = document.getElementById("ta"), slash = document.getElementById("slash");
+ta.addEventListener("input",()=>slash.classList.toggle("on", ta.value.startsWith("/")));
+ta.addEventListener("blur",()=>setTimeout(()=>slash.classList.remove("on"),150));
+slash.addEventListener("mousedown",e=>{const o=e.target.closest(".opt"); if(o){ta.value=o.querySelector("span").textContent; slash.classList.remove("on")}});
+document.getElementById("ctabs").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  document.querySelectorAll("#ctabs button").forEach(x=>x.classList.toggle("on",x===b));
+  const nota = b.dataset.m==="nota";
+  ta.placeholder = nota ? "Nota interna: só a equipe vê" : "Escreva uma mensagem";
+  document.querySelector(".composer").style.background = nota ? "var(--warning-soft)" : "";
+});
+
+const colunas = [
+  {t:"Novo lead",cor:"#9AA1AC",cards:[["+55 21 99812-0045","—","agora","c7","?"],["Studio Vértice","R$ 3.200","2 h","c4","AS"],["Ótica Central","R$ 900","5 dias sem resposta","c3","BR",1]]},
+  {t:"Qualificado",cor:"#1F8A80",cards:[["Padaria Bom Grão","R$ 1.250","40 min","c3","AS"],["Escola Aprender","R$ 7.600","3 d","c6","BR"]]},
+  {t:"Proposta",cor:"#5B45D6",cards:[["Mariana Costa","R$ 4.800","10:02","c1","AS"],["Construtora Alfa","R$ 22.000","seg","c6","AS"],["Clínica Sorriso","R$ 5.400","2 d","c5","LM"]]},
+  {t:"Negociação",cor:"#C2610C",cards:[["Grupo Horizonte","R$ 15.900","1 d","c4","LM"]]},
+  {t:"Ganho",cor:"#12804A",cards:[["Juliana Prado","R$ 2.100","ontem","c5","AS"],["Café Aurora","R$ 680","3 d","c2","BR"]]}
+];
+const toNum = v => +v.replace(/[^\d]/g,"")||0;
+document.getElementById("board").innerHTML = colunas.map(c=>{
+  const total = c.cards.reduce((s,x)=>s+toNum(x[1]),0);
+  return `<div class="col"><div class="col-h"><div class="t"><span><i class="sw" style="background:${c.cor}"></i>${c.t} <span class="badge muted">${c.cards.length}</span></span><button class="icon-btn" style="width:32px;height:32px" title="Opções da etapa"><svg class="i sm"><use href="#i-more"/></svg></button></div><div class="sum">R$ ${total.toLocaleString("pt-BR")}</div></div>
+  <div class="cards">${c.cards.map(k=>`<div class="card"><div class="ct"><b>${k[0]}</b><div class="av xs ${k[3]}">${k[4]}</div></div><div class="val">${k[1]}</div><div class="cf"><span class="l ${k[5]?'late':''}"><svg class="i sm" style="width:15px;height:15px"><use href="#i-${k[5]?'alert':'clock'}"/></svg>${k[2]}</span><button class="btn quiet sm" style="height:30px"><svg class="i sm" style="width:15px;height:15px"><use href="#i-chat"/></svg>Conversar</button></div></div>`).join("")}
+  <button class="add-card"><svg class="i sm"><use href="#i-plus"/></svg>Adicionar</button></div></div>`;
+}).join("");
+
+const contatos = [
+  ["Mariana Costa","+55 11 98765-4321","Costa Arquitetura","Hoje, 10:02","AS","c1","MC"],
+  ["Rafael Lima","+55 11 97654-1122","—","Hoje, 09:58","AS","c2","RL"],
+  ["Thiago Mendes","+55 31 99888-7766","—","Ontem","BR","c4","TM"],
+  ["Juliana Prado","+55 11 91234-5678","Prado Eventos","Ontem","AS","c5","JP"],
+  ["Carlos Henrique","+55 41 98877-6655","—","Hoje, 10:03","—","c4","CH"],
+  ["Paula Nogueira","+55 11 93456-7788","Clínica Sorriso","Há 2 dias","LM","c3","PN"]
+];
+document.getElementById("ctable").innerHTML = contatos.map(c=>`<tr>
+  <td><div class="person"><div class="av s ${c[5]}">${c[6]}</div><div><b>${c[0]}</b><span>${c[1]}</span></div></div></td>
+  <td class="hide-m">${c[2]==="—"?'<span class="muted">—</span>':c[2]}</td>
+  <td class="hide-m muted">${c[3]}</td>
+  <td class="hide-m">${c[4]==="—"?'<span class="muted">Ninguém</span>':`<div class="av xs c1">${c[4]}</div>`}</td>
+  <td style="text-align:right"><button class="btn ghost sm"><svg class="i sm"><use href="#i-chat"/></svg><span class="hide-m">Conversar</span></button></td>
+</tr>`).join("");
+
+const horas = [[8,12],[9,34],[10,41],[11,52],[12,30],[13,26],[14,38],[15,44],[16,36],[17,22],[18,9]];
+const max = Math.max(...horas.map(h=>h[1]));
+document.getElementById("bars").innerHTML = horas.map(h=>`<div><i class="${h[0]===10?'now':''}" style="height:${h[1]/max*100}%" title="${h[1]} conversas às ${h[0]}h"></i><small>${h[0]}h</small></div>`).join("");
+
+const atend = [["Ana Souza","AS","c1",42],["Bruno Reis","BR","c2",35],["Luana Martins","LM","c5",28],["Pedro Alves","PA","c4",19]];
+document.getElementById("rank").innerHTML = atend.map(a=>`<div class="r"><div class="av s ${a[2]}">${a[1]}</div><div class="nm"><b>${a[0]}</b><div class="meter"><i style="width:${a[3]/42*100}%"></i></div></div><b>${a[3]}</b></div>`).join("");
+
+const funil = [["Novo lead",412,"R$ 310 mil"],["Qualificado",188,"R$ 196 mil"],["Proposta",96,"R$ 142 mil"],["Negociação",71,"R$ 118 mil"],["Ganho",58,"R$ 94 mil"]];
+document.getElementById("funnel").innerHTML = funil.map(f=>`<div class="f"><span>${f[0]}</span><div><div class="fb" style="width:${Math.max(f[1]/412*100,14)}%">${f[1]}</div></div><span class="fv">${f[2]}</span></div>`).join("");
+
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("[data-go]").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("on",p.id==="p-"+b.dataset.go));
+  history.replaceState(null,"","#"+b.dataset.go);
+}));
+const inicial = location.hash.slice(1);
+if (inicial) document.querySelector(`[data-go="${inicial}"]`)?.click();
+
+const themeBtn = document.getElementById("themeBtn");
+function aplicarTema(escuro){
+  document.documentElement.dataset.theme = escuro ? "dark" : "light";
+  themeBtn.querySelector("use").setAttribute("href", escuro ? "#i-sun" : "#i-moon");
+  themeBtn.querySelector("span").textContent = escuro ? "Claro" : "Escuro";
+}
+aplicarTema(window.matchMedia("(prefers-color-scheme: dark)").matches);
+themeBtn.addEventListener("click",()=>aplicarTema(document.documentElement.dataset.theme !== "dark"));
+
+const sizeBtn = document.getElementById("sizeBtn");
+sizeBtn.addEventListener("click",()=>{
+  const grande = document.documentElement.dataset.size !== "lg";
+  document.documentElement.dataset.size = grande ? "lg" : "";
+  sizeBtn.classList.toggle("on", grande);
+  sizeBtn.title = grande ? "Voltar ao texto normal" : "Aumentar o texto";
+});
+</script>
+</body>
+</html>

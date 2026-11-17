@@ -41,8 +41,9 @@ const useStyles = makeStyles(theme => ({
 		height: "100%",
 	},
 	metricCard: {
-		padding: theme.spacing(2),
-		textAlign: "center",
+		padding: theme.spacing(2.25, 2.5),
+		borderRadius: 16,
+		height: "100%",
 	},
 	chartWrapper: {
 		width: "100%",
@@ -50,7 +51,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const COLORS = ["#2E93fA", "#66DA26", "#546E7A", "#E91E63", "#FF9800", "#9C27B0"];
+const COLORS = ["#5B45D6", "#12804A", "#C2610C", "#1F8A80", "#B03A6F", "#646B76"];
 
 const formatSeconds = seconds => {
 	if (seconds === null || seconds === undefined) return "—";
@@ -113,7 +114,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgFirstResponse")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgFirstResponseSeconds)}
 					</Typography>
 				</Paper>
@@ -123,7 +124,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgHandling")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgHandlingSeconds)}
 					</Typography>
 				</Paper>
@@ -133,7 +134,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.totalPeriod")}
 					</Typography>
-					<Typography variant="h5">{metrics.totals.totalPeriod}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.totals.totalPeriod}</Typography>
 				</Paper>
 			</Grid>
 			<Grid item xs={12} sm={6} md={3}>
@@ -141,7 +142,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.closed")}
 					</Typography>
-					<Typography variant="h5">{metrics.totals.closed}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.totals.closed}</Typography>
 				</Paper>
 			</Grid>
 
@@ -151,7 +152,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.resolutionRate")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{metrics.resolutionRate == null
 							? "—"
 							: `${metrics.resolutionRate.toFixed(1)}%`}
@@ -163,7 +164,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgResolution")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgResolutionSeconds)}
 					</Typography>
 				</Paper>
@@ -188,7 +189,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.newContacts")}
 					</Typography>
-					<Typography variant="h5">{metrics.newContacts}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.newContacts}</Typography>
 				</Paper>
 			</Grid>
 
@@ -203,7 +204,7 @@ const DashboardMetrics = () => {
 							<XAxis dataKey="label" interval={1} tick={{ fontSize: 11 }} />
 							<YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
 							<Tooltip />
-							<Bar dataKey="total" fill="#2576d2" radius={[6, 6, 0, 0]} />
+							<Bar dataKey="total" fill="#5B45D6" radius={[6, 6, 0, 0]} />
 						</BarChart>
 					</ResponsiveContainer>
 				</Paper>
@@ -248,7 +249,7 @@ const DashboardMetrics = () => {
 								<Line
 									type="monotone"
 									dataKey="total"
-									stroke="#2576d2"
+									stroke="#5B45D6"
 									strokeWidth={2}
 									dot={{ r: 3 }}
 								/>

@@ -11,7 +11,7 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
 	root: {
-		padding: theme.spacing(1, 2),
+		padding: 0,
 	},
 }));
 
@@ -60,7 +60,13 @@ const TicketTagsSelect = ({ ticket, disabled }) => {
 		}
 	};
 
-	if (available.length === 0 && selected.length === 0) return null;
+	if (available.length === 0 && selected.length === 0) {
+		return (
+			<span style={{ fontSize: "0.8125rem", opacity: 0.75 }}>
+				Nenhuma etiqueta cadastrada. Crie em Ajustes › Etiquetas.
+			</span>
+		);
+	}
 
 	return (
         <div className={classes.root}>
