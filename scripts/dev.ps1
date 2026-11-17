@@ -225,19 +225,24 @@ function Invoke-Status {
     $config = Get-Config
     if (Test-Tool "docker") { Invoke-Compose @("ps") } else { Write-Warn "Docker nao encontrado." }
     $checks = @(
-        @{ Name = "Backend Node"; Url = "http://localhost:$($config["BACKEND_PORT"])/" },
+        @{ Name = "Backend Node"; Url = "http://localhost:$($config["BACKEND_PORT"])/"; AnyResponse = $true },
         @{ Name = "Backend .NET"; Url = "http://localhost:$($config["DOTNET_API_PORT"])/health/live" },
         @{ Name = "Gateway"; Url = "http://localhost:$($config["GATEWAY_PORT"])/health/ready" },
         @{ Name = "Frontend"; Url = "http://localhost:$($config["FRONTEND_PORT"])/" }
     )
     foreach ($check in $checks) {
         try {
-            $response = Invoke-WebRequest -Uri $check.Url -UseBasicParsing -TimeoutSec 3
+            $response = Invoke-WebRequest -Uri $check.Url -UseBasicParsing -TimeoutSec 3 -Headers @{ Accept = "text/html" }
             Write-Host ("{0,-14} {1} ({2})" -f $check.Name, "OK", $response.StatusCode) -ForegroundColor Green
         }
         catch {
-            $code = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "sem resposta" }
-            Write-Host ("{0,-14} {1} ({2})" -f $check.Name, "FALHA", $code) -ForegroundColor Red
+            $code = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+            if ($check.AnyResponse -and $code -gt 0 -and $code -lt 500) {
+                Write-Host ("{0,-14} {1} ({2})" -f $check.Name, "OK", $code) -ForegroundColor Green
+            }
+            else {
+                Write-Host ("{0,-14} {1} ({2})" -f $check.Name, "FALHA", $(if ($code) { $code } else { "sem resposta" })) -ForegroundColor Red
+            }
         }
     }
 }
