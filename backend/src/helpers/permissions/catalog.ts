@@ -676,7 +676,11 @@ export const ESCOPOS: Record<string, DimensaoDeEscopo> = {
     descricao:
       "Quais quadros a pessoa enxerga no funil. Um quadro fora do escopo não aparece no seletor, e os cards dele não entram em nenhuma listagem nem em nenhum total.",
     requer: "crm:view",
-    fonte: "/crm/boards"
+    // As rotas do CRM são montadas na raiz (crmRoutes sem prefixo), então a
+    // lista de quadros mora em /boards. Com "/crm/boards" a chamada dava 404,
+    // o hook tratava como "fonte sem opções" e a tela de permissão abria sem
+    // nenhum quadro para marcar.
+    fonte: "/boards"
   },
   account: {
     modulo: "finance",
