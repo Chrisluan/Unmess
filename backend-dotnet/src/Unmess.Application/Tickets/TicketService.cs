@@ -57,6 +57,7 @@ public sealed partial class TicketService(
     IUnmessDbContext db,
     IUsuarioAtual usuarioAtual,
     ResolvedorDePermissoes permissoes,
+    ResolvedorDeEscopos escopos,
     SeletorDeConexao seletorDeConexao,
     LeitorDeConfiguracoes configuracoes,
     EnvioPeloWhatsapp envio,
@@ -161,9 +162,21 @@ public sealed partial class TicketService(
                 ticket.MensagensNaoLidas > 0);
         }
 
+        // O filtro da pessoa so restringe: a intersecao com o escopo vem sempre.
+        var escopoDeConexoes = await escopos.ResolverAsync(usuarioId, Escopos.Conexao, cancellationToken);
         if (conexoes.Count > 0)
         {
-            consulta = consulta.Where(ticket => ticket.ConexaoWhatsappId != null && conexoes.Contains(ticket.ConexaoWhatsappId.Value));
+            var permitidas = conexoes.Where(id => escopoDeConexoes.Alcanca(id)).ToList();
+            consulta = consulta.Where(ticket => ticket.ConexaoWhatsappId != null && permitidas.Contains(ticket.ConexaoWhatsappId.Value));
+        }
+        else if (!escopoDeConexoes.SemRestricao)
+        {
+            // Ticket sem conexao registrada continua passando, como no backend Node.
+            var negados = escopoDeConexoes.Negados.ToList();
+            var ids = escopoDeConexoes.Ids.ToList();
+            consulta = escopoDeConexoes.Irrestrito
+                ? consulta.Where(ticket => ticket.ConexaoWhatsappId == null || !negados.Contains(ticket.ConexaoWhatsappId.Value))
+                : consulta.Where(ticket => ticket.ConexaoWhatsappId == null || ids.Contains(ticket.ConexaoWhatsappId.Value));
         }
         if (atendentes.Count > 0)
         {
@@ -204,8 +217,32 @@ public sealed partial class TicketService(
             throw AppException.NotFound(ErroNaoEncontrado);
         }
 
+        // Chamadas internas (webhook, empresaId nulo) nao sao feitas em nome de ninguem.
+        if (empresaId is not null)
+        {
+            await ExigirNoEscopoAsync(ticket, cancellationToken);
+        }
+
         await GarantirProtocoloAsync(ticket, cancellationToken);
         return ticket;
+    }
+
+    /// <summary>
+    /// Confere se o usuario atual alcanca a conexao do ticket. Fora do escopo responde 404, igual a
+    /// "nao existe", para nao revelar ids de outras conexoes. Sem usuario autenticado nao faz nada.
+    /// </summary>
+    public async Task ExigirNoEscopoAsync(Ticket ticket, CancellationToken cancellationToken)
+    {
+        if (usuarioAtual.Obter() is not { } solicitante)
+        {
+            return;
+        }
+
+        var escopoDeConexoes = await escopos.ResolverAsync(solicitante.Id, Escopos.Conexao, cancellationToken);
+        if (!escopoDeConexoes.Alcanca(ticket.ConexaoWhatsappId))
+        {
+            throw AppException.NotFound(ErroNaoEncontrado);
+        }
     }
 
     public async Task<TicketResposta> CriarAsync(DadosDoTicket dados, CancellationToken cancellationToken)
@@ -245,7 +282,7 @@ public sealed partial class TicketService(
         };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync(cancellationToken);
-        return await CarregarAsync(ticket.Id, empresaId, cancellationToken);
+        return await CarregarAsync(ticket.Id, null, cancellationToken);
     }
 
     public async Task<TicketResposta> AtualizarPelaRotaAsync(int id, DadosDoTicket dados, CancellationToken cancellationToken)
@@ -396,6 +433,7 @@ public sealed partial class TicketService(
         var empresaId = usuarioAtual.EmpresaIdObrigatoria();
         var ticket = await db.Tickets.FirstOrDefaultAsync(item => item.Id == id && item.EmpresaId == empresaId, cancellationToken)
                      ?? throw AppException.NotFound(ErroNaoEncontrado);
+        await ExigirNoEscopoAsync(ticket, cancellationToken);
         db.Tickets.Remove(ticket);
         await db.SaveChangesAsync(cancellationToken);
         await realtime.ToRoomsAsync(

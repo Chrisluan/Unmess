@@ -23,6 +23,7 @@ public interface IUnmessDbContext
     DbSet<Empresa> Empresas { get; }
     DbSet<Usuario> Usuarios { get; }
     DbSet<GrupoDePermissao> GruposDePermissao { get; }
+    DbSet<Cargo> Cargos { get; }
     DbSet<Fila> Filas { get; }
     DbSet<ConexaoWhatsapp> ConexoesWhatsapp { get; }
     DbSet<Ticket> Tickets { get; }

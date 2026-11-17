@@ -24,6 +24,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<ResolvedorDePermissoes>();
+        services.AddScoped<ResolvedorDeEscopos>();
         services.AddScoped<SessionService>();
         services.AddScoped<UsuarioService>();
         services.AddScoped<GrupoDePermissaoService>();
