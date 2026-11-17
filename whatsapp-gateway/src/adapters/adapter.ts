@@ -1,4 +1,11 @@
-import type { DeliveryStatus, InboundMessage, SendMessageCommand } from "../contract.ts";
+import type {
+  DeleteMessageCommand,
+  DeliveryStatus,
+  EditMessageCommand,
+  InboundMessage,
+  ReadMessagesCommand,
+  SendMessageCommand
+} from "../contract.ts";
 
 export type ConnectionState =
   | { state: "connecting" }
@@ -28,6 +35,9 @@ export interface WhatsappAdapter {
   connect(sessionId: string, listener: AdapterListener): Promise<void>;
   disconnect(sessionId: string, logout: boolean): Promise<void>;
   send(sessionId: string, command: SendMessageCommand): Promise<{ messageId: string; chatId: string }>;
+  editMessage(sessionId: string, messageId: string, command: EditMessageCommand): Promise<void>;
+  deleteMessage(sessionId: string, messageId: string, command: DeleteMessageCommand): Promise<void>;
+  markRead(sessionId: string, command: ReadMessagesCommand): Promise<void>;
   checkNumber(sessionId: string, number: string): Promise<NumberCheck>;
   profilePictureUrl(sessionId: string, jid: string): Promise<string | undefined>;
   contacts(sessionId: string): Promise<PhoneContact[]>;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { SendMessageCommand } from "../contract.ts";
+import type { DeleteMessageCommand, EditMessageCommand, ReadMessagesCommand, SendMessageCommand } from "../contract.ts";
 import { SessionUnavailableError, type AdapterListener, type NumberCheck, type PhoneContact, type WhatsappAdapter } from "./adapter.ts";
 
 export interface FakeAdapterOptions {
@@ -7,11 +7,21 @@ export interface FakeAdapterOptions {
   statusDelayMs: number;
 }
 
+export interface FakeInbound {
+  from: string;
+  text: string;
+  pushName?: string;
+  groupId?: string;
+  groupName?: string;
+}
+
 export class FakeAdapter implements WhatsappAdapter {
   private readonly options: FakeAdapterOptions;
   private readonly listeners = new Map<string, AdapterListener>();
   private readonly paired = new Set<string>();
   private readonly timers = new Set<NodeJS.Timeout>();
+  readonly sent: { sessionId: string; command: SendMessageCommand; messageId: string }[] = [];
+  readonly reads: { sessionId: string; command: ReadMessagesCommand }[] = [];
 
   constructor(options: FakeAdapterOptions = { pairingDelayMs: 1500, statusDelayMs: 500 }) {
     this.options = options;
@@ -46,18 +56,28 @@ export class FakeAdapter implements WhatsappAdapter {
   }
 
   async send(sessionId: string, command: SendMessageCommand): Promise<{ messageId: string; chatId: string }> {
-    const listener = this.listeners.get(sessionId);
-    if (!listener || !this.paired.has(sessionId)) {
-      throw new Error("session is not connected");
-    }
-
+    const listener = this.requireConnected(sessionId);
     const messageId = `FAKE${randomUUID().replaceAll("-", "").toUpperCase()}`;
     const chatId = toChatId(command.to);
+    this.sent.push({ sessionId, command, messageId });
     const statuses = ["sent", "delivered", "read"] as const;
     statuses.forEach((status, index) => {
       this.later(this.options.statusDelayMs * (index + 1), () => listener.onStatus(sessionId, messageId, chatId, status));
     });
     return { messageId, chatId };
+  }
+
+  async editMessage(sessionId: string, _messageId: string, _command: EditMessageCommand): Promise<void> {
+    this.requireConnected(sessionId);
+  }
+
+  async deleteMessage(sessionId: string, _messageId: string, _command: DeleteMessageCommand): Promise<void> {
+    this.requireConnected(sessionId);
+  }
+
+  async markRead(sessionId: string, command: ReadMessagesCommand): Promise<void> {
+    this.requireConnected(sessionId);
+    this.reads.push({ sessionId, command });
   }
 
   async checkNumber(sessionId: string, number: string): Promise<NumberCheck> {
@@ -79,23 +99,25 @@ export class FakeAdapter implements WhatsappAdapter {
     ];
   }
 
-  simulateInbound(sessionId: string, from: string, text: string, pushName?: string): string {
-    const listener = this.listeners.get(sessionId);
-    if (!listener || !this.paired.has(sessionId)) {
-      throw new Error("session is not connected");
-    }
-
-    const chatId = toChatId(from);
+  simulateInbound(sessionId: string, inbound: FakeInbound): string {
+    const listener = this.requireConnected(sessionId);
+    const senderJid = toChatId(inbound.from);
+    const number = senderJid.split("@")[0] ?? senderJid;
+    const groupJid = inbound.groupId ? `${inbound.groupId.replace(/\D/g, "")}@g.us` : undefined;
     const id = `FAKEIN${randomUUID().replaceAll("-", "").toUpperCase()}`;
     listener.onMessage(sessionId, {
       id,
-      chatId,
-      from: chatId,
+      chatId: groupJid ?? senderJid,
+      from: senderJid,
       fromMe: false,
-      pushName,
+      fromApp: false,
+      isGroup: groupJid !== undefined,
+      pushName: inbound.pushName,
       timestamp: Math.floor(Date.now() / 1000),
       kind: "text",
-      text
+      text: inbound.text,
+      sender: { jid: senderJid, number, name: inbound.pushName || number },
+      group: groupJid ? { jid: groupJid, number: groupJid.split("@")[0] ?? groupJid, name: inbound.groupName || "Grupo Simulado" } : undefined
     });
     return id;
   }
@@ -108,10 +130,12 @@ export class FakeAdapter implements WhatsappAdapter {
     this.listeners.clear();
   }
 
-  private requireConnected(sessionId: string): void {
-    if (!this.listeners.has(sessionId) || !this.paired.has(sessionId)) {
+  private requireConnected(sessionId: string): AdapterListener {
+    const listener = this.listeners.get(sessionId);
+    if (!listener || !this.paired.has(sessionId)) {
       throw new SessionUnavailableError("session is not connected");
     }
+    return listener;
   }
 
   private later(delayMs: number, work: () => void): void {
@@ -129,6 +153,9 @@ export class FakeAdapter implements WhatsappAdapter {
 }
 
 export function toChatId(to: string): string {
+  if (to.endsWith("@c.us")) {
+    return `${to.slice(0, -"@c.us".length)}@s.whatsapp.net`;
+  }
   if (to.includes("@")) {
     return to;
   }

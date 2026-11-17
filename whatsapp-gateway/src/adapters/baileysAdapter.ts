@@ -3,6 +3,7 @@ import {
   DisconnectReason,
   downloadMediaMessage,
   getContentType,
+  isJidGroup,
   isJidUser,
   jidNormalizedUser,
   makeWASocket,
@@ -13,7 +14,16 @@ import {
   type WAMessage,
   type WASocket
 } from "baileys";
-import type { DeliveryStatus, InboundMessage, MessageKind, SendMessageCommand } from "../contract.ts";
+import type {
+  DeleteMessageCommand,
+  DeliveryStatus,
+  EditMessageCommand,
+  InboundMessage,
+  Participant,
+  ReadMessagesCommand,
+  SendMessageCommand
+} from "../contract.ts";
+import { bodyOf, hasMedia, kindOf, mediaFileName, quotedIdOf, resolveIdentity, shouldHandle } from "./inbound.ts";
 import type { Logger } from "../logger.ts";
 import type { MediaStore } from "../media.ts";
 import type { SecretStore } from "../storage/secretStore.ts";
@@ -42,6 +52,9 @@ export class BaileysAdapter implements WhatsappAdapter {
   private readonly sockets = new Map<string, WASocket>();
   private readonly intentionalClose = new Map<string, boolean>();
   private readonly contactBooks = new Map<string, Map<string, PhoneContact>>();
+  private readonly sentByGateway = new Set<string>();
+  private readonly groupSubjects = new Map<string, string>();
+  private readonly pictures = new Map<string, { url?: string; expiresAt: number }>();
 
   constructor(store: SecretStore, media: MediaStore, logger: Logger, options: BaileysAdapterOptions) {
     this.store = store;
@@ -100,10 +113,10 @@ export class BaileysAdapter implements WhatsappAdapter {
     });
 
     socket.ev.on("messages.upsert", async ({ messages, type }) => {
-      if (type !== "notify") {
-        return;
-      }
       for (const message of messages) {
+        if (type !== "notify" && !(type === "append" && message.key.fromMe)) {
+          continue;
+        }
         try {
           const normalized = await this.normalize(sessionId, socket, message);
           if (normalized) {
@@ -171,13 +184,37 @@ export class BaileysAdapter implements WhatsappAdapter {
     const chatId = toChatId(command.to);
     const content = await this.buildContent(command);
     const quoted = command.quotedMessageId
-      ? ({ key: { remoteJid: chatId, id: command.quotedMessageId, fromMe: false }, message: { conversation: "" } } as WAMessage)
+      ? ({ key: { remoteJid: chatId, id: command.quotedMessageId, fromMe: command.quotedFromMe === true }, message: { conversation: "" } } as WAMessage)
       : undefined;
     const sent = await socket.sendMessage(chatId, content, quoted ? { quoted } : undefined);
     if (!sent?.key.id) {
       throw new Error("WhatsApp did not return a message id");
     }
+    this.sentByGateway.add(sent.key.id);
+    if (this.sentByGateway.size > 5000) {
+      this.sentByGateway.delete(this.sentByGateway.values().next().value as string);
+    }
     return { messageId: sent.key.id, chatId };
+  }
+
+  async editMessage(sessionId: string, messageId: string, command: EditMessageCommand): Promise<void> {
+    const socket = this.connectedSocket(sessionId);
+    const chatId = toChatId(command.chatId);
+    await socket.sendMessage(chatId, { text: command.text, edit: { remoteJid: chatId, id: messageId, fromMe: true } });
+  }
+
+  async deleteMessage(sessionId: string, messageId: string, command: DeleteMessageCommand): Promise<void> {
+    const socket = this.connectedSocket(sessionId);
+    const chatId = toChatId(command.chatId);
+    await socket.sendMessage(chatId, { delete: { remoteJid: chatId, id: messageId, fromMe: command.fromMe } });
+  }
+
+  async markRead(sessionId: string, command: ReadMessagesCommand): Promise<void> {
+    const socket = this.connectedSocket(sessionId);
+    const chatId = toChatId(command.chatId);
+    if (command.messageIds.length > 0) {
+      await socket.readMessages(command.messageIds.map((id) => ({ remoteJid: chatId, id, fromMe: false })));
+    }
   }
 
   async checkNumber(sessionId: string, number: string): Promise<NumberCheck> {
@@ -244,70 +281,89 @@ export class BaileysAdapter implements WhatsappAdapter {
   private async normalize(sessionId: string, socket: WASocket, message: WAMessage): Promise<InboundMessage | undefined> {
     const content = normalizeMessageContent(message.message);
     const contentType = getContentType(content);
-    if (!content || !contentType || !message.key.id || !message.key.remoteJid || message.key.remoteJid === "status@broadcast") {
-      return undefined;
-    }
-    if (contentType === "protocolMessage" || contentType === "senderKeyDistributionMessage" || contentType === "reactionMessage") {
+    const remoteJid = message.key.remoteJid;
+    const fromMe = message.key.fromMe === true;
+    if (!content || !message.key.id || !remoteJid || remoteJid === "status@broadcast" || !shouldHandle(contentType, content, fromMe)) {
       return undefined;
     }
 
-    const kind = kindOf(contentType, content);
-    const inner = content[contentType] as { caption?: string; mimetype?: string; fileName?: string; contextInfo?: { stanzaId?: string } } | string | undefined;
-    const text = typeof inner === "string" ? inner : (content.extendedTextMessage?.text ?? (inner as { caption?: string } | undefined)?.caption ?? undefined);
-    const contextInfo = typeof inner === "object" ? inner?.contextInfo : undefined;
+    const type = contentType as string;
+    const kind = kindOf(type, content);
+    const isGroup = isJidGroup(remoteJid) === true;
+    const key = message.key as unknown as Record<string, unknown>;
+    const ownName = socket.user?.name?.trim().toLowerCase();
+    const pushName = message.pushName?.trim() && message.pushName.trim().toLowerCase() !== ownName ? message.pushName.trim() : undefined;
+
+    const senderJid = isGroup && !fromMe && message.key.participant ? message.key.participant : remoteJid;
+    const identity = resolveIdentity(senderJid, key, content);
+    const group = isGroup ? await this.groupParticipant(sessionId, socket, remoteJid) : undefined;
+    const sender = isGroup && fromMe
+      ? group!
+      : {
+          jid: identity.jid,
+          number: identity.number,
+          lid: identity.lid,
+          name: this.contactBooks.get(sessionId)?.get(jidNormalizedUser(identity.jid))?.name || pushName || identity.number || identity.lid || "",
+          profilePicUrl: await this.cachedPicture(socket, identity.jid)
+        };
 
     let media: InboundMessage["media"];
-    if (["image", "video", "audio", "voice", "document", "sticker"].includes(kind) && typeof inner === "object") {
-      const data = await downloadMediaMessage(message, "buffer", {}, {
-        logger: this.logger,
-        reuploadRequest: socket.updateMediaMessage
-      });
-      const mimetype = inner?.mimetype ?? "application/octet-stream";
-      media = {
-        ref: await this.media.save(sessionId, message.key.id, mimetype.split(";")[0] ?? mimetype, data, inner?.fileName ?? undefined),
-        mimetype,
-        filename: inner?.fileName ?? undefined
-      };
+    if (hasMedia(type)) {
+      const inner = content[type as keyof proto.IMessage] as { mimetype?: string | null } | undefined;
+      const mimetype = inner?.mimetype || (type === "audioMessage" ? "audio/ogg; codecs=opus" : type === "stickerMessage" ? "image/webp" : "application/octet-stream");
+      try {
+        const data = await downloadMediaMessage(message, "buffer", {}, { logger: this.logger, reuploadRequest: socket.updateMediaMessage });
+        const filename = mediaFileName(type, content, mimetype);
+        media = { ref: await this.media.save(sessionId, message.key.id, mimetype.split(";")[0] ?? mimetype, data, filename), mimetype, filename };
+      } catch (error) {
+        this.logger.error({ err: error, messageId: message.key.id }, "error downloading media");
+      }
     }
 
-    const chatId = message.key.remoteJid;
     return {
       id: message.key.id,
-      chatId,
-      from: message.key.participant ?? chatId,
-      fromMe: message.key.fromMe === true,
-      pushName: message.pushName ?? undefined,
+      chatId: remoteJid,
+      from: senderJid,
+      fromMe,
+      fromApp: fromMe && !this.sentByGateway.has(message.key.id),
+      isGroup,
+      pushName,
       timestamp: Number(message.messageTimestamp ?? Math.floor(Date.now() / 1000)),
       kind,
-      text: text ?? undefined,
+      text: bodyOf(type, content),
       media,
-      quotedMessageId: contextInfo?.stanzaId ?? undefined
+      quotedMessageId: quotedIdOf(content),
+      sender,
+      group
     };
   }
-}
 
-function kindOf(contentType: string, content: proto.IMessage): MessageKind {
-  switch (contentType) {
-    case "conversation":
-    case "extendedTextMessage":
-      return "text";
-    case "imageMessage":
-      return "image";
-    case "videoMessage":
-      return "video";
-    case "audioMessage":
-      return content.audioMessage?.ptt ? "voice" : "audio";
-    case "documentMessage":
-      return "document";
-    case "stickerMessage":
-      return "sticker";
-    case "locationMessage":
-    case "liveLocationMessage":
-      return "location";
-    case "contactMessage":
-    case "contactsArrayMessage":
-      return "contact";
-    default:
-      return "unknown";
+  private async groupParticipant(sessionId: string, socket: WASocket, jid: string): Promise<Participant> {
+    const number = jid.split("@")[0] ?? jid;
+    let subject = this.groupSubjects.get(jid);
+    if (!subject) {
+      try {
+        subject = (await socket.groupMetadata(jid)).subject || number;
+        this.groupSubjects.set(jid, subject);
+      } catch {
+        subject = number;
+      }
+    }
+    return { jid, number, name: subject, profilePicUrl: await this.cachedPicture(socket, jid) };
+  }
+
+  private async cachedPicture(socket: WASocket, jid: string): Promise<string | undefined> {
+    const cached = this.pictures.get(jid);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.url;
+    }
+    let url: string | undefined;
+    try {
+      url = (await socket.profilePictureUrl(jid, "image")) ?? undefined;
+    } catch {
+      url = undefined;
+    }
+    this.pictures.set(jid, { url, expiresAt: Date.now() + 6 * 60 * 60 * 1000 });
+    return url;
   }
 }

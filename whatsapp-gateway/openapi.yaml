@@ -102,6 +102,57 @@ paths:
                   chatId: { type: string }
         "400": { description: Invalid command }
         "409": { description: Session is not connected }
+  /v1/sessions/{sessionId}/messages/{messageId}:
+    parameters:
+      - { $ref: "#/components/parameters/SessionId" }
+      - { name: messageId, in: path, required: true, schema: { type: string } }
+    put:
+      description: Edits a message sent by this number.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chatId, text]
+              properties:
+                chatId: { type: string }
+                text: { type: string }
+      responses:
+        "204": { description: Edited }
+        "409": { description: Session is not connected }
+    delete:
+      description: Deletes a message for everyone.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chatId]
+              properties:
+                chatId: { type: string }
+                fromMe: { type: boolean }
+      responses:
+        "204": { description: Deleted }
+        "409": { description: Session is not connected }
+  /v1/sessions/{sessionId}/read:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    post:
+      description: Sends read receipts for received messages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chatId, messageIds]
+              properties:
+                chatId: { type: string }
+                messageIds: { type: array, items: { type: string } }
+      responses:
+        "204": { description: Marked as read }
+        "409": { description: Session is not connected }
   /v1/sessions/{sessionId}/numbers/{number}:
     parameters:
       - { $ref: "#/components/parameters/SessionId" }
@@ -214,6 +265,7 @@ components:
         to: { type: string, description: Phone number with country code or a full JID }
         text: { type: string }
         quotedMessageId: { type: string }
+        quotedFromMe: { type: boolean }
         media:
           allOf:
             - $ref: "#/components/schemas/MediaReference"
@@ -223,14 +275,27 @@ components:
                 asVoice: { type: boolean }
                 asDocument: { type: boolean }
                 asSticker: { type: boolean }
+    Participant:
+      type: object
+      required: [jid, number, name]
+      properties:
+        jid: { type: string }
+        number: { type: string, description: Phone number, or the group id for groups }
+        lid: { type: string }
+        name: { type: string, description: Saved name, push name or the number; group subject for groups }
+        profilePicUrl: { type: string }
     InboundMessage:
       type: object
-      required: [id, chatId, from, fromMe, timestamp, kind]
+      required: [id, chatId, from, fromMe, fromApp, isGroup, timestamp, kind, sender]
       properties:
         id: { type: string }
         chatId: { type: string }
         from: { type: string }
         fromMe: { type: boolean }
+        fromApp: { type: boolean, description: Sent from the phone, not through this gateway }
+        isGroup: { type: boolean }
+        sender: { $ref: "#/components/schemas/Participant" }
+        group: { $ref: "#/components/schemas/Participant" }
         pushName: { type: string }
         timestamp: { type: integer }
         kind: { type: string, enum: [text, image, video, audio, voice, document, sticker, location, contact, unknown] }

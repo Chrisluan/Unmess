@@ -1,4 +1,11 @@
-import type { SendMessageCommand, SessionSnapshot, SessionStatus } from "./contract.ts";
+import type {
+  DeleteMessageCommand,
+  EditMessageCommand,
+  ReadMessagesCommand,
+  SendMessageCommand,
+  SessionSnapshot,
+  SessionStatus
+} from "./contract.ts";
 import type { AdapterListener, ConnectionState, NumberCheck, PhoneContact, WhatsappAdapter } from "./adapters/adapter.ts";
 import type { Logger } from "./logger.ts";
 import type { Outbox } from "./outbox.ts";
@@ -98,6 +105,18 @@ export class SessionManager implements AdapterListener {
       metrics.sendFailures++;
       throw error;
     }
+  }
+
+  editMessage(sessionId: string, messageId: string, command: EditMessageCommand): Promise<void> {
+    return this.queue.run(sessionId, () => this.adapter.editMessage(sessionId, messageId, command));
+  }
+
+  deleteMessage(sessionId: string, messageId: string, command: DeleteMessageCommand): Promise<void> {
+    return this.queue.run(sessionId, () => this.adapter.deleteMessage(sessionId, messageId, command));
+  }
+
+  markRead(sessionId: string, command: ReadMessagesCommand): Promise<void> {
+    return this.adapter.markRead(sessionId, command);
   }
 
   checkNumber(sessionId: string, number: string): Promise<NumberCheck> {

@@ -12,17 +12,29 @@ export interface MediaReference {
   filename?: string;
 }
 
+export interface Participant {
+  jid: string;
+  number: string;
+  lid?: string;
+  name: string;
+  profilePicUrl?: string;
+}
+
 export interface InboundMessage {
   id: string;
   chatId: string;
   from: string;
   fromMe: boolean;
+  fromApp: boolean;
+  isGroup: boolean;
   pushName?: string;
   timestamp: number;
   kind: MessageKind;
   text?: string;
   media?: MediaReference;
   quotedMessageId?: string;
+  sender: Participant;
+  group?: Participant;
 }
 
 export type GatewayEvent =
@@ -43,6 +55,22 @@ export interface SendMessageCommand {
   text?: string;
   media?: MediaReference & { caption?: string; asVoice?: boolean; asDocument?: boolean; asSticker?: boolean };
   quotedMessageId?: string;
+  quotedFromMe?: boolean;
+}
+
+export interface EditMessageCommand {
+  chatId: string;
+  text: string;
+}
+
+export interface DeleteMessageCommand {
+  chatId: string;
+  fromMe: boolean;
+}
+
+export interface ReadMessagesCommand {
+  chatId: string;
+  messageIds: string[];
 }
 
 export interface SessionSnapshot {

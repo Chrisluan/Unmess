@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { DatabaseSync } from "node:sqlite";
 import express, { type NextFunction, type Request, type Response } from "express";
 import QRCode from "qrcode";
-import type { SendMessageCommand } from "../contract.ts";
+import type { DeleteMessageCommand, EditMessageCommand, ReadMessagesCommand, SendMessageCommand } from "../contract.ts";
 import { SessionUnavailableError } from "../adapters/adapter.ts";
 import type { FakeAdapter } from "../adapters/fakeAdapter.ts";
 import type { Logger } from "../logger.ts";
@@ -105,6 +105,36 @@ export function createApp(deps: AppDependencies): express.Express {
     }
   });
 
+  v1.put("/sessions/:sessionId/messages/:messageId", async (req, res) => {
+    const body = req.body as Partial<EditMessageCommand> | undefined;
+    if (!body?.chatId || !body.text) {
+      res.status(400).json({ error: "chat_id_and_text_required" });
+      return;
+    }
+    await deps.sessions.editMessage(req.params.sessionId as string, req.params.messageId as string, { chatId: body.chatId, text: body.text });
+    res.status(204).end();
+  });
+
+  v1.delete("/sessions/:sessionId/messages/:messageId", async (req, res) => {
+    const body = req.body as Partial<DeleteMessageCommand> | undefined;
+    if (!body?.chatId) {
+      res.status(400).json({ error: "chat_id_required" });
+      return;
+    }
+    await deps.sessions.deleteMessage(req.params.sessionId as string, req.params.messageId as string, { chatId: body.chatId, fromMe: body.fromMe === true });
+    res.status(204).end();
+  });
+
+  v1.post("/sessions/:sessionId/read", async (req, res) => {
+    const body = req.body as Partial<ReadMessagesCommand> | undefined;
+    if (!body?.chatId || !Array.isArray(body.messageIds)) {
+      res.status(400).json({ error: "chat_id_and_message_ids_required" });
+      return;
+    }
+    await deps.sessions.markRead(req.params.sessionId as string, { chatId: body.chatId, messageIds: body.messageIds.map(String) });
+    res.status(204).end();
+  });
+
   v1.get("/sessions/:sessionId/numbers/:number", async (req, res) => {
     res.json(await deps.sessions.checkNumber(req.params.sessionId as string, req.params.number as string));
   });
@@ -125,16 +155,20 @@ export function createApp(deps: AppDependencies): express.Express {
   if (deps.fake) {
     const fake = deps.fake;
     v1.post("/fake/sessions/:sessionId/inbound", (req, res) => {
-      const body = req.body as { from?: string; text?: string; pushName?: string } | undefined;
+      const body = req.body as { from?: string; text?: string; pushName?: string; groupId?: string; groupName?: string } | undefined;
       if (!body?.from || !body.text) {
         res.status(400).json({ error: "from_and_text_required" });
         return;
       }
-      try {
-        res.status(202).json({ messageId: fake.simulateInbound(req.params.sessionId as string, body.from, body.text, body.pushName) });
-      } catch {
-        res.status(409).json({ error: "session_not_connected" });
-      }
+      res.status(202).json({
+        messageId: fake.simulateInbound(req.params.sessionId as string, {
+          from: body.from,
+          text: body.text,
+          pushName: body.pushName,
+          groupId: body.groupId,
+          groupName: body.groupName
+        })
+      });
     });
   }
 

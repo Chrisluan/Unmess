@@ -107,6 +107,20 @@ test("full session lifecycle in fake mode", async () => {
   assert.deepEqual(types.slice(0, 3), ["connecting", "qr", "connected"]);
   assert.equal(new Set(events.map((envelope) => envelope.id)).size, events.length);
 
+  assert.equal(received.event.type === "message.received" && received.event.message.sender.number, "5511888880000");
+
+  const group = await call("POST", "/v1/fake/sessions/7/inbound", { from: "5511777770000", text: "Oi grupo", groupId: "1203630", groupName: "Equipe" });
+  assert.equal(group.status, 202);
+  const fromGroup = await waitFor(() =>
+    events.find((envelope) => envelope.event.type === "message.received" && envelope.event.message.isGroup)
+  );
+  assert.equal(fromGroup.event.type === "message.received" && fromGroup.event.message.group?.name, "Equipe");
+
+  assert.equal((await call("PUT", `/v1/sessions/7/messages/${messageId}`, { chatId: chatId, text: "Editado" })).status, 204);
+  assert.equal((await call("DELETE", `/v1/sessions/7/messages/${messageId}`, { chatId: chatId, fromMe: true })).status, 204);
+  assert.equal((await call("POST", "/v1/sessions/7/read", { chatId: "5511888880000@c.us", messageIds: ["A", "B"] })).status, 204);
+  assert.equal((await call("PUT", `/v1/sessions/7/messages/${messageId}`, { text: "sem chat" })).status, 400);
+
   const check = await call("GET", "/v1/sessions/7/numbers/5585999990000");
   assert.deepEqual(await check.json(), { exists: true, jid: "5585999990000@s.whatsapp.net" });
   assert.deepEqual(await (await call("GET", "/v1/sessions/7/numbers/123")).json(), { exists: false });
