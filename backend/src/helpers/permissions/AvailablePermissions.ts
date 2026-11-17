@@ -174,3 +174,28 @@ export const AVAILABLE_PERMISSIONS: readonly string[] = Object.values(PERMISSION
 );
 
 export type Permission = string;
+
+// Permissões de quem é atendente (profile "member") e ainda não foi colocado em
+// nenhum grupo. Sem isto, a regra "negado por padrão" trancava todos os usuários
+// comuns para fora do sistema até alguém criar grupos.
+//
+// Só entra o que o dia a dia do atendimento exige. De fora ficam, de propósito,
+// tudo que apaga, exporta, importa ou configura: delete, export, import,
+// viewAll, manage*, e os módulos de usuários (escrita), filas, conexões
+// (escrita), configurações e grupos de permissão. Quem precisar de mais é
+// colocado em um grupo, que substitui este conjunto.
+export const DEFAULT_MEMBER_PERMISSIONS: readonly string[] = [
+  "dashboard:access", "dashboard:view",
+  "tickets:access", "tickets:view", "tickets:create", "tickets:edit", "tickets:transfer",
+  "contacts:access", "contacts:view", "contacts:create", "contacts:edit",
+  "clients:access", "clients:view", "clients:create", "clients:edit",
+  "crm:access", "crm:view", "crm:create", "crm:edit", "crm:move",
+  "products:access",
+  "tags:access", "tags:view", "tags:assign",
+  "quickAnswers:access", "quickAnswers:view", "quickAnswers:create", "quickAnswers:edit",
+  "stickers:access", "stickers:view", "stickers:send",
+  // Somente leitura: o front carrega o próprio usuário, a lista de conexões
+  // e a lista de colegas (para transferir) ao abrir o atendimento.
+  "connections:view",
+  "users:view",
+];

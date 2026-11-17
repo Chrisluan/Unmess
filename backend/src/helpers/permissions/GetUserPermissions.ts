@@ -1,6 +1,10 @@
 import User from "../../models/User";
 import PermissionGroup from "../../models/PermissionGroup";
-import { AVAILABLE_PERMISSIONS, Permission } from "./AvailablePermissions";
+import {
+  AVAILABLE_PERMISSIONS,
+  DEFAULT_MEMBER_PERMISSIONS,
+  Permission,
+} from "./AvailablePermissions";
 
 // Profiles com acesso total que ignoram o sistema granular.
 const PROFILES_WITH_FULL_ACCESS = ["admin", "super"];
@@ -42,10 +46,11 @@ export const resolveUserPermissions = async (
     return { permissions: all, groupPermissions: [], overrides: { allow: [], deny: [] } };
   }
 
-  // Base: permissões do grupo
+  // Base: permissões do grupo. Quem não tem grupo recebe o conjunto padrão de
+  // atendente, em vez de ficar sem acesso a nada.
   const groupPermissions: string[] = user.permissionGroup
     ? parseJsonArray(user.permissionGroup.permissions)
-    : [];
+    : [...DEFAULT_MEMBER_PERMISSIONS];
 
   // Overrides individuais
   const { add: allowOverrides = [], remove: denyOverrides = [] } =
