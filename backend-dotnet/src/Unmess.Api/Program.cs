@@ -91,6 +91,7 @@ app.MapAuthEndpoints();
 app.MapUsuarioEndpoints();
 app.MapGrupoDePermissaoEndpoints();
 app.MapEmpresaEndpoints();
+app.MapCadastroEndpoints();
 app.MapHub<RealtimeHub>(RealtimeHub.Path);
 
 app.Run();

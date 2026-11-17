@@ -2,7 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Unmess.Application.Common;
+using Unmess.Domain.Atendimento;
 using Unmess.Domain.Comum;
+using Unmess.Domain.Configuracoes;
+using Unmess.Domain.Etiquetas;
+using Unmess.Domain.RespostasRapidas;
 using Unmess.Domain.Conexoes;
 using Unmess.Domain.Crm;
 using Unmess.Domain.Empresas;
@@ -26,6 +30,12 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<Quadro> Quadros => Set<Quadro>();
     public DbSet<EtapaDoFunil> EtapasDoFunil => Set<EtapaDoFunil>();
+    public DbSet<Configuracao> Configuracoes => Set<Configuracao>();
+    public DbSet<Etiqueta> Etiquetas => Set<Etiqueta>();
+    public DbSet<RespostaRapida> RespostasRapidas => Set<RespostaRapida>();
+    public DbSet<SituacaoDeTicket> SituacoesDeTicket => Set<SituacaoDeTicket>();
+    public DbSet<HorarioDeAtendimento> HorariosDeAtendimento => Set<HorarioDeAtendimento>();
+    public DbSet<Feriado> Feriados => Set<Feriado>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -129,6 +139,60 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
             entity.Property(item => item.Protocolo).HasColumnName("protocol");
             entity.Property(item => item.SaudacaoEnviada).HasColumnName("greetingSent");
             entity.Property(item => item.UltimaMensagemEm).HasColumnName("lastMessageAt");
+        });
+
+        modelBuilder.Entity<Configuracao>(entity =>
+        {
+            Table(entity, "Settings");
+            entity.Property(item => item.Chave).HasColumnName("key");
+            entity.Property(item => item.Valor).HasColumnName("value");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<Etiqueta>(entity =>
+        {
+            Table(entity, "Tags");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Cor).HasColumnName("color");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<RespostaRapida>(entity =>
+        {
+            Table(entity, "QuickAnswers");
+            entity.Property(item => item.Atalho).HasColumnName("shortcut");
+            entity.Property(item => item.Mensagem).HasColumnName("message");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<SituacaoDeTicket>(entity =>
+        {
+            Table(entity, "TicketStatuses");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Cor).HasColumnName("color");
+            entity.Property(item => item.Tipo).HasColumnName("type");
+            entity.Property(item => item.Padrao).HasColumnName("isDefault");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<HorarioDeAtendimento>(entity =>
+        {
+            Table(entity, "BusinessHours");
+            entity.Property(item => item.DiaDaSemana).HasColumnName("weekDay");
+            entity.Property(item => item.Ativo).HasColumnName("enabled");
+            entity.Property(item => item.Inicio).HasColumnName("startTime");
+            entity.Property(item => item.Fim).HasColumnName("endTime");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<Feriado>(entity =>
+        {
+            Table(entity, "Holidays");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Data).HasColumnName("date").HasColumnType("date")
+                .HasConversion(value => value.ToDateTime(TimeOnly.MinValue), value => DateOnly.FromDateTime(value));
+            entity.Property(item => item.Recorrente).HasColumnName("recurring");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
         });
 
         modelBuilder.Entity<Quadro>(entity =>

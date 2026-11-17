@@ -25,12 +25,12 @@ Legenda: ✅ migrado e testado · ⏳ pendente
 | users | `GET/POST /users`, `GET/PUT/DELETE /users/:id` | ✅ (ao excluir, tickets abertos voltam a `pending`; os eventos de ticket entram com o módulo de tickets) |
 | permission-groups | `available`, `modules`, `user/:id`, CRUD | ✅ |
 | companies | CRUD (super) e `GET/PUT /company/branding` | ✅ |
-| settings | `GET /settings`, `GET /settings/attendance`, `PUT /settings/:key` | ⏳ |
-| queues | CRUD `/queue` | ⏳ |
-| tags | CRUD `/tags` | ⏳ |
-| quick-answers | CRUD `/quick-answers` | ⏳ |
-| ticket-statuses | CRUD `/ticket-statuses` | ⏳ |
-| business-hours / holidays | 5 rotas | ⏳ |
+| settings | `GET /settings`, `GET /settings/attendance`, `PUT /settings/:key` | ✅ |
+| queues | CRUD `/queue` | ✅ |
+| tags | CRUD `/tags` | ✅ (falta `PUT /tickets/:id/tags`, que entra com tickets) |
+| quick-answers | CRUD `/quick-answers` | ✅ |
+| ticket-statuses | CRUD `/ticket-statuses` | ✅ |
+| business-hours / holidays | 5 rotas | ✅ |
 | stickers | 5 rotas | ⏳ |
 | products | 5 rotas | ⏳ |
 | customers | 6 rotas | ⏳ |
@@ -50,3 +50,13 @@ Legenda: ✅ migrado e testado · ⏳ pendente
 | Job de fechar tickets inativos | ⏳ |
 | Adaptador SignalR no frontend (`frontend/src/services/socket-io.js`) | ⏳ |
 | Troca do frontend para o .NET e remoção da pasta `backend/` | ⏳ |
+
+## Como verificar
+
+Com o MySQL de dev de pé e o backend .NET rodando em `http://localhost:5240`:
+
+```powershell
+.\backend-dotnet\tests\smoke\run-all.ps1
+```
+
+Cada linha mostra `ok` quando o status HTTP bate com o do Node e `XX` quando não bate. Os roteiros criam uma empresa nova a cada execução, então podem rodar várias vezes.
