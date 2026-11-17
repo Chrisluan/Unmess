@@ -113,6 +113,8 @@ function Set-ProcessEnv($Config) {
     $env:ASPNETCORE_ENVIRONMENT = "Development"
     $env:Database__ConnectionString = "Server=$($Config["DB_HOST"]);Port=$($Config["DB_PORT"]);Database=$($Config["DB_NAME"]);User ID=$($Config["DB_USER"]);Password=$($Config["DB_PASS"])"
     $env:Jwt__Secret = $Config["JWT_SECRET"]
+    $env:Jwt__RefreshSecret = $Config["JWT_REFRESH_SECRET"]
+    $env:Uploads__Directory = Join-Path $Root "backend\public"
     $env:WhatsappGateway__BaseUrl = "http://localhost:$($Config["GATEWAY_PORT"])"
     $env:WhatsappGateway__ApiToken = $Config["GATEWAY_API_TOKEN"]
     $env:WhatsappGateway__WebhookSecret = $Config["GATEWAY_WEBHOOK_SECRET"]

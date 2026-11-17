@@ -57,7 +57,7 @@ public sealed class LegacyJwtAuthenticationTests(ApiFactory factory) : IClassFix
 
         var response = await client.GetAsync("/internal/whoami");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class LegacyJwtAuthenticationTests(ApiFactory factory) : IClassFix
 
         var response = await client.GetAsync("/internal/whoami");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

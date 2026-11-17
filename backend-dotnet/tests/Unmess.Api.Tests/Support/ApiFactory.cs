@@ -14,6 +14,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("JWT_SECRET", Secret);
+        builder.UseSetting("JWT_REFRESH_SECRET", Secret + "-refresh");
+        builder.UseSetting("Uploads:Directory", Path.Combine(Path.GetTempPath(), "unmess-tests-uploads"));
         builder.UseSetting("Database:ConnectionString", string.Empty);
     }
 

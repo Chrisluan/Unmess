@@ -2,26 +2,19 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Unmess.Api.Realtime;
+using Unmess.Application.Common;
 using Unmess.Application.Usuarios;
+using Unmess.Infrastructure.Security;
 
 namespace Unmess.Api.Authentication;
 
 public static class AuthenticationSetup
 {
-    public static IServiceCollection AddLegacyJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddOptions<JwtOptions>()
-            .Bind(configuration.GetSection(JwtOptions.SectionName))
-            .PostConfigure(options =>
-            {
-                if (string.IsNullOrWhiteSpace(options.Secret))
-                {
-                    options.Secret = configuration[JwtOptions.LegacySecretKey] ?? string.Empty;
-                }
-            })
-            .Validate(options => !string.IsNullOrWhiteSpace(options.Secret), "Jwt:Secret or JWT_SECRET must be configured.")
-            .ValidateOnStart();
+    public const string InvalidTokenMessage = "Invalid token. We'll try to assign a new one on next request";
 
+    public static IServiceCollection AddLegacyJwtAuthentication(this IServiceCollection services)
+    {
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
 
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
@@ -38,7 +31,31 @@ public static class AuthenticationSetup
                     ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                     NameClaimType = LegacyJwtClaims.Username,
                     RoleClaimType = LegacyJwtClaims.Profile,
-                    ClockSkew = TimeSpan.FromSeconds(30)
+                    ClockSkew = TimeSpan.Zero
+                };
+                bearer.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        if (context.HttpContext.Request.Path.StartsWithSegments(RealtimeHub.Path) &&
+                            context.Request.Query.TryGetValue("access_token", out var token))
+                        {
+                            context.Token = token;
+                        }
+                        return Task.CompletedTask;
+                    },
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+                        var hasToken = context.Request.Headers.Authorization.Count > 0;
+                        context.Response.StatusCode = hasToken ? StatusCodes.Status403Forbidden : StatusCodes.Status401Unauthorized;
+                        await context.Response.WriteAsJsonAsync(new { error = hasToken ? InvalidTokenMessage : ErrorCodes.SessionExpired });
+                    },
+                    OnForbidden = async context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        await context.Response.WriteAsJsonAsync(new { error = ErrorCodes.NoPermission });
+                    }
                 };
             });
 
