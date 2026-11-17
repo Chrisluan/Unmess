@@ -184,11 +184,11 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
         },
 
         MuiIconButton: {
-          styleOverrides: { root: { borderRadius: RAIO } }
+          styleOverrides: { root: { borderRadius: raio } }
         },
 
         MuiToggleButton: {
-          styleOverrides: { root: { borderRadius: RAIO } }
+          styleOverrides: { root: { borderRadius: raio } }
         },
 
         MuiPaper: {
@@ -239,11 +239,11 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
         },
 
         MuiMenu: {
-          styleOverrides: { paper: { borderRadius: RAIO } }
+          styleOverrides: { paper: { borderRadius: raio } }
         },
 
         MuiPopover: {
-          styleOverrides: { paper: { borderRadius: RAIO } }
+          styleOverrides: { paper: { borderRadius: raio } }
         },
 
         MuiChip: {
@@ -276,7 +276,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
         },
 
         MuiFilledInput: {
-          styleOverrides: { root: { borderRadius: RAIO } }
+          styleOverrides: { root: { borderRadius: raio } }
         },
 
         MuiTooltip: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
@@ -56,6 +56,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Settings = () => {
+	const classes = useStyles();
 	const { whatsApps } = useContext(WhatsAppsContext);
 
 	const [settings, setSettings] = useState([]);

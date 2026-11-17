@@ -85,6 +85,13 @@ const TicketTagsSelect = ({ ticket, disabled }) => {
 		}
 	};
 
+	const abrirEditor = () => {
+		setEditando(true);
+		// O foco entra no campo assim que ele existe, senão o clique abre a
+		// caixa e obriga um segundo clique para digitar.
+		setTimeout(() => campoRef.current?.focus(), 0);
+	};
+
 	if (available.length === 0 && selected.length === 0) {
 		return (
 			<span style={{ fontSize: "0.8125rem", opacity: 0.75 }}>

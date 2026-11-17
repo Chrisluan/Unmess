@@ -37,7 +37,6 @@ const useStyles = makeStyles((theme) => ({
 
 const TicketHeader = ({ loading, children }) => {
   const classes = useStyles();
-  const theme = useTheme();
   const history = useHistory();
 
   if (loading) return <TicketHeaderSkeleton />;
