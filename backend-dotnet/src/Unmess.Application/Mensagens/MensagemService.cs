@@ -157,6 +157,7 @@ public sealed class MensagemService(
         {
             throw AppException.NotFound(ErroNaoEncontradaParaEncaminhar);
         }
+        await tickets.ExigirNoEscopoAsync(mensagem.Ticket, cancellationToken);
         if (mensagem.Interna)
         {
             throw new AppException("ERR_CANNOT_FORWARD_INTERNAL_NOTE");
@@ -253,6 +254,7 @@ public sealed class MensagemService(
         {
             throw new AppException(ErroNaoEncontrada);
         }
+        await tickets.ExigirNoEscopoAsync(mensagem.Ticket, cancellationToken);
 
         return (mensagem, mensagem.Ticket);
     }

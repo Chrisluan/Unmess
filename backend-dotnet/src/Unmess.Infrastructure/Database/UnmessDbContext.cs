@@ -30,6 +30,7 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<GrupoDePermissao> GruposDePermissao => Set<GrupoDePermissao>();
+    public DbSet<Cargo> Cargos => Set<Cargo>();
     public DbSet<Fila> Filas => Set<Fila>();
     public DbSet<ConexaoWhatsapp> ConexoesWhatsapp => Set<ConexaoWhatsapp>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
@@ -77,6 +78,14 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
             entity.Property(item => item.EmpresaId).HasColumnName("companyId");
         });
 
+        modelBuilder.Entity<Cargo>(entity =>
+        {
+            Table(entity, "Roles");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Escopos).HasColumnName("scopes");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
         modelBuilder.Entity<Fila>(entity =>
         {
             Table(entity, "Queues");
@@ -120,6 +129,9 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
             entity.Property(item => item.EmpresaId).HasColumnName("companyId");
             entity.Property(item => item.GrupoDePermissaoId).HasColumnName("permissionGroupId");
             entity.Property(item => item.PermissoesPersonalizadas).HasColumnName("customPermissions");
+            entity.Property(item => item.CargoId).HasColumnName("roleId");
+            entity.Property(item => item.ExcecoesDeEscopo).HasColumnName("scopeExceptions");
+            entity.HasOne(item => item.Cargo).WithMany().HasForeignKey(item => item.CargoId).OnDelete(DeleteBehavior.SetNull);
             entity.Property(item => item.Online).HasColumnName("online");
             entity.Property(item => item.MaximoDeTicketsSimultaneos).HasColumnName("maxSimultaneousTickets");
             entity.Property(item => item.VistoPorUltimoEm).HasColumnName("lastSeenAt");

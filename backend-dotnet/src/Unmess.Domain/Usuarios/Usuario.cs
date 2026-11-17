@@ -19,6 +19,9 @@ public sealed class Usuario : Entidade
     public int? GrupoDePermissaoId { get; set; }
     public GrupoDePermissao? GrupoDePermissao { get; set; }
     public string? PermissoesPersonalizadas { get; set; }
+    public int? CargoId { get; set; }
+    public Cargo? Cargo { get; set; }
+    public string? ExcecoesDeEscopo { get; set; }
     public bool Online { get; set; }
     public int MaximoDeTicketsSimultaneos { get; set; }
     public DateTimeOffset? VistoPorUltimoEm { get; set; }
