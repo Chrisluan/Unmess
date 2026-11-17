@@ -138,22 +138,27 @@ public static class AtendimentoEndpoints
             })
             .RequireCompanyPermission("connections:delete");
 
+        // Ligar, religar e derrubar o número tira o atendimento da empresa do ar:
+        // o grupo só exige empresa, e cada rota exige connections:session, como no Node.
         var sessoes = endpoints.MapGroup("/whatsappsession").RequireAuthorization().RequireCompany();
         sessoes.MapPost("/{whatsappId:int}", async (int whatsappId, ConexaoService servico, CancellationToken cancellationToken) =>
         {
             await servico.IniciarSessaoAsync(whatsappId, cancellationToken);
             return Results.Ok(new { message = "Starting session." });
-        });
+        })
+            .RequirePermission("connections:session");
         sessoes.MapPut("/{whatsappId:int}", async (int whatsappId, ConexaoService servico, CancellationToken cancellationToken) =>
         {
             await servico.NovoQrCodeAsync(whatsappId, cancellationToken);
             return Results.Ok(new { message = "Starting session." });
-        });
+        })
+            .RequirePermission("connections:session");
         sessoes.MapDelete("/{whatsappId:int}", async (int whatsappId, ConexaoService servico, CancellationToken cancellationToken) =>
         {
             await servico.DesconectarAsync(whatsappId, cancellationToken);
             return Results.Ok(new { message = "Session disconnected." });
-        });
+        })
+            .RequirePermission("connections:session");
     }
 }
 

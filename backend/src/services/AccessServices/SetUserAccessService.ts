@@ -124,7 +124,9 @@ const SetUserAccessService = async ({
   const eraAdministrador = alvo.role?.slug === SLUG_ADMINISTRADOR;
   const continuaAdministrador = cargoNovo?.slug === SLUG_ADMINISTRADOR;
 
-  if (eraAdministrador && !continuaAdministrador) {
+  // O super-admin da plataforma pode deixar a empresa sem administrador:
+  // ele é quem a conserta.
+  if (eraAdministrador && !continuaAdministrador && !ator.isSuper) {
     const administradores = await User.count({
       where: { companyId, roleId: alvo.roleId }
     });

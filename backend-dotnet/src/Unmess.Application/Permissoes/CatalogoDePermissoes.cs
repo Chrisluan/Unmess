@@ -98,7 +98,8 @@ public static class CatalogoDePermissoes
             ["connections:view"] = "Visualizar",
             ["connections:create"] = "Criar",
             ["connections:edit"] = "Editar",
-            ["connections:delete"] = "Excluir"
+            ["connections:delete"] = "Excluir",
+            ["connections:session"] = "Ligar, religar e desconectar o número"
         }),
         ["dashboard"] = new("Dashboard", new Dictionary<string, string>
         {

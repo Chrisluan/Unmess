@@ -7,6 +7,7 @@ import { alcanca } from "../helpers/permissions/escopos";
 import { usuarioPode } from "../helpers/permissions/resolve";
 import * as Caixa from "../services/FinanceServices/FrenteDeCaixa";
 import * as Balcao from "../services/FinanceServices/VendaDeBalcao";
+import CashSession from "../models/CashSession";
 import * as Cadastros from "../services/FinanceServices/CadastrosFinanceiros";
 
 /**
@@ -20,6 +21,30 @@ import * as Cadastros from "../services/FinanceServices/CadastrosFinanceiros";
  * O escopo de contas vale aqui como vale no resto do financeiro: quem só
  * alcança o caixa da loja não abre turno no caixa da fábrica.
  */
+
+/**
+ * O turno é de uma conta, e a conta tem alcance.
+ *
+ * As rotas que mexem num turno recebem só o id dele, e os serviços buscam por
+ * id e empresa. Sem esta conferência, quem alcançava só a gaveta da loja
+ * registrava venda, sangria ou fechamento na gaveta da fábrica adivinhando o
+ * número do turno. Turno de outra empresa ou inexistente dá 404, igual.
+ */
+const garantirTurnoNoEscopo = async (
+  req: Request,
+  sessionId: number
+): Promise<void> => {
+  const turno = await CashSession.findOne({
+    where: { id: sessionId, companyId: getCompanyId(req) },
+    attributes: ["id", "accountId"]
+  });
+
+  if (!turno) {
+    throw new AppError("Turno de caixa não encontrado.", 404);
+  }
+
+  await garantirNoEscopo(req, "account", turno.accountId, "Este caixa");
+};
 
 const numero = (v: unknown): number => {
   const n = Number(v);
@@ -103,6 +128,8 @@ export const fechar = async (req: Request, res: Response): Promise<Response> => 
   const { sessionId } = req.params;
   const { closingAmount, notes } = req.body;
 
+  await garantirTurnoNoEscopo(req, Number(sessionId));
+
   if (closingAmount === undefined || closingAmount === null) {
     throw new AppError("Informe quanto foi contado na gaveta.", 400);
   }
@@ -133,6 +160,18 @@ export const movimentar = async (
     );
   }
 
+  await garantirTurnoNoEscopo(req, Number(sessionId));
+
+  // A outra ponta da sangria ou do suprimento também é uma conta, e mover
+  // dinheiro para (ou de) uma conta fora do alcance é mexer nela.
+  await garantirNoEscopo(
+    req,
+    "account",
+    Number(counterAccountId),
+    "A conta de contrapartida"
+  );
+
+
   const resumo = await Caixa.registrarMovimento({
     companyId: getCompanyId(req),
     sessionId: Number(sessionId),
@@ -149,6 +188,8 @@ export const movimentar = async (
 export const vender = async (req: Request, res: Response): Promise<Response> => {
   const { sessionId } = req.params;
   const { items, method, discount, customerId } = req.body;
+
+  await garantirTurnoNoEscopo(req, Number(sessionId));
 
   /**
    * Desconto no balcão pede a mesma permissão que desconto no orçamento.
