@@ -4,6 +4,7 @@ using Serilog.Formatting.Compact;
 using Unmess.Api.Authentication;
 using Unmess.Api.Endpoints;
 using Unmess.Api.Health;
+using Unmess.Api.WhatsappGateway;
 using Unmess.Application;
 using Unmess.Infrastructure;
 
@@ -22,6 +23,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddApplication();
@@ -43,6 +45,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthEndpoints();
 app.MapWhoAmIEndpoints();
+app.MapGatewayEventsEndpoints();
 
 app.Run();
 

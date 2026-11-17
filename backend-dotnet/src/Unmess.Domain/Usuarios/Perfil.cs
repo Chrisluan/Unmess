@@ -3,13 +3,23 @@ namespace Unmess.Domain.Usuarios;
 public enum Perfil
 {
     Usuario,
-    Admin
+    Admin,
+    Super
 }
 
 public static class PerfilConversor
 {
-    public static Perfil DoTexto(string? valor) =>
-        string.Equals(valor, "admin", StringComparison.OrdinalIgnoreCase) ? Perfil.Admin : Perfil.Usuario;
+    public static Perfil DoTexto(string? valor) => valor?.ToLowerInvariant() switch
+    {
+        "admin" => Perfil.Admin,
+        "super" => Perfil.Super,
+        _ => Perfil.Usuario
+    };
 
-    public static string ParaTexto(Perfil perfil) => perfil == Perfil.Admin ? "admin" : "user";
+    public static string ParaTexto(Perfil perfil) => perfil switch
+    {
+        Perfil.Admin => "admin",
+        Perfil.Super => "super",
+        _ => "user"
+    };
 }

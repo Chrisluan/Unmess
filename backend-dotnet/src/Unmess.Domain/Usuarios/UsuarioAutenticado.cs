@@ -7,5 +7,5 @@ public sealed record UsuarioAutenticado(
     int? EmpresaId,
     string? NomeEmpresa)
 {
-    public bool EhAdmin => Perfil == Perfil.Admin;
+    public bool EhAdmin => Perfil is Perfil.Admin or Perfil.Super;
 }

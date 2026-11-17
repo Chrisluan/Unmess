@@ -1,0 +1,51 @@
+name: whatsapp-gateway
+
+on:
+  pull_request:
+    paths:
+      - "whatsapp-gateway/**"
+      - ".github/workflows/whatsapp-gateway.yml"
+  push:
+    branches:
+      - "release*"
+      - "production"
+      - "dev"
+    paths:
+      - "whatsapp-gateway/**"
+      - ".github/workflows/whatsapp-gateway.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whatsapp-gateway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: whatsapp-gateway
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: whatsapp-gateway/.nvmrc
+          cache: npm
+          cache-dependency-path: whatsapp-gateway/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+  image:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: docker build --tag unmess-whatsapp-gateway:ci whatsapp-gateway

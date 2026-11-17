@@ -1,0 +1,224 @@
+openapi: 3.1.0
+info:
+  title: Unmess WhatsApp Gateway
+  version: 1.0.0
+  description: |
+    Command API from the core to the gateway. Events flow the other way: the gateway
+    POSTs an EventEnvelope to the core webhook with headers X-Unmess-Timestamp,
+    X-Unmess-Signature (sha256=HMAC_SHA256(secret, "<timestamp>.<body>")) and
+    X-Unmess-Delivery (the event id, used by the core to drop duplicates).
+servers:
+  - url: http://localhost:8090
+security:
+  - bearer: []
+paths:
+  /health/live:
+    get:
+      security: []
+      responses:
+        "200": { description: Process is alive }
+  /health/ready:
+    get:
+      security: []
+      responses:
+        "200": { description: Storage is reachable }
+        "503": { description: Storage is unavailable }
+  /v1/sessions:
+    get:
+      responses:
+        "200":
+          description: Known sessions
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/SessionSnapshot" } }
+  /v1/sessions/{sessionId}:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    get:
+      responses:
+        "200":
+          description: Session status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionSnapshot" }
+  /v1/sessions/{sessionId}/connect:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    post:
+      responses:
+        "202":
+          description: Connection started; follow qr and connection.update events
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionSnapshot" }
+  /v1/sessions/{sessionId}/disconnect:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logout: { type: boolean, description: "true unlinks the device and erases credentials" }
+      responses:
+        "200":
+          description: Session stopped
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionSnapshot" }
+  /v1/sessions/{sessionId}/qr:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    get:
+      responses:
+        "200":
+          description: Current pairing QR code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [qr, dataUrl]
+                properties:
+                  qr: { type: string }
+                  dataUrl: { type: string, description: PNG data URL }
+        "404": { description: No QR code pending }
+  /v1/sessions/{sessionId}/messages:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    post:
+      description: Sends through a per-session paced queue; the call returns after the message is handed to WhatsApp.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SendMessageCommand" }
+      responses:
+        "200":
+          description: Accepted by WhatsApp
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [messageId, chatId]
+                properties:
+                  messageId: { type: string }
+                  chatId: { type: string }
+        "400": { description: Invalid command }
+        "409": { description: Session is not connected }
+  /v1/metrics:
+    get:
+      responses:
+        "200": { description: Outbox and per-session counters }
+  /v1/fake/sessions/{sessionId}/inbound:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    post:
+      description: Only in GATEWAY_MODE=fake. Simulates a customer message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, text]
+              properties:
+                from: { type: string }
+                text: { type: string }
+                pushName: { type: string }
+      responses:
+        "202": { description: Message emitted as message.received }
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[A-Za-z0-9_-]{1,64}$" }
+  schemas:
+    SessionStatus:
+      type: string
+      enum: [disconnected, connecting, qr, connected, needs_qr]
+    SessionSnapshot:
+      type: object
+      required: [sessionId, status, updatedAt]
+      properties:
+        sessionId: { type: string }
+        status: { $ref: "#/components/schemas/SessionStatus" }
+        phoneNumber: { type: string }
+        qr: { type: string }
+        lastError: { type: string }
+        updatedAt: { type: string, format: date-time }
+    MediaReference:
+      type: object
+      required: [ref, mimetype]
+      properties:
+        ref: { type: string, description: Path relative to the shared media volume }
+        mimetype: { type: string }
+        filename: { type: string }
+    SendMessageCommand:
+      type: object
+      required: [to]
+      properties:
+        to: { type: string, description: Phone number with country code or a full JID }
+        text: { type: string }
+        quotedMessageId: { type: string }
+        media:
+          allOf:
+            - $ref: "#/components/schemas/MediaReference"
+            - type: object
+              properties:
+                caption: { type: string }
+                asVoice: { type: boolean }
+                asDocument: { type: boolean }
+                asSticker: { type: boolean }
+    InboundMessage:
+      type: object
+      required: [id, chatId, from, fromMe, timestamp, kind]
+      properties:
+        id: { type: string }
+        chatId: { type: string }
+        from: { type: string }
+        fromMe: { type: boolean }
+        pushName: { type: string }
+        timestamp: { type: integer }
+        kind: { type: string, enum: [text, image, video, audio, voice, document, sticker, location, contact, unknown] }
+        text: { type: string }
+        media: { $ref: "#/components/schemas/MediaReference" }
+        quotedMessageId: { type: string }
+    EventEnvelope:
+      type: object
+      required: [id, version, occurredAt, event]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: string, const: v1 }
+        occurredAt: { type: string, format: date-time }
+        event:
+          oneOf:
+            - type: object
+              required: [type, sessionId, message]
+              properties:
+                type: { const: message.received }
+                sessionId: { type: string }
+                message: { $ref: "#/components/schemas/InboundMessage" }
+            - type: object
+              required: [type, sessionId, messageId, chatId, status]
+              properties:
+                type: { const: message.status }
+                sessionId: { type: string }
+                messageId: { type: string }
+                chatId: { type: string }
+                status: { type: string, enum: [pending, sent, delivered, read, played, failed] }
+            - type: object
+              required: [type, sessionId, status]
+              properties:
+                type: { const: connection.update }
+                sessionId: { type: string }
+                status: { $ref: "#/components/schemas/SessionStatus" }
+                phoneNumber: { type: string }
+                reason: { type: string }
+            - type: object
+              required: [type, sessionId, qr]
+              properties:
+                type: { const: qr }
+                sessionId: { type: string }
+                qr: { type: string }
