@@ -3,26 +3,31 @@ import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
 import openSocket from "../../services/socket-io";
-import clsx from "clsx";
-
-import { Paper } from "@mui/material";
-
 import makeStyles from '@mui/styles/makeStyles';
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInput/";
 import TicketHeader from "../TicketHeader";
-import TicketInfo from "../TicketInfo";
+import TicketInfo, { ChipNegocio } from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtons";
 import MessagesList from "../MessagesList";
-import TicketTagsSelect from "../TicketTagsSelect";
 import PendingTicketBar from "../PendingTicketBar";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
-const drawerWidth = 320;
+const CHAVE_PAINEL = "painelClienteAberto";
+
+const lerPainel = () => {
+  try {
+    const salvo = localStorage.getItem(CHAVE_PAINEL);
+    if (salvo !== null) return salvo === "true";
+  } catch {
+    return window.innerWidth >= 1440;
+  }
+  return window.innerWidth >= 1440;
+};
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -32,49 +37,14 @@ const useStyles = makeStyles((theme) => ({
     overflow: "hidden",
   },
 
-  ticketInfo: {
-    maxWidth: "50%",
-    flexBasis: "50%",
-    [theme.breakpoints.down('md')]: {
-      maxWidth: "80%",
-      flexBasis: "80%",
-    },
-  },
-  ticketActionButtons: {
-    maxWidth: "50%",
-    flexBasis: "50%",
-    display: "flex",
-    [theme.breakpoints.down('md')]: {
-      maxWidth: "100%",
-      flexBasis: "100%",
-      marginBottom: "5px",
-    },
-  },
-
   mainWrapper: {
     flex: 1,
+    minWidth: 0,
     height: "100%",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderLeft: "0",
-    marginRight: -drawerWidth,
-    transition: theme.transitions.create("margin", {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-  },
-
-  mainWrapperShift: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-    transition: theme.transitions.create("margin", {
-      easing: theme.transitions.easing.easeOut,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-    marginRight: 0,
+    backgroundColor: theme.palette.unmess.fundoConversa,
   },
 }));
 
@@ -84,7 +54,7 @@ const Ticket = () => {
   const classes = useStyles();
   const { user } = useContext(AuthContext);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(lerPainel);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
@@ -141,41 +111,30 @@ const Ticket = () => {
     };
   }, [ticketId, history]);
 
-  const handleDrawerOpen = () => {
-    setDrawerOpen(true);
+  const mudarPainel = (aberto) => {
+    setDrawerOpen(aberto);
+    try {
+      localStorage.setItem(CHAVE_PAINEL, String(aberto));
+    } catch {
+      return;
+    }
   };
 
-  const handleDrawerClose = () => {
-    setDrawerOpen(false);
-  };
+  const handleDrawerClose = () => mudarPainel(false);
 
   return (
     <div className={classes.root} id="drawer-container">
-      <Paper
-        variant="outlined"
-        elevation={0}
-        className={clsx(classes.mainWrapper, {
-          [classes.mainWrapperShift]: drawerOpen,
-        })}
-      >
+      <div className={classes.mainWrapper}>
         <TicketHeader loading={loading}>
-          <div className={classes.ticketInfo}>
-            <TicketInfo
-              contact={contact}
-              ticket={ticket}
-              onClick={handleDrawerOpen}
-            />
-          </div>
-          <div className={classes.ticketActionButtons}>
-            <TicketActionButtons ticket={ticket} />
-          </div>
-        </TicketHeader>
-        {!loading && ticket?.id && (
-          <TicketTagsSelect
+          <TicketInfo contact={contact} ticket={ticket} onClick={() => mudarPainel(!drawerOpen)} />
+          <TicketActionButtons
             ticket={ticket}
-            disabled={ticket.status === "closed"}
-          />
-        )}
+            painelAberto={drawerOpen}
+            onTogglePainel={() => mudarPainel(!drawerOpen)}
+          >
+            {ticket?.id && <ChipNegocio ticketId={ticket.id} onClick={() => mudarPainel(true)} />}
+          </TicketActionButtons>
+        </TicketHeader>
         <ReplyMessageProvider>
           <MessagesList
             ticketId={ticketId}
@@ -191,11 +150,12 @@ const Ticket = () => {
             />
           )}
         </ReplyMessageProvider>
-      </Paper>
+      </div>
       <ContactDrawer
         open={drawerOpen}
         handleDrawerClose={handleDrawerClose}
         contact={contact}
+        ticket={ticket}
         loading={loading}
       />
     </div>

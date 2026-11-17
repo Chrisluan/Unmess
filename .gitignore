@@ -49,3 +49,6 @@ certs/
 /backend/.backup-seguranca/
 /backend/.env.antes-da-rotacao
 /backend/.senha-nova-temporaria.txt
+
+!whatsapp-gateway/package-lock.json
+.vs/

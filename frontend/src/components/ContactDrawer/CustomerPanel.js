@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 
-import { Button, Chip, Divider, Paper, Typography } from "@mui/material";
+import { Button, Chip, Typography } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 import { format, parseISO } from "date-fns";
 
@@ -11,10 +11,12 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
 	section: {
-		marginTop: 8,
-		padding: 8,
+		padding: "18px 20px",
+		borderBottom: `1px solid ${theme.palette.unmess.linha}`,
 		display: "flex",
 		flexDirection: "column",
+		gap: 6,
+		"& > .MuiTypography-subtitle2": { fontSize: "0.875rem", marginBottom: 4 },
 	},
 	row: {
 		display: "flex",
@@ -24,17 +26,19 @@ const useStyles = makeStyles(theme => ({
 	},
 	label: {
 		color: theme.palette.text.secondary,
-		fontSize: "0.78rem",
+		fontSize: "0.8125rem",
 	},
 	value: {
-		fontSize: "0.82rem",
+		fontSize: "0.875rem",
+		fontWeight: 500,
 		textAlign: "right",
 		wordBreak: "break-word",
 	},
 	historyItem: {
 		padding: "6px 0",
 		cursor: "pointer",
-		"&:hover": { backgroundColor: "rgba(0,0,0,0.04)" },
+		"&:hover": { backgroundColor: theme.palette.unmess.hover },
+		borderRadius: 8,
 	},
 	empty: {
 		fontSize: "0.8rem",
@@ -118,11 +122,10 @@ const CustomerPanel = ({ contact }) => {
 				onSave={fetchCustomer}
 			/>
 
-			<Paper square variant="outlined" className={classes.section}>
+			<div className={classes.section}>
 				<Typography variant="subtitle2">
 					{i18n.t("contactDrawer.customer.title")}
 				</Typography>
-				<Divider />
 
 				{customer ? (
 					<>
@@ -191,13 +194,12 @@ const CustomerPanel = ({ contact }) => {
 						</Button>
 					</>
 				)}
-			</Paper>
+			</div>
 
-			<Paper square variant="outlined" className={classes.section}>
+			<div className={classes.section}>
 				<Typography variant="subtitle2">
 					{i18n.t("contactDrawer.history.title")}
 				</Typography>
-				<Divider />
 				{tickets.length === 0 && (
 					<span className={classes.empty}>
 						{i18n.t("contactDrawer.history.empty")}
@@ -239,7 +241,7 @@ const CustomerPanel = ({ contact }) => {
 						</div>
 					</div>
 				))}
-			</Paper>
+			</div>
 		</>
 	);
 };

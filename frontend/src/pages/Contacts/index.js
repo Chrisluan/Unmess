@@ -32,6 +32,7 @@ import ConfirmationModal from "../../components/ConfirmationModal/";
 
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
+import AbasContatos from "../../components/AbasContatos";
 import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import MainContainer from "../../components/MainContainer";
@@ -265,6 +266,7 @@ const Contacts = () => {
           ? `${i18n.t("contacts.confirmationModal.deleteMessage")}`
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
+      <AbasContatos />
       <MainHeader>
         <Title>{i18n.t("contacts.title")}</Title>
         <MainHeaderButtonsWrapper>
@@ -282,8 +284,7 @@ const Contacts = () => {
             }}
           />
           <Button
-            variant="contained"
-            color="primary"
+            variant="outlined"
             onClick={(e) => setConfirmOpen(true)}
           >
             {i18n.t("contacts.buttons.import")}

@@ -1,22 +1,28 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import makeStyles from '@mui/styles/makeStyles';
-import Paper from "@mui/material/Paper";
-import SearchIcon from "@mui/icons-material/Search";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useHistory } from "react-router-dom";
+import makeStyles from "@mui/styles/makeStyles";
 import InputBase from "@mui/material/InputBase";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
 import Badge from "@mui/material/Badge";
-import MoveToInboxIcon from "@mui/icons-material/MoveToInbox";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import GroupIcon from "@mui/icons-material/Group";
+import Button from "@mui/material/Button";
+import ButtonBase from "@mui/material/ButtonBase";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
 import Popover from "@mui/material/Popover";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import ListItemText from "@mui/material/ListItemText";
+import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
-import FilterListIcon from "@mui/icons-material/FilterList";
+import TuneIcon from "@mui/icons-material/Tune";
+import CloseIcon from "@mui/icons-material/Close";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsList";
-import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
@@ -25,116 +31,164 @@ import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
 import TicketsTagSelect from "../TicketsTagSelect";
 import TicketsUserSelect from "../TicketsUserSelect";
-import { Button } from "@mui/material";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
+import { ticketDate } from "../../helpers/messageDate";
+import { formatWaitingTime } from "../../helpers/waitingTime";
 
-const useStyles = makeStyles((theme) => ({
-  ticketsWrapper: {
-    position: "relative",
-    display: "flex",
-    height: "100%",
-    flexDirection: "column",
-    overflow: "hidden",
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-    backgroundColor: theme.palette.background.default,
-    color: theme.palette.text.primary,
-  },
-  tabsHeader: {
-    flex: "none",
-    backgroundColor: theme.palette.background.paper,
-  },
-  settingsIcon: {
-    alignSelf: "center",
-    marginLeft: "auto",
-    padding: 8,
-  },
-  tab: {
-    minWidth: 120,
-    width: 120,
-  },
-  // Rótulo em uma linha só. Com "Aguardando atendimento" o texto quebrava e
-  // era cortado pela altura da aba; o corte some com o nome curto, mas a
-  // trava evita que volte se algum rótulo crescer de novo.
-  abaCompacta: {
-    minWidth: 0,
-    padding: "10px 8px",
-    fontSize: "0.82rem",
-    whiteSpace: "nowrap",
-  },
-  ticketOptionsBox: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(1),
-    background: theme.palette.background.paper,
-    padding: theme.spacing(1),
-  },
-  espacador: {
-    flex: 1,
-  },
-  painelFiltros: {
-    width: 280,
-    padding: theme.spacing(2),
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.spacing(1.5),
-  },
-  switchFiltro: {
-    marginLeft: 0,
-  },
-  limparFiltros: {
-    alignSelf: "flex-start",
-  },
-  serachInputWrapper: {
-    flex: 1,
-    background: theme.palette.background.default,
-    display: "flex",
-    borderRadius: 40,
-    padding: 4,
-    marginRight: theme.spacing(1),
-  },
-  searchIcon: {
-    color: "grey",
-    marginLeft: 6,
-    marginRight: 6,
-    alignSelf: "center",
-  },
-  searchInput: {
-    flex: 1,
-    border: "none",
-    borderRadius: 30,
-    color: theme.palette.text.primary, 
-    backgroundColor: theme.palette.background.default,
-  },
-  badge: {
-    right: "-10px",
-  },
-  show: {
-    display: "block",
-  },
-  hide: {
-    display: "none !important",
-  },
-}));
+const ABAS_PRINCIPAIS = [
+  { valor: "myTickets", rotulo: "Minhas" },
+  { valor: "waiting", rotulo: "Na fila" },
+  { valor: "attending", rotulo: "Equipe" },
+];
+
+const ABAS_EXTRAS = [
+  { valor: "known", rotulo: "Conhecidos", descricao: "Pessoas conhecidas, sem fila" },
+  { valor: "groups", rotulo: "Grupos", descricao: "Conversas em grupo" },
+  { valor: "closed", rotulo: "Resolvidas", descricao: "Conversas já encerradas" },
+];
+
+const useStyles = makeStyles((theme) => {
+  const c = theme.palette.unmess;
+  return {
+    root: {
+      position: "relative",
+      display: "flex",
+      height: "100%",
+      flexDirection: "column",
+      overflow: "hidden",
+      backgroundColor: c.superficie,
+      color: c.texto,
+    },
+    cabecalho: {
+      padding: theme.spacing(2.5, 2, 1.5),
+      display: "flex",
+      flexDirection: "column",
+      gap: theme.spacing(1.5),
+      flex: "none",
+    },
+    linhaTitulo: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    titulo: {
+      fontWeight: 700,
+      fontSize: "1.375rem",
+      letterSpacing: "-0.015em",
+      margin: 0,
+    },
+    fila: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      padding: "12px 14px",
+      borderRadius: 12,
+      backgroundColor: c.atencaoSuave,
+    },
+    filaTexto: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: "0.875rem",
+      lineHeight: 1.35,
+      "& b": { display: "block", color: c.texto },
+      "& span": { color: c.atencao, fontWeight: 600, fontSize: "0.8125rem" },
+    },
+    filaIcone: { color: c.atencao },
+    busca: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      height: 42,
+      padding: "0 6px 0 12px",
+      borderRadius: 10,
+      backgroundColor: c.superficie2,
+      border: `1px solid ${c.linha}`,
+      color: c.textoApagado,
+      "&:focus-within": { borderColor: c.primaria, boxShadow: c.foco },
+    },
+    buscaInput: {
+      flex: 1,
+      color: c.texto,
+      fontSize: "0.9375rem",
+      "& input::placeholder": { color: c.textoApagado, opacity: 1 },
+    },
+    segmentos: {
+      display: "flex",
+      gap: 2,
+      padding: 4,
+      borderRadius: 12,
+      backgroundColor: c.hover,
+    },
+    segmento: {
+      flex: 1,
+      height: 34,
+      borderRadius: 9,
+      gap: 6,
+      padding: "0 8px",
+      fontSize: "0.875rem",
+      fontWeight: 600,
+      color: c.textoApagado,
+      whiteSpace: "nowrap",
+    },
+    segmentoAtivo: {
+      backgroundColor: c.superficie,
+      color: c.texto,
+      boxShadow: c.sombra,
+    },
+    contador: {
+      minWidth: 20,
+      height: 20,
+      padding: "0 6px",
+      borderRadius: 10,
+      fontSize: "0.72rem",
+      fontWeight: 700,
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.sinal,
+      color: c.sinalTexto,
+    },
+    contadorApagado: {
+      backgroundColor: c.linha,
+      color: c.textoApagado,
+    },
+    listas: {
+      flex: 1,
+      minHeight: 0,
+      display: "flex",
+      flexDirection: "column",
+      borderTop: `1px solid ${c.linha}`,
+    },
+    painelFiltros: {
+      width: 300,
+      padding: theme.spacing(2),
+      display: "flex",
+      flexDirection: "column",
+      gap: theme.spacing(1.5),
+    },
+    painelTitulo: { fontWeight: 700, fontSize: "0.9375rem" },
+    switchFiltro: { marginLeft: 0 },
+  };
+});
 
 const TicketsManager = () => {
   const classes = useStyles();
+  const history = useHistory();
   const [searchParam, setSearchParam] = useState("");
-  const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("myTickets");
+  const [textoBusca, setTextoBusca] = useState("");
+  const [aba, setAba] = useState("myTickets");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
-  const searchInputRef = useRef();
+  const [maisAnchor, setMaisAnchor] = useState(null);
+  const [atendendo, setAtendendo] = useState(false);
+  const buscaTimeout = useRef();
   const { user } = useContext(AuthContext);
   const { isEnabled } = useContext(AttendanceSettingsContext);
-  const [myTicketsCount, setMyTicketsCount] = useState(0);
-  const [attendingCount, setAttendingCount] = useState(0);
-  const [waitingCount, setWaitingCount] = useState(0);
-  const [knownCount, setKnownCount] = useState(0);
-  const [groupsCount, setGroupsCount] = useState(0);
+  const [contagens, setContagens] = useState({});
+  const [fila, setFila] = useState([]);
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
-  // Vazio = todas as conexões. Persistido para o atendente não precisar
-  // reaplicar o filtro toda vez que abre o painel.
   const [selectedWhatsappIds, setSelectedWhatsappIds] = useState(() => {
     try {
       const saved = localStorage.getItem("ticketsWhatsappFilter");
@@ -143,14 +197,11 @@ const TicketsManager = () => {
       return [];
     }
   });
-
   const [selectedTagIds, setSelectedTagIds] = useState([]);
-  // Vazio = todos os atendentes. Só é oferecido a quem vê todas as conversas.
   const [selectedUserIds, setSelectedUserIds] = useState([]);
   const [filtrosAnchor, setFiltrosAnchor] = useState(null);
+  const [agora, setAgora] = useState(() => new Date());
 
-  // Quantidade de filtros restringindo a lista. Vira o número no badge, para
-  // o atendente perceber que está vendo um recorte mesmo com o painel fechado.
   const filtrosAtivos =
     (selectedWhatsappIds.length > 0 ? 1 : 0) +
     (selectedTagIds.length > 0 ? 1 : 0) +
@@ -165,10 +216,11 @@ const TicketsManager = () => {
   };
 
   useEffect(() => {
-    localStorage.setItem(
-      "ticketsWhatsappFilter",
-      JSON.stringify(selectedWhatsappIds)
-    );
+    try {
+      localStorage.setItem("ticketsWhatsappFilter", JSON.stringify(selectedWhatsappIds));
+    } catch {
+      return;
+    }
   }, [selectedWhatsappIds]);
 
   useEffect(() => {
@@ -179,140 +231,171 @@ const TicketsManager = () => {
   }, []);
 
   useEffect(() => {
-    if (tab === "search") {
-      searchInputRef.current.focus();
-      setSearchParam("");
-    }
-  }, [tab]);
+    const t = setInterval(() => setAgora(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
-  let searchTimeout;
+  const contar = (chave) => (valor) =>
+    setContagens((atual) => (atual[chave] === valor ? atual : { ...atual, [chave]: valor }));
 
   const handleSearch = (e) => {
-    const searchedTerm = e.target.value.toLowerCase();
+    const termo = e.target.value;
+    setTextoBusca(termo);
+    clearTimeout(buscaTimeout.current);
+    buscaTimeout.current = setTimeout(() => setSearchParam(termo.trim().toLowerCase()), 400);
+  };
 
-    clearTimeout(searchTimeout);
+  const limparBusca = () => {
+    clearTimeout(buscaTimeout.current);
+    setTextoBusca("");
+    setSearchParam("");
+  };
 
-    if (searchedTerm === "") {
-      setSearchParam(searchedTerm);
-      setTab("open");
-      return;
+  const aguardando = useMemo(
+    () =>
+      fila
+        .filter((t) => t.status === "pending" && !t.contact?.isKnown)
+        .sort((a, b) => new Date(ticketDate(a)) - new Date(ticketDate(b))),
+    [fila]
+  );
+  const maisAntigo = aguardando[0];
+  const esperaMaisAntiga = maisAntigo ? formatWaitingTime(ticketDate(maisAntigo), agora) : null;
+
+  const atenderProximo = async () => {
+    if (!maisAntigo) return;
+    setAtendendo(true);
+    try {
+      await api.put(`/tickets/${maisAntigo.id}`, { status: "open", userId: user?.id });
+      history.push(`/tickets/${maisAntigo.id}`);
+      setAba("myTickets");
+    } catch (err) {
+      toastError(err);
     }
-
-    searchTimeout = setTimeout(() => {
-      setSearchParam(searchedTerm);
-    }, 500);
+    setAtendendo(false);
   };
 
-  const handleChangeTab = (e, newValue) => {
-    setTab(newValue);
+  const extraAtiva = ABAS_EXTRAS.find((a) => a.valor === aba);
+  const buscando = Boolean(searchParam);
+
+  const filtrosComuns = {
+    selectedQueueIds,
+    selectedWhatsappIds,
+    selectedTagIds,
+    selectedUserIds,
   };
 
-  const handleChangeTabOpen = (e, newValue) => {
-    setTabOpen(newValue);
-  };
+  const oculto = (valor) => (buscando || aba !== valor ? { display: "none" } : undefined);
 
-  const applyPanelStyle = (status) => {
-    if (tabOpen !== status) {
-      return { width: 0, height: 0 };
-    }
-  };
+  const Contador = ({ valor, apagado }) =>
+    valor > 0 ? (
+      <span className={`${classes.contador} ${apagado ? classes.contadorApagado : ""}`}>
+        {valor > 99 ? "99+" : valor}
+      </span>
+    ) : null;
 
   return (
-    <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
-      <NewTicketModal
-        modalOpen={newTicketModalOpen}
-        onClose={(e) => setNewTicketModalOpen(false)}
-      />
-      <Paper elevation={0} square className={classes.tabsHeader}>
-        <Tabs
-          value={tab}
-          onChange={handleChangeTab}
-          variant="fullWidth"
-          indicatorColor="primary"
-          textColor="primary"
-          aria-label="icon label tabs example"
-        >
-          <Tab
-            value={"open"}
-            icon={<MoveToInboxIcon />}
-            label={i18n.t("tickets.tabs.open.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"closed"}
-            icon={<CheckBoxIcon />}
-            label={i18n.t("tickets.tabs.closed.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"groups"}
-            icon={
-              <Badge
-                className={classes.badge}
-                badgeContent={groupsCount}
-                color="primary"
-              >
-                <GroupIcon />
-              </Badge>
-            }
-            label={i18n.t("tickets.tabs.groups.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
-          />
-        </Tabs>
-      </Paper>
-      {/* Uma faixa só: ação principal à esquerda, filtros recolhidos à direita.
-          Antes os três seletores dividiam a largura da lista com o botão e o
-          switch, cada um espremido em 150px e truncando o próprio rótulo. */}
-      <Paper square elevation={0} className={classes.ticketOptionsBox}>
-        {tab === "search" ? (
-          <div className={classes.serachInputWrapper}>
-            <SearchIcon className={classes.searchIcon} />
-            <InputBase
-              className={classes.searchInput}
-              inputRef={searchInputRef}
-              placeholder={i18n.t("tickets.search.placeholder")}
-              type="search"
-              onChange={handleSearch}
-            />
+    <div className={classes.root}>
+      <NewTicketModal modalOpen={newTicketModalOpen} onClose={() => setNewTicketModalOpen(false)} />
+
+      <div className={classes.cabecalho}>
+        <div className={classes.linhaTitulo}>
+          <h1 className={classes.titulo}>Conversas</h1>
+          <div>
+            <Tooltip title="Filtrar por número, etiqueta, fila ou atendente">
+              <IconButton onClick={(e) => setFiltrosAnchor(e.currentTarget)} aria-label="Filtros">
+                <Badge badgeContent={filtrosAtivos} color="primary">
+                  <TuneIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={i18n.t("ticketsManager.buttons.newTicket")}>
+              <IconButton onClick={() => setNewTicketModalOpen(true)} aria-label="Nova conversa">
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
           </div>
-        ) : (
-          <>
+        </div>
+
+        {aguardando.length > 0 && (
+          <div className={classes.fila} role="status">
+            <AccessTimeIcon className={classes.filaIcone} />
+            <div className={classes.filaTexto}>
+              <b>
+                {aguardando.length === 1 ? "1 pessoa esperando" : `${aguardando.length} pessoas esperando`}
+              </b>
+              {esperaMaisAntiga && <span>a mais antiga há {esperaMaisAntiga}</span>}
+            </div>
             <Button
               variant="contained"
-              color="primary"
               size="small"
-              startIcon={<AddIcon />}
-              onClick={() => setNewTicketModalOpen(true)}
+              endIcon={<ArrowForwardIcon />}
+              onClick={atenderProximo}
+              disabled={atendendo}
             >
-              {i18n.t("ticketsManager.buttons.newTicket")}
+              Atender
             </Button>
-
-            <div className={classes.espacador} />
-
-            <Badge
-              badgeContent={filtrosAtivos}
-              color="primary"
-              overlap="circular"
-            >
-              <Button
-                size="small"
-                variant={filtrosAtivos ? "contained" : "outlined"}
-                color={filtrosAtivos ? "primary" : "inherit"}
-                startIcon={<FilterListIcon />}
-                onClick={(e) => setFiltrosAnchor(e.currentTarget)}
-              >
-                {i18n.t("ticketsManager.buttons.filters")}
-              </Button>
-            </Badge>
-          </>
+          </div>
         )}
-      </Paper>
+
+        <label className={classes.busca}>
+          <SearchIcon fontSize="small" />
+          <InputBase
+            className={classes.buscaInput}
+            placeholder={i18n.t("tickets.search.placeholder")}
+            value={textoBusca}
+            onChange={handleSearch}
+            inputProps={{ "aria-label": "Buscar conversas" }}
+          />
+          {textoBusca && (
+            <IconButton size="small" onClick={limparBusca} aria-label="Limpar busca">
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          )}
+        </label>
+
+        {!buscando && (
+          <div className={classes.segmentos} role="tablist">
+            {ABAS_PRINCIPAIS.map(({ valor, rotulo }) => (
+              <ButtonBase
+                key={valor}
+                role="tab"
+                aria-selected={aba === valor}
+                className={`${classes.segmento} ${aba === valor ? classes.segmentoAtivo : ""}`}
+                onClick={() => setAba(valor)}
+              >
+                {rotulo}
+                {valor === "waiting" && <Contador valor={contagens.waiting} />}
+              </ButtonBase>
+            ))}
+            <ButtonBase
+              role="tab"
+              aria-selected={Boolean(extraAtiva)}
+              aria-haspopup="menu"
+              className={`${classes.segmento} ${extraAtiva ? classes.segmentoAtivo : ""}`}
+              onClick={(e) => setMaisAnchor(e.currentTarget)}
+            >
+              {extraAtiva ? extraAtiva.rotulo : "Mais"}
+              <ExpandMoreIcon fontSize="small" />
+            </ButtonBase>
+          </div>
+        )}
+      </div>
+
+      <Menu anchorEl={maisAnchor} open={Boolean(maisAnchor)} onClose={() => setMaisAnchor(null)}>
+        {ABAS_EXTRAS.map(({ valor, rotulo, descricao }) => (
+          <MenuItem
+            key={valor}
+            selected={aba === valor}
+            onClick={() => {
+              setAba(valor);
+              setMaisAnchor(null);
+            }}
+          >
+            <ListItemText primary={rotulo} secondary={descricao} />
+            {valor === "known" && <Contador valor={contagens.known} apagado />}
+          </MenuItem>
+        ))}
+      </Menu>
 
       <Popover
         open={Boolean(filtrosAnchor)}
@@ -322,8 +405,7 @@ const TicketsManager = () => {
         transformOrigin={{ vertical: "top", horizontal: "right" }}
         slotProps={{ paper: { className: classes.painelFiltros } }}
       >
-        {/* Aqui cada seletor ocupa a largura toda do painel, então o rótulo
-            aparece inteiro. */}
+        <span className={classes.painelTitulo}>Filtros</span>
         <TicketsWhatsappSelect
           style={{ width: "100%", marginTop: 0 }}
           selectedWhatsappIds={selectedWhatsappIds}
@@ -340,10 +422,6 @@ const TicketsManager = () => {
           userQueues={user?.queues}
           onChange={(values) => setSelectedQueueIds(values)}
         />
-
-        {/* Filtro por atendente: ferramenta de supervisão, só aparece para
-            quem enxerga o atendimento inteiro. O backend valida a mesma
-            permissão, então esconder aqui é conveniência, não a trava. */}
         <Can permission="tickets:viewAll">
           <TicketsUserSelect
             style={{ width: "100%", marginTop: 0 }}
@@ -351,9 +429,6 @@ const TicketsManager = () => {
             onChange={(values) => setSelectedUserIds(values)}
           />
         </Can>
-
-        {/* O switch "Todos" fica disponível para admin ou, se a empresa
-            liberou, para qualquer atendente. */}
         <Can
           role={user.profile}
           perform="tickets-manager:showall"
@@ -367,7 +442,6 @@ const TicketsManager = () => {
                   checked={showAllTickets}
                   onChange={() => setShowAllTickets((prevState) => !prevState)}
                   name="showAllTickets"
-                  color="primary"
                 />
               }
             />
@@ -383,166 +457,60 @@ const TicketsManager = () => {
                     checked={showAllTickets}
                     onChange={() => setShowAllTickets((prevState) => !prevState)}
                     name="showAllTickets"
-                    color="primary"
                   />
                 }
               />
             ) : null
           }
         />
-
         {filtrosAtivos > 0 && (
-          <Button
-            size="small"
-            onClick={limparFiltros}
-            className={classes.limparFiltros}
-          >
+          <Button size="small" variant="outlined" onClick={limparFiltros} sx={{ alignSelf: "flex-start" }}>
             {i18n.t("ticketsManager.buttons.clearFilters")}
           </Button>
         )}
       </Popover>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Tabs
-          value={tabOpen}
-          onChange={handleChangeTabOpen}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-        >
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={myTicketsCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.myTicketsHeader")}
-              </Badge>
-            }
-            className={classes.abaCompacta}
-            value={"myTickets"}
-          />
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={attendingCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.attendingHeader")}
-              </Badge>
-            }
-            className={classes.abaCompacta}
-            value={"attending"}
-          />
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={waitingCount}
-                color="secondary"
-              >
-                {i18n.t("ticketsList.waitingHeader")}
-              </Badge>
-            }
-            className={classes.abaCompacta}
-            value={"waiting"}
-          />
-          {/* Conversas de pessoas conhecidas: já abertas, sem passar por fila
-              nem exigir aceite. */}
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={knownCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.knownHeader")}
-              </Badge>
-            }
-            className={classes.abaCompacta}
-            value={"known"}
-          />
-        </Tabs>
-        <Paper className={classes.ticketsWrapper}>
-          <TicketsList
-            tab="myTickets"
-            groups="exclude"
-            showAll={false}
-            selectedQueueIds={selectedQueueIds}
-            selectedWhatsappIds={selectedWhatsappIds}
-            selectedTagIds={selectedTagIds}
-            selectedUserIds={selectedUserIds}
-            updateCount={(val) => setMyTicketsCount(val)}
-            style={applyPanelStyle("myTickets")}
-          />
-          <TicketsList
-            tab="attending"
-            groups="exclude"
-            showAll={showAllTickets}
-            selectedQueueIds={selectedQueueIds}
-            selectedWhatsappIds={selectedWhatsappIds}
-            selectedTagIds={selectedTagIds}
-            selectedUserIds={selectedUserIds}
-            updateCount={(val) => setAttendingCount(val)}
-            style={applyPanelStyle("attending")}
-          />
-          <TicketsList
-            tab="waiting"
-            groups="exclude"
-            showAll={true}
-            selectedQueueIds={selectedQueueIds}
-            selectedWhatsappIds={selectedWhatsappIds}
-            selectedTagIds={selectedTagIds}
-            selectedUserIds={selectedUserIds}
-            updateCount={(val) => setWaitingCount(val)}
-            style={applyPanelStyle("waiting")}
-          />
-          <TicketsList
-            tab="known"
-            groups="exclude"
-            showAll={true}
-            selectedQueueIds={selectedQueueIds}
-            selectedWhatsappIds={selectedWhatsappIds}
-            selectedTagIds={selectedTagIds}
-            selectedUserIds={selectedUserIds}
-            updateCount={(val) => setKnownCount(val)}
-            style={applyPanelStyle("known")}
-          />
-        </Paper>
-      </TabPanel>
-      <TabPanel value={tab} name="groups" className={classes.ticketsWrapper}>
+
+      <div className={classes.listas}>
         <TicketsList
-          tab="groups"
-          showAll={true}
-          selectedQueueIds={selectedQueueIds}
-          selectedWhatsappIds={selectedWhatsappIds}
-          selectedTagIds={selectedTagIds}
-          selectedUserIds={selectedUserIds}
-          updateCount={(val) => setGroupsCount(val)}
+          tab="myTickets"
+          groups="exclude"
+          showAll={false}
+          {...filtrosComuns}
+          updateCount={contar("myTickets")}
+          style={oculto("myTickets")}
         />
-      </TabPanel>
-      <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
-          status="closed"
+          tab="waiting"
+          groups="exclude"
           showAll={true}
-          selectedQueueIds={selectedQueueIds}
-          selectedWhatsappIds={selectedWhatsappIds}
-          selectedTagIds={selectedTagIds}
-          selectedUserIds={selectedUserIds}
+          {...filtrosComuns}
+          updateCount={contar("waiting")}
+          updateTickets={setFila}
+          style={oculto("waiting")}
         />
-      </TabPanel>
-      <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
         <TicketsList
-          searchParam={searchParam}
-          showAll={true}
-          selectedQueueIds={selectedQueueIds}
-          selectedWhatsappIds={selectedWhatsappIds}
-          selectedTagIds={selectedTagIds}
-          selectedUserIds={selectedUserIds}
+          tab="attending"
+          groups="exclude"
+          showAll={showAllTickets}
+          {...filtrosComuns}
+          updateCount={contar("attending")}
+          style={oculto("attending")}
         />
-      </TabPanel>
-    </Paper>
+        <TicketsList
+          tab="known"
+          groups="exclude"
+          showAll={true}
+          {...filtrosComuns}
+          updateCount={contar("known")}
+          style={oculto("known")}
+        />
+        {!buscando && aba === "groups" && (
+          <TicketsList tab="groups" showAll={true} {...filtrosComuns} updateCount={contar("groups")} />
+        )}
+        {!buscando && aba === "closed" && <TicketsList status="closed" showAll={true} {...filtrosComuns} />}
+        {buscando && <TicketsList searchParam={searchParam} showAll={true} {...filtrosComuns} />}
+      </div>
+    </div>
   );
 };
 

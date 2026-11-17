@@ -6,7 +6,9 @@ const useStyles = makeStyles(theme => ({
 	contactsHeader: {
 		display: "flex",
 		alignItems: "center",
-		padding: "0px 6px 6px 6px",
+		flexWrap: "wrap",
+		gap: theme.spacing(1.5),
+		flex: "none",
 	},
 }));
 

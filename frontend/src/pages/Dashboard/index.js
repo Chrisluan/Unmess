@@ -15,33 +15,53 @@ import { i18n } from "../../translate/i18n";
 import Chart from "./Chart"
 import DashboardMetrics from "./DashboardMetrics"
 
-const useStyles = makeStyles(theme => ({
-	container: {
-		paddingTop: theme.spacing(4),
-		paddingBottom: theme.spacing(4),
-	},
-	fixedHeightPaper: {
-		padding: theme.spacing(2),
-		display: "flex",
-		overflow: "auto",
-		flexDirection: "column",
-		height: 240,
-	},
-	customFixedHeightPaper: {
-		padding: theme.spacing(2),
-		display: "flex",
-		overflow: "auto",
-		flexDirection: "column",
-		height: 120,
-	},
-	customFixedHeightPaperLg: {
-		padding: theme.spacing(2),
-		display: "flex",
-		overflow: "auto",
-		flexDirection: "column",
-		height: "100%",
-	},
-}))
+const useStyles = makeStyles(theme => {
+	const c = theme.palette.unmess
+	return {
+		container: {
+			padding: theme.spacing(3, 4, 4),
+			maxWidth: 1280,
+			[theme.breakpoints.down("sm")]: {
+				padding: theme.spacing(2),
+			},
+		},
+		cabecalho: {
+			marginBottom: theme.spacing(2.5),
+		},
+		rotulo: {
+			fontSize: "0.8125rem",
+			fontWeight: 600,
+			color: c.textoApagado,
+		},
+		kpi: {
+			padding: theme.spacing(2.25, 2.5),
+			border: `1px solid ${c.linha}`,
+			borderRadius: 16,
+			height: "100%",
+		},
+		kpiDestaque: {
+			backgroundColor: c.primariaSuave,
+			borderColor: "transparent",
+			"& $rotulo, & $numero": { color: c.primariaSuaveTexto },
+		},
+		numero: {
+			fontWeight: 700,
+			fontSize: "1.875rem",
+			letterSpacing: "-0.02em",
+			lineHeight: 1.2,
+			marginTop: 6,
+		},
+		fixedHeightPaper: {
+			padding: theme.spacing(2.5),
+			display: "flex",
+			overflow: "auto",
+			flexDirection: "column",
+			height: 280,
+			border: `1px solid ${c.linha}`,
+			borderRadius: 16,
+		},
+	}
+})
 
 const Dashboard = () => {
 	const classes = useStyles()
@@ -66,42 +86,30 @@ const Dashboard = () => {
 
 	return (
 		<div>
-			<Container maxWidth="lg" className={classes.container}>
-				<Grid container spacing={3}>
-					<Grid item xs={4}>
-						<Paper className={classes.customFixedHeightPaper} style={{ overflow: "hidden" }}>
-							<Typography component="h3" variant="h6" color="primary" paragraph>
-								{i18n.t("dashboard.messages.inAttendance.title")}
-							</Typography>
-							<Grid item>
-								<Typography component="h1" variant="h4">
-									{GetTickets("open", "true", "false")}
-								</Typography>
-							</Grid>
+			<Container maxWidth={false} className={classes.container}>
+				<div className={classes.cabecalho}>
+					<span className={classes.rotulo}>Painel</span>
+					<Typography component="h1" sx={{ fontWeight: 700, fontSize: "1.375rem", letterSpacing: "-0.015em" }}>
+						Como está o dia
+					</Typography>
+				</div>
+				<Grid container spacing={2}>
+					<Grid item xs={12} sm={4}>
+						<Paper className={`${classes.kpi} ${classes.kpiDestaque}`}>
+							<span className={classes.rotulo}>{i18n.t("dashboard.messages.inAttendance.title")}</span>
+							<div className={classes.numero}>{GetTickets("open", "true", "false")}</div>
 						</Paper>
 					</Grid>
-					<Grid item xs={4}>
-						<Paper className={classes.customFixedHeightPaper} style={{ overflow: "hidden" }}>
-							<Typography component="h3" variant="h6" color="primary" paragraph>
-								{i18n.t("dashboard.messages.waiting.title")}
-							</Typography>
-							<Grid item>
-								<Typography component="h1" variant="h4">
-									{GetTickets("pending", "true", "false")}
-								</Typography>
-							</Grid>
+					<Grid item xs={12} sm={4}>
+						<Paper className={classes.kpi}>
+							<span className={classes.rotulo}>{i18n.t("dashboard.messages.waiting.title")}</span>
+							<div className={classes.numero}>{GetTickets("pending", "true", "false")}</div>
 						</Paper>
 					</Grid>
-					<Grid item xs={4}>
-						<Paper className={classes.customFixedHeightPaper} style={{ overflow: "hidden" }}>
-							<Typography component="h3" variant="h6" color="primary" paragraph>
-								{i18n.t("dashboard.messages.closed.title")}
-							</Typography>
-							<Grid item>
-								<Typography component="h1" variant="h4">
-									{GetTickets("closed", "true", "false")}
-								</Typography>
-							</Grid>
+					<Grid item xs={12} sm={4}>
+						<Paper className={classes.kpi}>
+							<span className={classes.rotulo}>{i18n.t("dashboard.messages.closed.title")}</span>
+							<div className={classes.numero}>{GetTickets("closed", "true", "false")}</div>
 						</Paper>
 					</Grid>
 					<Grid item xs={12}>

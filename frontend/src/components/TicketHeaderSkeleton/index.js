@@ -1,15 +1,18 @@
 import React from "react";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { Avatar, Card, CardHeader } from "@mui/material";
 import Skeleton from '@mui/material/Skeleton';
 
 const useStyles = makeStyles(theme => ({
 	ticketHeader: {
 		display: "flex",
-		backgroundColor: "#eee",
+		alignItems: "center",
+		gap: 12,
+		minHeight: 72,
+		padding: theme.spacing(1, 2.5),
 		flex: "none",
-		borderBottom: "1px solid rgba(0, 0, 0, 0.12)",
+		backgroundColor: theme.palette.unmess.superficie,
+		borderBottom: `1px solid ${theme.palette.unmess.linha}`,
 	},
 }));
 
@@ -17,20 +20,14 @@ const TicketHeaderSkeleton = () => {
 	const classes = useStyles();
 
 	return (
-        <Card square className={classes.ticketHeader}>
-            <CardHeader
-				titleTypographyProps={{ noWrap: true }}
-				subheaderTypographyProps={{ noWrap: true }}
-				avatar={
-					<Skeleton animation="wave" variant="circular">
-						<Avatar alt="contact_image" />
-					</Skeleton>
-				}
-				title={<Skeleton animation="wave" width={80} />}
-				subheader={<Skeleton animation="wave" width={140} />}
-			/>
-        </Card>
-    );
+		<header className={classes.ticketHeader}>
+			<Skeleton animation="wave" variant="circular" width={44} height={44} />
+			<div>
+				<Skeleton animation="wave" width={140} />
+				<Skeleton animation="wave" width={200} />
+			</div>
+		</header>
+	);
 };
 
 export default TicketHeaderSkeleton;

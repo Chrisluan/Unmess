@@ -29,7 +29,7 @@ import { ThemeProvider } from "../context/DarkMode";
 import { StyledEngineProvider } from "@mui/material/styles";
 import Route from "./Route";
 
-const ConnectionsRedirect = () => <Redirect to="/Settings" />;
+const ConnectionsRedirect = () => <Redirect to="/Settings?aba=conexoes" />;
 
 const Routes = () => {
   return (

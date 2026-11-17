@@ -1,22 +1,27 @@
 import React from "react";
 
 import makeStyles from '@mui/styles/makeStyles';
-import Container from "@mui/material/Container";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
     flex: 1,
-    // padding: theme.spacing(2),
-    // height: `calc(100% - 48px)`,
-    padding: 0,
     height: "100%",
+    padding: theme.spacing(3, 4, 3),
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(2, 2, 2),
+    },
   },
 
   contentWrapper: {
-    height: "100%",
+    flex: 1,
+    minHeight: 0,
     overflowY: "hidden",
     display: "flex",
     flexDirection: "column",
+    gap: theme.spacing(2),
   },
 }));
 
@@ -24,9 +29,9 @@ const MainContainer = ({ children }) => {
   const classes = useStyles();
 
   return (
-    <Container className={classes.mainContainer} maxWidth={false}>
+    <div className={classes.mainContainer}>
       <div className={classes.contentWrapper}>{children}</div>
-    </Container>
+    </div>
   );
 };
 

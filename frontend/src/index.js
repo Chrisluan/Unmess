@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
+import "@fontsource-variable/inter";
 import App from "./App";
 
 // React 18 substitui ReactDOM.render por createRoot. StrictMode segue fora:

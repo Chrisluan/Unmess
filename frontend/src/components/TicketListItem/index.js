@@ -5,12 +5,9 @@ import { parseISO, format, isSameDay } from "date-fns";
 import clsx from "clsx";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 import ListItemButton from "@mui/material/ListItemButton";
-import ListItemAvatar from "@mui/material/ListItemAvatar";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
-import Divider from "@mui/material/Divider";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 
 import { i18n } from "../../translate/i18n";
@@ -20,199 +17,158 @@ import { ticketDate } from "../../helpers/messageDate";
 import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import MarkdownWrapper from "../MarkdownWrapper";
-import { Tooltip } from "@mui/material";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import toastError from "../../errors/toastError";
 
-const useStyles = makeStyles(theme => ({
-	// Três colunas: avatar (fixo), miolo (elástico) e trilho direito (fixo).
-	// Antes o botão e a tag da conexão eram position:absolute e passavam por
-	// cima do nome e da prévia da mensagem.
-	ticket: {
-		position: "relative",
-		display: "flex",
-		alignItems: "flex-start",
-		gap: 10,
-		paddingLeft: 18, // espaço para a faixa colorida do setor
-		paddingRight: 10,
-		paddingTop: 8,
-		paddingBottom: 8,
-	},
+const useStyles = makeStyles(theme => {
+	const c = theme.palette.unmess;
+	return {
+		ticket: {
+			position: "relative",
+			display: "flex",
+			alignItems: "center",
+			gap: 12,
+			padding: "12px 16px",
+			"&.Mui-selected": { backgroundColor: c.primariaSuave },
+			"&.Mui-selected::before": {
+				content: '""',
+				position: "absolute",
+				left: 0,
+				top: 12,
+				bottom: 12,
+				width: 4,
+				borderRadius: "0 4px 4px 0",
+				backgroundColor: c.primaria,
+			},
+			"&:hover": { backgroundColor: c.superficie2 },
+			"&.Mui-selected:hover": { backgroundColor: c.primariaSuave },
+		},
 
-	pendingTicket: {
-		cursor: "pointer",
-	},
+		avatar: {
+			width: 46,
+			height: 46,
+			flex: "none",
+		},
 
-	avatarBox: {
-		minWidth: "auto",
-		marginTop: 2,
-	},
+		miolo: {
+			flex: 1,
+			minWidth: 0,
+			display: "flex",
+			flexDirection: "column",
+		},
 
-	miolo: {
-		flex: 1,
-		minWidth: 0, // sem isto o texto empurra o trilho para fora da lista
-		display: "flex",
-		flexDirection: "column",
-		gap: 2,
-	},
+		linhaNome: {
+			display: "flex",
+			alignItems: "baseline",
+			justifyContent: "space-between",
+			gap: 8,
+			minWidth: 0,
+		},
 
-	linhaNome: {
-		display: "flex",
-		alignItems: "center",
-		gap: 6,
-		minWidth: 0,
-	},
+		nome: {
+			fontWeight: 600,
+			fontSize: "0.97rem",
+			minWidth: 0,
+			color: c.texto,
+		},
 
-	nome: {
-		fontWeight: 600,
-		minWidth: 0,
-	},
+		hora: {
+			flex: "none",
+			fontSize: "0.78rem",
+			color: c.textoApagado,
+		},
 
-	previa: {
-		minWidth: 0,
-		"& p": { margin: 0 },
-	},
+		horaNova: {
+			color: c.sinal,
+			fontWeight: 700,
+		},
 
-	naoLidas: {
-		flexShrink: 0,
-		minWidth: 18,
-		height: 18,
-		padding: "0 5px",
-		borderRadius: 9,
-		backgroundColor: green[500],
-		color: "#fff",
-		fontSize: "0.68rem",
-		fontWeight: 700,
-		display: "inline-flex",
-		alignItems: "center",
-		justifyContent: "center",
-	},
+		linhaPrevia: {
+			display: "flex",
+			alignItems: "center",
+			justifyContent: "space-between",
+			gap: 8,
+			marginTop: 2,
+			minWidth: 0,
+		},
 
-	trilho: {
-		flexShrink: 0,
-		display: "flex",
-		flexDirection: "column",
-		alignItems: "flex-end",
-		gap: 4,
-		maxWidth: 132,
-	},
+		previa: {
+			minWidth: 0,
+			fontSize: "0.875rem",
+			color: c.textoApagado,
+			"& p": { margin: 0 },
+		},
 
-	linhaTopo: {
-		display: "flex",
-		alignItems: "center",
-		gap: 4,
-	},
+		previaNaoLida: {
+			color: c.texto2,
+			fontWeight: 500,
+		},
 
-	noTicketsDiv: {
-		display: "flex",
-		height: "100px",
-		margin: 40,
-		flexDirection: "column",
-		alignItems: "center",
-		justifyContent: "center",
-	},
+		naoLidas: {
+			flexShrink: 0,
+			minWidth: 20,
+			height: 20,
+			padding: "0 6px",
+			borderRadius: 10,
+			backgroundColor: c.sinal,
+			color: c.sinalTexto,
+			fontSize: "0.72rem",
+			fontWeight: 700,
+			display: "inline-flex",
+			alignItems: "center",
+			justifyContent: "center",
+		},
 
-	noTicketsText: {
-		textAlign: "center",
-		color: "rgb(104, 121, 146)",
-		fontSize: "14px",
-		lineHeight: "1.4",
-	},
+		meta: {
+			display: "flex",
+			alignItems: "center",
+			gap: 8,
+			marginTop: 6,
+			minWidth: 0,
+			fontSize: "0.78rem",
+			color: c.textoApagado,
+		},
 
-	noTicketsTitle: {
-		textAlign: "center",
-		fontSize: "16px",
-		fontWeight: "600",
-		margin: "0px",
-	},
+		espera: {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: 4,
+			fontWeight: 700,
+			whiteSpace: "nowrap",
+		},
+		esperaOk: { color: c.sucesso },
+		esperaAtencao: { color: c.atencao },
+		esperaCritico: { color: c.erro },
+		esperaIcone: { fontSize: "0.95rem" },
 
-	// Tempo de espera: numa fila, saber há quanto tempo o cliente aguarda vale
-	// mais que qualquer outro dado da linha. Muda de cor conforme atrasa.
-	waitBadge: {
-		display: "inline-flex",
-		alignItems: "center",
-		gap: 3,
-		marginLeft: 6,
-		padding: "1px 7px",
-		borderRadius: 8,
-		fontSize: "0.68rem",
-		fontWeight: 700,
-		whiteSpace: "nowrap",
-	},
-	waitOk: {
-		backgroundColor: "rgba(46,158,91,0.14)",
-		color: "#2e9e5b",
-	},
-	waitAtencao: {
-		backgroundColor: "rgba(199,119,0,0.16)",
-		color: "#c77700",
-	},
-	waitCritico: {
-		backgroundColor: "rgba(214,69,69,0.16)",
-		color: "#d64545",
-	},
-	waitIcon: {
-		fontSize: "0.82rem",
-	},
+		etiqueta: {
+			display: "inline-flex",
+			alignItems: "center",
+			gap: 5,
+			minWidth: 0,
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+			whiteSpace: "nowrap",
+		},
 
-	acceptButton: {
-		minWidth: 0,
-		padding: "2px 12px",
-		fontSize: "0.75rem",
-		whiteSpace: "nowrap",
-	},
+		ponto: {
+			width: 8,
+			height: 8,
+			borderRadius: "50%",
+			flex: "none",
+		},
 
-	ticketQueueColor: {
-		flex: "none",
-		width: "8px",
-		height: "100%",
-		position: "absolute",
-		top: "0%",
-		left: "0%",
-	},
+		protocolo: {
+			fontFamily: "ui-monospace, monospace",
+			fontSize: "0.75rem",
+			color: c.textoApagado,
+		},
 
-	tagsWrapper: {
-		display: "inline-flex",
-		gap: 4,
-		flexWrap: "nowrap",
-		overflow: "hidden",
-		marginLeft: 4,
-	},
-
-	tagChip: {
-		color: "#fff",
-		borderRadius: 8,
-		padding: "0 6px",
-		fontSize: "0.68rem",
-		lineHeight: "16px",
-		whiteSpace: "nowrap",
-		maxWidth: 80,
-		overflow: "hidden",
-		textOverflow: "ellipsis",
-	},
-
-	// Só aparece nos resultados de busca: quem procurou por protocolo precisa
-	// confirmar que achou o atendimento certo sem abrir a conversa.
-	protocolo: {
-		fontFamily: "monospace",
-		fontSize: "0.68rem",
-		letterSpacing: "0.02em",
-		color: theme.palette.text.secondary,
-	},
-
-	userTag: {
-		maxWidth: "100%",
-		background: "#2576D2",
-		color: "#ffffff",
-		padding: "1px 8px",
-		borderRadius: 8,
-		fontSize: "0.68rem",
-		fontWeight: 600,
-		whiteSpace: "nowrap",
-		overflow: "hidden",
-		textOverflow: "ellipsis",
-	},
-}));
+		atender: {
+			flex: "none",
+		},
+	};
+});
 
 const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 	const classes = useStyles();
@@ -232,6 +188,7 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 			? formatWaitingTime(ticketDate(ticket), agora)
 			: null;
 	const nivelEspera = waitingLevel(ticketDate(ticket), agora);
+	const aguardando = ticket.status === "pending" && !ticket.contact?.isKnown;
 	const history = useHistory();
 	const [loading, setLoading] = useState(false);
 	const { ticketId } = useParams();
@@ -266,147 +223,85 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 	};
 
 	return (
-		<React.Fragment key={ticket.id}>
-			{/* ListItemButton porque o prop `button` do ListItem saiu no MUI v6:
-			    mantê-lo deixava a linha sem hover, foco nem ripple. */}
-			<ListItemButton
-				dense
-				// Pendente também abre: dá para ler o que o cliente quer antes de
-				// puxar o atendimento. O envio continua bloqueado enquanto o
-				// ticket não for aceito, então abrir não assume a conversa.
-				onClick={() => handleSelectTicket(ticket.id)}
-				selected={ticketId && +ticketId === ticket.id}
-				className={clsx(classes.ticket, {
-					[classes.pendingTicket]: ticket.status === "pending",
-				})}
-			>
-				<Tooltip
-					arrow
-					placement="right"
-					title={ticket.queue?.name || "Sem fila"}
-				>
-					<span
-						style={{ backgroundColor: ticket.queue?.color || "#7C7C7C" }}
-						className={classes.ticketQueueColor}
-					></span>
-				</Tooltip>
-				<ListItemAvatar className={classes.avatarBox}>
-					<Avatar src={ticket?.contact?.profilePicUrl} />
-				</ListItemAvatar>
+		<ListItemButton
+			onClick={() => handleSelectTicket(ticket.id)}
+			selected={Boolean(ticketId) && +ticketId === ticket.id}
+			className={classes.ticket}
+		>
+			<Avatar src={ticket?.contact?.profilePicUrl} className={classes.avatar} alt={ticket.contact?.name}>
+				{ticket.contact?.name?.[0]?.toUpperCase()}
+			</Avatar>
 
-				{/* Coluna do meio: encolhe e trunca. O minWidth 0 é o que permite
-				    o texto ser cortado em vez de empurrar a coluna da direita. */}
-				<div className={classes.miolo}>
-					<div className={classes.linhaNome}>
-						<Typography noWrap component="span" variant="body2" className={classes.nome}>
-							{ticket.contact.name}
-						</Typography>
-						{ticket.unreadMessages > 0 && (
-							<span className={classes.naoLidas}>{ticket.unreadMessages}</span>
-						)}
-					</div>
+			<div className={classes.miolo}>
+				<div className={classes.linhaNome}>
+					<Typography noWrap component="span" className={classes.nome}>
+						{ticket.contact.name}
+					</Typography>
+					<span className={clsx(classes.hora, { [classes.horaNova]: ticket.unreadMessages > 0 })}>
+						{isSameDay(parseISO(ticketDate(ticket)), new Date())
+							? format(parseISO(ticketDate(ticket)), "HH:mm")
+							: format(parseISO(ticketDate(ticket)), "dd/MM/yy")}
+					</span>
+				</div>
 
+				<div className={classes.linhaPrevia}>
 					<Typography
 						noWrap
 						component="div"
-						variant="body2"
-						color="textSecondary"
-						className={classes.previa}
+						className={clsx(classes.previa, { [classes.previaNaoLida]: ticket.unreadMessages > 0 })}
 					>
-						{ticket.lastMessage ? (
-							<MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
-						) : (
-							" "
-						)}
+						{ticket.lastMessage ? <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper> : " "}
 					</Typography>
-
-					{mostrarProtocolo && ticket.protocol && (
-						<Typography
-							noWrap
-							component="span"
-							variant="caption"
-							className={classes.protocolo}
-							title={i18n.t("ticketsList.protocol")}
-						>
-							{ticket.protocol}
-						</Typography>
-					)}
-
-					{ticket.tags?.length > 0 && (
-						<div className={classes.tagsWrapper}>
-							{ticket.tags.slice(0, 2).map(tag => (
-								<span
-									key={tag.id}
-									className={classes.tagChip}
-									style={{ backgroundColor: tag.color }}
-									title={tag.name}
-								>
-									{tag.name}
-								</span>
-							))}
-							{ticket.tags.length > 2 && (
-								<span className={classes.tagChip} style={{ backgroundColor: "#95a5a6" }}>
-									+{ticket.tags.length - 2}
-								</span>
-							)}
-						</div>
+					{ticket.unreadMessages > 0 && !aguardando && (
+						<span className={classes.naoLidas}>{ticket.unreadMessages}</span>
 					)}
 				</div>
 
-				{/* Coluna da direita: largura própria, nunca sobreposta ao texto. */}
-				<div className={classes.trilho}>
-					<div className={classes.linhaTopo}>
-						<Typography component="span" variant="caption" color="textSecondary">
-							{isSameDay(parseISO(ticketDate(ticket)), new Date())
-								? format(parseISO(ticketDate(ticket)), "HH:mm")
-								: format(parseISO(ticketDate(ticket)), "dd/MM/yy")}
-						</Typography>
-						{ticket.status === "pending" && espera && (
+				{(aguardando || mostrarProtocolo) && (
+					<div className={classes.meta}>
+						{aguardando && espera && (
 							<span
-								className={clsx(classes.waitBadge, {
-									[classes.waitOk]: nivelEspera === "ok",
-									[classes.waitAtencao]: nivelEspera === "atencao",
-									[classes.waitCritico]: nivelEspera === "critico",
+								className={clsx(classes.espera, {
+									[classes.esperaOk]: nivelEspera === "ok",
+									[classes.esperaAtencao]: nivelEspera === "atencao",
+									[classes.esperaCritico]: nivelEspera === "critico",
 								})}
 								title={i18n.t("ticketsList.waitingFor")}
 							>
-								<AccessTimeIcon className={classes.waitIcon} />
-								{espera}
+								<AccessTimeIcon className={classes.esperaIcone} />
+								{espera === "agora" ? "Chegou agora" : `Esperando há ${espera}`}
 							</span>
 						)}
+						{mostrarProtocolo && ticket.protocol ? (
+							<span className={classes.protocolo} title={i18n.t("ticketsList.protocol")}>
+								{ticket.protocol}
+							</span>
+						) : aguardando && ticket.queue?.name ? (
+							<span className={classes.etiqueta} title="Fila">
+								<span className={classes.ponto} style={{ backgroundColor: ticket.queue.color || "#9AA1AC" }} />
+								{ticket.queue.name}
+							</span>
+						) : null}
 					</div>
+				)}
+			</div>
 
-					{ticket.whatsappId && ticket.whatsapp?.name && (
-						<span
-							className={classes.userTag}
-							title={i18n.t("ticketsList.connectionTitle")}
-						>
-							{ticket.whatsapp.name}
-						</span>
-					)}
-
-					{/* Conhecido não se aceita: qualquer atendente já pode responder. */}
-					{ticket.status === "pending" && !ticket.contact?.isKnown && (
-						<ButtonWithSpinner
-							color="primary"
-							variant="contained"
-							className={classes.acceptButton}
-							size="small"
-							loading={loading}
-							onClick={e => {
-								// Sem isto o clique subiria para a linha e abriria a
-								// conversa junto com o aceite.
-								e.stopPropagation();
-								handleAcepptTicket(ticket.id);
-							}}
-						>
-							{i18n.t("ticketsList.buttons.accept")}
-						</ButtonWithSpinner>
-					)}
-				</div>
-			</ListItemButton>
-			<Divider variant="inset" component="li" />
-		</React.Fragment>
+			{aguardando && (
+				<ButtonWithSpinner
+					color="primary"
+					variant="contained"
+					className={classes.atender}
+					size="small"
+					loading={loading}
+					onClick={e => {
+						e.stopPropagation();
+						handleAcepptTicket(ticket.id);
+					}}
+				>
+					Atender
+				</ButtonWithSpinner>
+			)}
+		</ListItemButton>
 	);
 };
 
