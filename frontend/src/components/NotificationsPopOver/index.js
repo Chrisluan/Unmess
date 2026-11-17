@@ -6,6 +6,8 @@ import useSound from "use-sound";
 
 import Popover from "@mui/material/Popover";
 import List from "@mui/material/List";
+import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
 import makeStyles from '@mui/styles/makeStyles';
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 

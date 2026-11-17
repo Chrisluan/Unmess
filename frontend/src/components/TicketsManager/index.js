@@ -26,6 +26,7 @@ import TicketsList from "../TicketsList";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
+import { Can } from "../Can";
 import usePermissions from "../../hooks/usePermissions";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";

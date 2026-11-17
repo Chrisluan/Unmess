@@ -16,6 +16,9 @@ import GeneralTab from "./GeneralTab";
 import BusinessHoursTab from "./BusinessHoursTab";
 import Connections from "../Connections";
 import BrandingTab from "./BrandingTab";
+import TicketStatusesTab from "../Cadastros/TicketStatusesTab";
+import TagsTab from "../Cadastros/TagsTab";
+import AutoMessagesTab from "../Cadastros/AutoMessagesTab";
 
 import Title from "../../components/Title";
 import { ABAS_CONFIGURACOES } from "../../layout/ajustesItens";
