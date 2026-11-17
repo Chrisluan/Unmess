@@ -70,8 +70,6 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
   const c = ehEscuro ? escuro : claro;
   const raio = 12;
 
-  const primaria = escuro ? azul.claro : azul.medio;
-
   return createTheme(
     {
       palette: {
