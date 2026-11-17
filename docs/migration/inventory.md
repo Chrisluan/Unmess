@@ -27,17 +27,17 @@ Legenda: ✅ migrado e testado · ⏳ pendente
 | companies | CRUD (super) e `GET/PUT /company/branding` | ✅ |
 | settings | `GET /settings`, `GET /settings/attendance`, `PUT /settings/:key` | ✅ |
 | queues | CRUD `/queue` | ✅ |
-| tags | CRUD `/tags` | ✅ (falta `PUT /tickets/:id/tags`, que entra com tickets) |
+| tags | CRUD `/tags` e `PUT /tickets/:id/tags` | ✅ |
 | quick-answers | CRUD `/quick-answers` | ✅ |
 | ticket-statuses | CRUD `/ticket-statuses` | ✅ |
 | business-hours / holidays | 5 rotas | ✅ |
-| stickers | 5 rotas | ✅ listar, criar e excluir (enviar e salvar a partir de mensagem entram com mensagens) |
+| stickers | 5 rotas | ✅ |
 | products | 5 rotas | ✅ |
 | customers | 6 rotas | ✅ |
 | contacts | 9 rotas, incluindo importação | ✅ (validação de número, foto e importação via gateway) |
-| tickets | 6 rotas + regras de abas | ⏳ |
-| messages | 6 rotas (envio, mídia, edição, exclusão, notas internas) | ⏳ |
-| whatsapp / sessions | CRUD de conexões + iniciar/reiniciar/remover sessão via gateway | ⏳ |
+| tickets | 6 rotas + regras de abas | ✅ |
+| messages | 6 rotas (envio, mídia, edição, exclusão, notas internas, encaminhar) | ✅ |
+| whatsapp / sessions | CRUD de conexões + iniciar/reiniciar/remover sessão via gateway | ✅ |
 | api externa | `POST /api/messages/send` | ⏳ |
 | dashboard | `GET /dashboard/metrics` | ⏳ |
 | crm | quadros, etapas, negócios, itens, atividades, ordem de serviço (31 rotas) | ⏳ |
@@ -46,8 +46,8 @@ Legenda: ✅ migrado e testado · ⏳ pendente
 
 | Item | Situação |
 | --- | --- |
-| Eventos do gateway → contatos, tickets e mensagens | ⏳ |
-| Job de fechar tickets inativos | ⏳ |
+| Eventos do gateway → contatos, tickets e mensagens | ✅ (fila por opção, saudação, fora do horário, vCard, grupos, LID) |
+| Job de fechar tickets inativos | ✅ (a cada 5 min, mais a retomada das sessões ao iniciar) |
 | Adaptador SignalR no frontend (`frontend/src/services/socket-io.js`) | ⏳ |
 | Troca do frontend para o .NET e remoção da pasta `backend/` | ⏳ |
 

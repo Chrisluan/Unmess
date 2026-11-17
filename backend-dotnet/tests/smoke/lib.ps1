@@ -61,7 +61,14 @@ function New-TestImage {
     return $path
 }
 
-function Upload($path, $fields, $file, $contentType, $token) {
+function Fake-Inbound([int]$sessionId, $body) {
+    $envValues = Read-DevEnv
+    $headers = @{ Authorization = "Bearer $($envValues.GATEWAY_API_TOKEN)" }
+    $json = [System.Text.Encoding]::UTF8.GetBytes(($body | ConvertTo-Json))
+    return Invoke-RestMethod -Method Post "http://localhost:$($envValues.GATEWAY_PORT)/v1/fake/sessions/$sessionId/inbound" -Headers $headers -ContentType "application/json; charset=utf-8" -Body $json
+}
+
+function Upload($path, $fields, $file, $contentType, $token, [string]$Field = "file") {
     Add-Type -AssemblyName System.Net.Http
     $client = New-Object System.Net.Http.HttpClient
     $client.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", $token)
@@ -69,7 +76,7 @@ function Upload($path, $fields, $file, $contentType, $token) {
     foreach ($key in $fields.Keys) { $form.Add((New-Object System.Net.Http.StringContent([string]$fields[$key])), $key) }
     $bytes = New-Object System.Net.Http.ByteArrayContent(,[System.IO.File]::ReadAllBytes($file))
     $bytes.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue($contentType)
-    $form.Add($bytes, "file", [System.IO.Path]::GetFileName($file))
+    $form.Add($bytes, $Field, [System.IO.Path]::GetFileName($file))
     $response = $client.PostAsync("$base$path", $form).GetAwaiter().GetResult()
     $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
     $client.Dispose()

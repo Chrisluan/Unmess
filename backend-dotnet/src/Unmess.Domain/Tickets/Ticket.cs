@@ -29,4 +29,5 @@ public sealed class Ticket : Entidade
     public string? Protocolo { get; set; }
     public bool SaudacaoEnviada { get; set; }
     public DateTimeOffset? UltimaMensagemEm { get; set; }
+    public List<Unmess.Domain.Etiquetas.Etiqueta> Etiquetas { get; set; } = [];
 }

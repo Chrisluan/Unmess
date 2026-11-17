@@ -7,6 +7,7 @@ using Unmess.Domain.Clientes;
 using Unmess.Domain.Comum;
 using Unmess.Domain.Contatos;
 using Unmess.Domain.Figurinhas;
+using Unmess.Domain.Mensagens;
 using Unmess.Domain.Produtos;
 using Unmess.Domain.Configuracoes;
 using Unmess.Domain.Etiquetas;
@@ -45,6 +46,7 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Produto> Produtos => Set<Produto>();
     public DbSet<Figurinha> Figurinhas => Set<Figurinha>();
+    public DbSet<Mensagem> Mensagens => Set<Mensagem>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -153,6 +155,38 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
             entity.HasOne(item => item.Fila).WithMany().HasForeignKey(item => item.FilaId);
             entity.HasOne(item => item.ConexaoWhatsapp).WithMany().HasForeignKey(item => item.ConexaoWhatsappId);
             entity.HasOne(item => item.SituacaoDeEncerramento).WithMany().HasForeignKey(item => item.SituacaoDeEncerramentoId);
+            entity.HasMany(item => item.Etiquetas).WithMany().UsingEntity("TicketTags",
+                right => right.HasOne(typeof(Etiqueta)).WithMany().HasForeignKey("tagId"),
+                left => left.HasOne(typeof(Ticket)).WithMany().HasForeignKey("ticketId"),
+                join => JoinTimestamps(join));
+        });
+
+        modelBuilder.Entity<Mensagem>(entity =>
+        {
+            entity.ToTable("Messages");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasColumnName("id");
+            entity.Property(item => item.Corpo).HasColumnName("body");
+            entity.Property(item => item.Ack).HasColumnName("ack");
+            entity.Property(item => item.Lida).HasColumnName("read");
+            entity.Property(item => item.TipoDeMidia).HasColumnName("mediaType");
+            entity.Property(item => item.ArquivoDeMidia).HasColumnName("mediaUrl");
+            entity.Property(item => item.TicketId).HasColumnName("ticketId");
+            entity.Property(item => item.DeMim).HasColumnName("fromMe");
+            entity.Property(item => item.Excluida).HasColumnName("isDeleted");
+            entity.Property(item => item.ContatoId).HasColumnName("contactId");
+            entity.Property(item => item.CitadaId).HasColumnName("quotedMsgId");
+            entity.Property(item => item.Interna).HasColumnName("isInternal");
+            entity.Property(item => item.UsuarioId).HasColumnName("userId");
+            entity.Property(item => item.DoAplicativo).HasColumnName("fromApp");
+            entity.Property(item => item.Editada).HasColumnName("isEdited");
+            entity.Property(item => item.Momento).HasColumnName("timestamp");
+            entity.Property(item => item.CriadoEm).HasColumnName("createdAt").HasColumnType("datetime(6)");
+            entity.Property(item => item.AtualizadoEm).HasColumnName("updatedAt").HasColumnType("datetime(6)");
+            entity.HasOne(item => item.Ticket).WithMany().HasForeignKey(item => item.TicketId);
+            entity.HasOne(item => item.Contato).WithMany().HasForeignKey(item => item.ContatoId);
+            entity.HasOne(item => item.Usuario).WithMany().HasForeignKey(item => item.UsuarioId);
+            entity.HasOne(item => item.Citada).WithMany().HasForeignKey(item => item.CitadaId);
         });
 
         modelBuilder.Entity<Contato>(entity =>

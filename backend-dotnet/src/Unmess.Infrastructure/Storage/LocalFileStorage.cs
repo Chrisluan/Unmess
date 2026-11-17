@@ -86,5 +86,11 @@ public sealed partial class LocalFileStorage(IOptions<UploadOptions> options, Ti
         }
     }
 
-    public string CaminhoCompleto(string nomeDoArquivo) => Path.Combine(Root, Path.GetFileName(nomeDoArquivo));
+    public string CaminhoCompleto(string nomeDoArquivo)
+    {
+        var caminho = Path.GetFullPath(Path.Combine(Root, nomeDoArquivo.Replace('\\', '/').TrimStart('/')));
+        return caminho.StartsWith(Root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            ? caminho
+            : Path.Combine(Root, Path.GetFileName(nomeDoArquivo));
+    }
 }

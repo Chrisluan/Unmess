@@ -5,6 +5,7 @@ using Unmess.Domain.Clientes;
 using Unmess.Domain.Conexoes;
 using Unmess.Domain.Contatos;
 using Unmess.Domain.Figurinhas;
+using Unmess.Domain.Mensagens;
 using Unmess.Domain.Produtos;
 using Unmess.Domain.Configuracoes;
 using Unmess.Domain.Etiquetas;
@@ -38,6 +39,7 @@ public interface IUnmessDbContext
     DbSet<Cliente> Clientes { get; }
     DbSet<Produto> Produtos { get; }
     DbSet<Figurinha> Figurinhas { get; }
+    DbSet<Mensagem> Mensagens { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -60,11 +60,10 @@ export class SessionManager implements AdapterListener {
   async disconnect(sessionId: string, logout: boolean): Promise<SessionSnapshot> {
     this.clearReconnect(sessionId);
     const current = this.sessions.get(sessionId);
-    this.sessions.save({
-      sessionId,
-      status: logout ? "needs_qr" : "disconnected",
+    this.setStatus(sessionId, logout ? "needs_qr" : "disconnected", {
+      desiredConnected: false,
       phoneNumber: logout ? undefined : current?.phoneNumber,
-      desiredConnected: false
+      reason: logout ? "logged_out" : "disconnected"
     });
     this.qrCodes.delete(sessionId);
     await this.adapter.disconnect(sessionId, logout);

@@ -87,7 +87,7 @@ Saúde: `/health/live` (processo) e `/health/ready` (banco).
 | `GATEWAY_ENCRYPTION_KEY` | 64 hex | criptografa as credenciais em repouso |
 | `GATEWAY_SEND_INTERVAL_MS` | `1500` | ritmo mínimo entre envios por número |
 | `GATEWAY_SYNC_FULL_HISTORY` | `false` | histórico fica no núcleo |
-| `GATEWAY_DATA_DIR` / `GATEWAY_MEDIA_DIR` | `/data` / `/media` | volumes nomeados, **incluídos no backup** |
+| `GATEWAY_DATA_DIR` / `GATEWAY_MEDIA_DIR` | `/data` / `/media` | volumes nomeados, **incluídos no backup**; `/media` precisa ser o mesmo volume montado como pasta de uploads do backend .NET (`Uploads__Directory`), porque as mídias recebidas e enviadas são lidas pelos dois |
 
 Saúde: `/health/live` e `/health/ready` (SQLite). Métricas por sessão em `/v1/metrics`.
 

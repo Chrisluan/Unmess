@@ -128,6 +128,7 @@ function Set-ProcessEnv($Config) {
     $env:GATEWAY_SEND_INTERVAL_MS = $Config["GATEWAY_SEND_INTERVAL_MS"]
     $env:GATEWAY_CORE_WEBHOOK_URL = "http://localhost:$($Config["DOTNET_API_PORT"])/internal/whatsapp-gateway/events"
     $env:GATEWAY_DATA_DIR = Join-Path $Root "whatsapp-gateway\data"
+    $env:GATEWAY_MEDIA_DIR = Join-Path $Root "backend\public"
     Remove-Item Env:PORT -ErrorAction SilentlyContinue
 }
 

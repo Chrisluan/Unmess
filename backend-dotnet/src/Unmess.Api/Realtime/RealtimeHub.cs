@@ -2,23 +2,17 @@ using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Unmess.Application.Common;
 using Unmess.Application.Usuarios;
 using Unmess.Infrastructure.Database;
 
 namespace Unmess.Api.Realtime;
 
-public static class RealtimeRooms
-{
-    public static string Company(int companyId) => $"company-{companyId}";
-    public static string Notification(int companyId) => $"company-{companyId}-notification";
-    public static string Status(int companyId, string status) => $"company-{companyId}-status-{status}";
-    public static string Ticket(int companyId, string ticketId) => $"company-{companyId}-ticket-{ticketId}";
-}
-
 [Authorize]
 public sealed class RealtimeHub(
     IUsuarioAtual usuarioAtual,
     PresenceTracker presence,
+    RoomMembership membership,
     IServiceScopeFactory scopeFactory,
     ILogger<RealtimeHub> logger) : Hub
 {
@@ -29,7 +23,7 @@ public sealed class RealtimeHub(
         var usuario = usuarioAtual.Obter();
         if (usuario?.EmpresaId is { } empresaId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeRooms.Company(empresaId));
+            await JoinAsync(RealtimeRooms.Company(empresaId));
             if (presence.Connect(usuario.Id, Context.ConnectionId))
             {
                 await SetPresenceAsync(usuario.Id, empresaId, true);
@@ -42,6 +36,7 @@ public sealed class RealtimeHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        membership.Disconnect(Context.ConnectionId);
         var usuario = usuarioAtual.Obter();
         if (usuario?.EmpresaId is { } empresaId && presence.Disconnect(usuario.Id, Context.ConnectionId))
         {
@@ -53,24 +48,29 @@ public sealed class RealtimeHub(
     }
 
     public Task JoinChatBox(string ticketId) =>
-        usuarioAtual.Obter()?.EmpresaId is { } empresaId
-            ? Groups.AddToGroupAsync(Context.ConnectionId, RealtimeRooms.Ticket(empresaId, ticketId))
-            : Task.CompletedTask;
+        usuarioAtual.Obter()?.EmpresaId is { } empresaId ? JoinAsync(RealtimeRooms.Ticket(empresaId, ticketId)) : Task.CompletedTask;
 
-    public Task LeaveChatBox(string ticketId) =>
-        usuarioAtual.Obter()?.EmpresaId is { } empresaId
-            ? Groups.RemoveFromGroupAsync(Context.ConnectionId, RealtimeRooms.Ticket(empresaId, ticketId))
-            : Task.CompletedTask;
+    public async Task LeaveChatBox(string ticketId)
+    {
+        if (usuarioAtual.Obter()?.EmpresaId is { } empresaId)
+        {
+            var room = RealtimeRooms.Ticket(empresaId, ticketId);
+            membership.Leave(Context.ConnectionId, room);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, room);
+        }
+    }
 
     public Task JoinNotification() =>
-        usuarioAtual.Obter()?.EmpresaId is { } empresaId
-            ? Groups.AddToGroupAsync(Context.ConnectionId, RealtimeRooms.Notification(empresaId))
-            : Task.CompletedTask;
+        usuarioAtual.Obter()?.EmpresaId is { } empresaId ? JoinAsync(RealtimeRooms.Notification(empresaId)) : Task.CompletedTask;
 
     public Task JoinTickets(string status) =>
-        usuarioAtual.Obter()?.EmpresaId is { } empresaId
-            ? Groups.AddToGroupAsync(Context.ConnectionId, RealtimeRooms.Status(empresaId, status))
-            : Task.CompletedTask;
+        usuarioAtual.Obter()?.EmpresaId is { } empresaId ? JoinAsync(RealtimeRooms.Status(empresaId, status)) : Task.CompletedTask;
+
+    private Task JoinAsync(string room)
+    {
+        membership.Join(Context.ConnectionId, room);
+        return Groups.AddToGroupAsync(Context.ConnectionId, room);
+    }
 
     private async Task SetPresenceAsync(int usuarioId, int empresaId, bool online)
     {

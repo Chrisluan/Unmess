@@ -51,9 +51,9 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.Configure<MediaOptions>(configuration.GetSection(MediaOptions.SectionName));
         services.AddSingleton<IConversorDeFigurinha, FfmpegConversorDeFigurinha>();
+        services.AddSingleton<Unmess.Application.Mensagens.IConversorDeAudio, FfmpegConversorDeAudio>();
 
         services.AddHttpClient<IWhatsappGateway, WhatsappGatewayClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
-        services.AddScoped<IGatewayEventHandler, LoggingGatewayEventHandler>();
         services.AddMemoryCache();
 
         services.AddHealthChecks()

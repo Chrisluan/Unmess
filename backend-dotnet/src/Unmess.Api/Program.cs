@@ -34,6 +34,7 @@ builder.Services.ConfigureHttpJsonOptions(options => JsonSetup.Configure(options
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<LoginAttemptLimiter>();
 builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddSingleton<RoomMembership>();
 builder.Services.AddSingleton<IRealtimePublisher, SignalRRealtimePublisher>();
 builder.Services.AddExceptionHandler<AppExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -93,6 +94,7 @@ app.MapGrupoDePermissaoEndpoints();
 app.MapEmpresaEndpoints();
 app.MapCadastroEndpoints();
 app.MapContatoEClienteEndpoints();
+app.MapAtendimentoEndpoints();
 app.MapHub<RealtimeHub>(RealtimeHub.Path);
 
 app.Run();
