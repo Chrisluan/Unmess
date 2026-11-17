@@ -24,7 +24,7 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
-        theme_color: "#2576d2",
+        theme_color: "#5B45D6",
         background_color: "#f7f8fa",
         // O 512x512 não é enfeite: sem ele o Chrome não considera o app
         // instalável e o convite "Instalar aplicativo" simplesmente não

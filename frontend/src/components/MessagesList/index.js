@@ -4,7 +4,6 @@ import { isSameDay, parseISO, format } from "date-fns";
 import openSocket from "../../services/socket-io";
 import clsx from "clsx";
 
-import { green } from "@mui/material/colors";
 import { Button, CircularProgress, Divider, IconButton, InputBase } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 import {
@@ -25,7 +24,6 @@ import VcardPreview from "../VcardPreview";
 import LocationPreview from "../LocationPreview";
 import ModalImageCors from "../ModalImageCors";
 import MessageOptionsMenu from "../MessageOptionsMenu";
-import whatsBackground from "../../assets/wa-background.png";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -43,20 +41,21 @@ const useStyles = makeStyles((theme) => ({
   },
 
   messagesList: {
-    backgroundImage: `url(${whatsBackground})`,
+    backgroundColor: theme.palette.unmess.fundoConversa,
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,
-    padding: "20px 20px 20px 20px",
+    padding: "20px 6% 16px",
+    gap: 4,
     overflowY: "scroll",
     [theme.breakpoints.down('md')]: {
-      paddingBottom: "90px",
+      padding: "16px 10px 12px",
     },
     ...theme.scrollbarStyles,
   },
 
   circleLoading: {
-    color: green[500],
+    color: theme.palette.unmess.primaria,
     position: "absolute",
     opacity: "70%",
     top: 0,
@@ -80,25 +79,25 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#ffffff",
-    color: "#303030",
+    backgroundColor: theme.palette.unmess.balaoRecebido,
+    color: theme.palette.unmess.texto,
     alignSelf: "flex-start",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 5,
+    borderRadius: 14,
+    borderTopLeftRadius: 4,
+    fontSize: "0.9375rem",
+    lineHeight: 1.5,
+    paddingLeft: 6,
+    paddingRight: 6,
+    paddingTop: 6,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    boxShadow: theme.palette.unmess.sombra,
   },
 
   quotedContainerLeft: {
     margin: "-3px -80px 6px -6px",
     overflow: "hidden",
-    backgroundColor: "#f0f0f0",
-    borderRadius: "7.5px",
+    backgroundColor: theme.palette.unmess.superficie2,
+    borderRadius: 10,
     display: "flex",
     position: "relative",
   },
@@ -115,7 +114,7 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorLeft: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#6bcbef",
+    backgroundColor: theme.palette.unmess.textoApagado,
   },
 
   messageRight: {
@@ -134,25 +133,25 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#dcf8c6",
-    color: "#303030",
+    backgroundColor: theme.palette.unmess.balaoEnviado,
+    color: theme.palette.unmess.texto,
     alignSelf: "flex-end",
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 0,
-    paddingLeft: 5,
-    paddingRight: 5,
-    paddingTop: 5,
+    borderRadius: 14,
+    borderTopRightRadius: 4,
+    fontSize: "0.9375rem",
+    lineHeight: 1.5,
+    paddingLeft: 6,
+    paddingRight: 6,
+    paddingTop: 6,
     paddingBottom: 0,
-    boxShadow: "0 1px 1px #b3b3b3",
+    boxShadow: theme.palette.unmess.sombra,
   },
 
   quotedContainerRight: {
     margin: "-3px -80px 6px -6px",
     overflowY: "hidden",
-    backgroundColor: "#cfe9ba",
-    borderRadius: "7.5px",
+    backgroundColor: theme.palette.unmess.primariaSuave,
+    borderRadius: 10,
     display: "flex",
     position: "relative",
   },
@@ -167,13 +166,13 @@ const useStyles = makeStyles((theme) => ({
   quotedSideColorRight: {
     flex: "none",
     width: "4px",
-    backgroundColor: "#35cd96",
+    backgroundColor: theme.palette.unmess.primaria,
   },
 
   messageActionsButton: {
     display: "none",
     position: "relative",
-    color: "#999",
+    color: theme.palette.unmess.textoApagado,
     zIndex: 1,
     backgroundColor: "inherit",
     opacity: "90%",
@@ -182,8 +181,8 @@ const useStyles = makeStyles((theme) => ({
 
   messageContactName: {
     display: "flex",
-    color: "#6bcbef",
-    fontWeight: 500,
+    color: theme.palette.unmess.primariaSuaveTexto,
+    fontWeight: 600,
   },
 
   textContentItem: {
@@ -193,7 +192,7 @@ const useStyles = makeStyles((theme) => ({
 
   textContentItemDeleted: {
     fontStyle: "italic",
-    color: "rgba(0, 0, 0, 0.36)",
+    color: theme.palette.unmess.textoApagado,
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
   },
@@ -249,24 +248,25 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 11,
     position: "absolute",
     bottom: 0,
-    right: 5,
-    color: "#999",
+    right: 8,
+    color: theme.palette.unmess.textoApagado,
   },
 
   dailyTimestamp: {
     alignItems: "center",
     textAlign: "center",
     alignSelf: "center",
-    width: "110px",
-    backgroundColor: "#e1f3fb",
+    backgroundColor: theme.palette.unmess.superficie,
     margin: "10px",
-    borderRadius: "10px",
-    boxShadow: "0 1px 1px #b3b3b3",
+    borderRadius: 999,
+    fontSize: "0.8125rem",
+    fontWeight: 600,
   },
 
   dailyTimestampText: {
-    color: "#808888",
-    padding: 8,
+    color: theme.palette.unmess.textoApagado,
+    padding: "4px 12px",
+    display: "block",
     alignSelf: "center",
     marginLeft: "0px",
   },
@@ -279,23 +279,22 @@ const useStyles = makeStyles((theme) => ({
   },
 
   internalNote: {
-    backgroundColor: "#fff8c4",
-    border: "1px solid #f0e2a0",
-    color: "#5a4b00",
-    borderRadius: 8,
-    padding: "6px 10px",
+    backgroundColor: theme.palette.unmess.atencaoSuave,
+    border: `1px dashed ${theme.palette.unmess.atencao}`,
+    color: theme.palette.unmess.texto,
+    borderRadius: 12,
+    padding: "8px 12px",
     maxWidth: "70%",
     fontSize: "0.9em",
     whiteSpace: "pre-wrap",
-    boxShadow: "0 1px 1px rgba(0,0,0,0.1)",
+    boxShadow: "none",
   },
 
   internalNoteLabel: {
     display: "block",
     fontWeight: 600,
-    fontSize: "0.72rem",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    fontSize: "0.78rem",
+    color: theme.palette.unmess.atencao,
     marginBottom: 2,
   },
 
@@ -318,9 +317,9 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: 8,
-    padding: "4px 8px",
-    borderBottom: "1px solid rgba(0,0,0,0.12)",
-    backgroundColor: "#f7f7f7",
+    padding: "4px 12px",
+    borderBottom: `1px solid ${theme.palette.unmess.linha}`,
+    backgroundColor: theme.palette.unmess.superficie,
   },
 
   ackIcons: {
@@ -336,7 +335,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   ackDoneAllIcon: {
-    color: green[500],
+    color: theme.palette.unmess.primaria,
     fontSize: 18,
     verticalAlign: "middle",
     marginLeft: 4,
@@ -942,7 +941,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
           </IconButton>
         )}
         {debouncedSearch && (
-          <span style={{ fontSize: "0.78rem", color: "#666", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: "0.8125rem", whiteSpace: "nowrap", opacity: 0.75 }}>
             {i18n.t("messagesList.searchResults", {
               count: messagesList.length,
             })}

@@ -1,0 +1,79 @@
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
+import BoltOutlinedIcon from "@mui/icons-material/BoltOutlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
+import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
+import SmsOutlinedIcon from "@mui/icons-material/SmsOutlined";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
+import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
+import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
+import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
+
+export const ABAS_CONFIGURACOES = ["geral", "conexoes", "horarios", "status", "etiquetas", "mensagens", "marca"];
+
+export const SECOES_AJUSTES = [
+  {
+    titulo: "Atendimento",
+    itens: [
+      { rotulo: "Números de WhatsApp", para: "/Settings?aba=conexoes", permissao: "settings:access", Icone: WhatsAppIcon },
+      { rotulo: "Filas", para: "/Queues", permissao: "queues:access", Icone: AccountTreeOutlinedIcon },
+      { rotulo: "Respostas rápidas", para: "/quickAnswers", permissao: "quickAnswers:access", Icone: BoltOutlinedIcon },
+      { rotulo: "Etiquetas", para: "/Settings?aba=etiquetas", permissao: "settings:access", Icone: LocalOfferOutlinedIcon },
+      { rotulo: "Horário de atendimento", para: "/Settings?aba=horarios", permissao: "settings:access", Icone: ScheduleOutlinedIcon },
+      { rotulo: "Motivos de encerramento", para: "/Settings?aba=status", permissao: "settings:access", Icone: TaskAltOutlinedIcon },
+      { rotulo: "Mensagens automáticas", para: "/Settings?aba=mensagens", permissao: "settings:access", Icone: SmsOutlinedIcon }
+    ]
+  },
+  {
+    titulo: "Vendas",
+    itens: [
+      { rotulo: "Produtos", para: "/products", permissao: "products:access", Icone: Inventory2OutlinedIcon }
+    ]
+  },
+  {
+    titulo: "Equipe",
+    itens: [
+      { rotulo: "Usuários", para: "/users", permissao: "users:access", Icone: PeopleAltOutlinedIcon },
+      { rotulo: "Grupos de permissão", para: "/permission-groups", permissao: "permissionGroups:access", Icone: ShieldOutlinedIcon }
+    ]
+  },
+  {
+    titulo: "Conta",
+    itens: [
+      { rotulo: "Geral", para: "/Settings?aba=geral", permissao: "settings:access", Icone: TuneOutlinedIcon },
+      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:access", Icone: PaletteOutlinedIcon }
+    ]
+  },
+  {
+    titulo: "Plataforma",
+    apenasSuper: true,
+    itens: [
+      { rotulo: "Empresas", para: "/companies", Icone: BusinessOutlinedIcon }
+    ]
+  }
+];
+
+export const ROTAS_AJUSTES = ["/settings", "/queues", "/quickanswers", "/products", "/users", "/permission-groups", "/companies"];
+
+export const ehRotaDeAjustes = (pathname) =>
+  ROTAS_AJUSTES.some((rota) => pathname.toLowerCase().startsWith(rota));
+
+export const secoesVisiveis = ({ can, ehSuper }) =>
+  SECOES_AJUSTES.filter((secao) => !secao.apenasSuper || ehSuper)
+    .map((secao) => ({
+      ...secao,
+      itens: secao.itens.filter((item) => !item.permissao || can(item.permissao))
+    }))
+    .filter((secao) => secao.itens.length > 0);
+
+export const itemAtivo = (item, { pathname, search }) => {
+  const [caminho, consulta] = item.para.split("?");
+  if (pathname.toLowerCase() !== caminho.toLowerCase()) return false;
+  if (!consulta) return true;
+  const esperado = new URLSearchParams(consulta).get("aba");
+  const atual = new URLSearchParams(search).get("aba") || "geral";
+  return esperado === atual;
+};

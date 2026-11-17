@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
 import makeStyles from '@mui/styles/makeStyles';
-import Container from "@mui/material/Container";
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n.js";
@@ -19,20 +18,52 @@ import Connections from "../Connections";
 import TagsTab from "./TagsTab";
 import BrandingTab from "./BrandingTab";
 
+import Title from "../../components/Title";
+import { ABAS_CONFIGURACOES } from "../../layout/ajustesItens";
+
+const SUBTITULOS = {
+	geral: "Regras do atendimento e preferências da empresa.",
+	conexoes: "Números de WhatsApp ligados ao Unmess.",
+	horarios: "Quando a equipe atende e o que responder fora do horário.",
+	status: "Motivos que o atendente escolhe ao resolver uma conversa.",
+	etiquetas: "Etiquetas para organizar conversas e contatos.",
+	mensagens: "Mensagens enviadas sozinhas em momentos do atendimento.",
+	marca: "Nome e logo que aparecem para a sua equipe.",
+};
+
+const TITULOS = {
+	geral: "settings.tabs.general",
+	conexoes: "settings.tabs.connections",
+	horarios: "settings.tabs.businessHours",
+	status: "settings.tabs.ticketStatuses",
+	etiquetas: "settings.tabs.tags",
+	mensagens: "settings.tabs.autoMessages",
+	marca: "settings.tabs.branding",
+};
+
 const useStyles = makeStyles(theme => ({
 	root: {
-		padding: theme.spacing(4),
+		padding: theme.spacing(3, 4, 4),
+		maxWidth: 1200,
+		width: "100%",
+		[theme.breakpoints.down("sm")]: {
+			padding: theme.spacing(2),
+		},
 	},
-	tabPanel: {
-		paddingTop: theme.spacing(3),
+	cabecalho: {
+		marginBottom: theme.spacing(3),
 	},
+	tabPanel: {},
 }));
 
 const Settings = () => {
 	const classes = useStyles();
 
 	const [settings, setSettings] = useState([]);
-	const [tab, setTab] = useState(0);
+	const { search } = useLocation();
+	const abaPedida = new URLSearchParams(search).get("aba");
+	const aba = ABAS_CONFIGURACOES.includes(abaPedida) ? abaPedida : "geral";
+	const tab = ABAS_CONFIGURACOES.indexOf(aba);
 
 	const fetchSettings = useCallback(async () => {
 		try {
@@ -79,24 +110,12 @@ const Settings = () => {
 
 	return (
 		<div className={classes.root}>
-			<Container maxWidth="lg">
-				<Tabs
-					value={tab}
-					onChange={(e, value) => setTab(value)}
-					indicatorColor="primary"
-					textColor="primary"
-					variant="scrollable"
-					scrollButtons="auto"
-				>
-					<Tab label={i18n.t("settings.tabs.general")} />
-					<Tab label={i18n.t("settings.tabs.connections")} />
-					<Tab label={i18n.t("settings.tabs.businessHours")} />
-					<Tab label={i18n.t("settings.tabs.ticketStatuses")} />
-					<Tab label={i18n.t("settings.tabs.tags")} />
-					<Tab label={i18n.t("settings.tabs.autoMessages")} />
-					<Tab label={i18n.t("settings.tabs.branding")} />
-				</Tabs>
-
+			<div className={classes.cabecalho}>
+				<Title>{i18n.t(TITULOS[aba])}</Title>
+				<Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+					{SUBTITULOS[aba]}
+				</Typography>
+			</div>
 				<Box className={classes.tabPanel} hidden={tab !== 0}>
 					<GeneralTab
 						settings={settings}
@@ -128,7 +147,6 @@ const Settings = () => {
 				<Box className={classes.tabPanel} hidden={tab !== 6}>
 					<BrandingTab />
 				</Box>
-			</Container>
 		</div>
 	);
 };

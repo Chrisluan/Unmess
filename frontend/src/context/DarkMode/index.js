@@ -7,31 +7,62 @@ import { ptBR } from "@mui/material/locale";
 import { buildTheme } from "../../theme";
 
 const ThemeContext = createContext();
-const CHAVE = "darkMode";
+const CHAVE_TEMA = "darkMode";
+const CHAVE_TEXTO = "textoGrande";
+
+const lerPreferencia = (chave, padrao) => {
+  try {
+    const valor = localStorage.getItem(chave);
+    return valor === null ? padrao : valor === "true";
+  } catch {
+    return padrao;
+  }
+};
+
+const gravarPreferencia = (chave, valor) => {
+  try {
+    localStorage.setItem(chave, String(valor));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const sistemaEscuro = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-color-scheme: dark)").matches;
 
 export const ThemeProvider = ({ children }) => {
-  // A preferência sobrevive ao recarregamento: alternar o tema toda vez que
-  // abre o sistema é atrito desnecessário.
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem(CHAVE) === "true"
-  );
+  const [darkMode, setDarkMode] = useState(() => lerPreferencia(CHAVE_TEMA, sistemaEscuro()));
+  const [textoGrande, setTextoGrande] = useState(() => lerPreferencia(CHAVE_TEXTO, false));
 
   useEffect(() => {
-    localStorage.setItem(CHAVE, String(darkMode));
+    document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
   }, [darkMode]);
 
   const toggleTheme = () => {
-    setDarkMode((prevMode) => !prevMode);
+    setDarkMode((anterior) => {
+      gravarPreferencia(CHAVE_TEMA, !anterior);
+      return !anterior;
+    });
   };
 
-  // Mesma base visual do modo claro, só trocando o modo. Antes este provider
-  // criava um tema do zero e apagava todo o restante da identidade.
+  const toggleTextoGrande = () => {
+    setTextoGrande((anterior) => {
+      gravarPreferencia(CHAVE_TEXTO, !anterior);
+      return !anterior;
+    });
+  };
+
   const theme = useMemo(
-    () => buildTheme(darkMode ? "dark" : "light", ptBR),
-    [darkMode]
+    () => buildTheme(darkMode ? "dark" : "light", ptBR, { textoGrande }),
+    [darkMode, textoGrande]
   );
 
-  const contextValue = useMemo(() => ({ darkMode, toggleTheme }), [darkMode]);
+  const contextValue = useMemo(
+    () => ({ darkMode, toggleTheme, textoGrande, toggleTextoGrande }),
+    [darkMode, textoGrande]
+  );
 
   return (
     <ThemeContext.Provider value={contextValue}>
