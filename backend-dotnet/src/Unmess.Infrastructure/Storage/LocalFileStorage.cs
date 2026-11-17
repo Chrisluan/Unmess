@@ -36,12 +36,17 @@ public sealed partial class LocalFileStorage(IOptions<UploadOptions> options, Ti
 
     private string Root => Path.GetFullPath(options.Value.Directory);
 
+    public void ExigirTipoPermitido(string tipoDeConteudo)
+    {
+        if (!AllowedTypes.Contains(tipoDeConteudo))
+        {
+            throw new AppException(string.Format(CultureInfo.InvariantCulture, FileTypeNotAllowed, tipoDeConteudo));
+        }
+    }
+
     public async Task<string> SalvarAsync(ArquivoEnviado arquivo, CancellationToken cancellationToken)
     {
-        if (!AllowedTypes.Contains(arquivo.TipoDeConteudo))
-        {
-            throw new AppException(string.Format(CultureInfo.InvariantCulture, FileTypeNotAllowed, arquivo.TipoDeConteudo));
-        }
+        ExigirTipoPermitido(arquivo.TipoDeConteudo);
 
         if (arquivo.Tamanho > options.Value.MaxFileBytes)
         {

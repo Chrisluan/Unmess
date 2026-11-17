@@ -25,12 +25,22 @@ public static class GatewayEventTypes
     public const string Qr = "qr";
 }
 
+public sealed record GatewayNumberCheck(bool Exists, string? Jid);
+
+public sealed record GatewayPhoneContact(string Jid, string Number, string? Name, string? PushName);
+
+public sealed class GatewaySessionUnavailableException(string sessionId)
+    : Exception($"WhatsApp session {sessionId} is not connected in the gateway.");
+
 public interface IWhatsappGateway
 {
     Task<GatewaySession> GetSessionAsync(string sessionId, CancellationToken cancellationToken);
     Task<GatewaySession> ConnectAsync(string sessionId, CancellationToken cancellationToken);
     Task<GatewaySession> DisconnectAsync(string sessionId, bool logout, CancellationToken cancellationToken);
     Task<GatewaySendResult> SendAsync(string sessionId, GatewaySendCommand command, CancellationToken cancellationToken);
+    Task<GatewayNumberCheck> CheckNumberAsync(string sessionId, string number, CancellationToken cancellationToken);
+    Task<string?> GetProfilePictureAsync(string sessionId, string jid, CancellationToken cancellationToken);
+    Task<IReadOnlyList<GatewayPhoneContact>> ListContactsAsync(string sessionId, CancellationToken cancellationToken);
 }
 
 public interface IGatewayEventHandler

@@ -1,7 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Unmess.Application.Atendimento;
 using Unmess.Application.Authentication;
+using Unmess.Application.Clientes;
+using Unmess.Application.Conexoes;
 using Unmess.Application.Configuracoes;
+using Unmess.Application.Contatos;
+using Unmess.Application.Figurinhas;
+using Unmess.Application.Produtos;
 using Unmess.Application.Etiquetas;
 using Unmess.Application.Filas;
 using Unmess.Application.RespostasRapidas;
@@ -27,6 +32,11 @@ public static class DependencyInjection
         services.AddScoped<RespostaRapidaService>();
         services.AddScoped<SituacaoDeTicketService>();
         services.AddScoped<HorarioDeAtendimentoService>();
+        services.AddScoped<SeletorDeConexao>();
+        services.AddScoped<ContatoService>();
+        services.AddScoped<ClienteService>();
+        services.AddScoped<ProdutoService>();
+        services.AddScoped<FigurinhaService>();
         return services;
     }
 }

@@ -31,10 +31,10 @@ Legenda: ✅ migrado e testado · ⏳ pendente
 | quick-answers | CRUD `/quick-answers` | ✅ |
 | ticket-statuses | CRUD `/ticket-statuses` | ✅ |
 | business-hours / holidays | 5 rotas | ✅ |
-| stickers | 5 rotas | ⏳ |
-| products | 5 rotas | ⏳ |
-| customers | 6 rotas | ⏳ |
-| contacts | 9 rotas, incluindo importação | ⏳ |
+| stickers | 5 rotas | ✅ listar, criar e excluir (enviar e salvar a partir de mensagem entram com mensagens) |
+| products | 5 rotas | ✅ |
+| customers | 6 rotas | ✅ |
+| contacts | 9 rotas, incluindo importação | ✅ (validação de número, foto e importação via gateway) |
 | tickets | 6 rotas + regras de abas | ⏳ |
 | messages | 6 rotas (envio, mídia, edição, exclusão, notas internas) | ⏳ |
 | whatsapp / sessions | CRUD de conexões + iniciar/reiniciar/remover sessão via gateway | ⏳ |

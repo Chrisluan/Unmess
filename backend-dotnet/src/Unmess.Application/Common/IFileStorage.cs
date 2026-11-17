@@ -7,4 +7,5 @@ public interface IFileStorage
     Task<string> SalvarAsync(ArquivoEnviado arquivo, CancellationToken cancellationToken);
     void Remover(string? nomeDoArquivo);
     string CaminhoCompleto(string nomeDoArquivo);
+    void ExigirTipoPermitido(string tipoDeConteudo);
 }

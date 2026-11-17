@@ -1,5 +1,5 @@
 import type { SendMessageCommand, SessionSnapshot, SessionStatus } from "./contract.ts";
-import type { AdapterListener, ConnectionState, WhatsappAdapter } from "./adapters/adapter.ts";
+import type { AdapterListener, ConnectionState, NumberCheck, PhoneContact, WhatsappAdapter } from "./adapters/adapter.ts";
 import type { Logger } from "./logger.ts";
 import type { Outbox } from "./outbox.ts";
 import type { PacedQueue } from "./sendQueue.ts";
@@ -98,6 +98,18 @@ export class SessionManager implements AdapterListener {
       metrics.sendFailures++;
       throw error;
     }
+  }
+
+  checkNumber(sessionId: string, number: string): Promise<NumberCheck> {
+    return this.adapter.checkNumber(sessionId, number);
+  }
+
+  profilePictureUrl(sessionId: string, jid: string): Promise<string | undefined> {
+    return this.adapter.profilePictureUrl(sessionId, jid);
+  }
+
+  contacts(sessionId: string): Promise<PhoneContact[]> {
+    return this.adapter.contacts(sessionId);
   }
 
   pendingSends(sessionId: string): number {

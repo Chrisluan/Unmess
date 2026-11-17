@@ -115,6 +115,8 @@ function Set-ProcessEnv($Config) {
     $env:Jwt__Secret = $Config["JWT_SECRET"]
     $env:Jwt__RefreshSecret = $Config["JWT_REFRESH_SECRET"]
     $env:Uploads__Directory = Join-Path $Root "backend\public"
+    $ffmpeg = Join-Path $Root "backend\node_modules\ffmpeg-static\ffmpeg.exe"
+    if (Test-Path $ffmpeg) { $env:Media__FfmpegPath = $ffmpeg }
     $env:WhatsappGateway__BaseUrl = "http://localhost:$($Config["GATEWAY_PORT"])"
     $env:WhatsappGateway__ApiToken = $Config["GATEWAY_API_TOKEN"]
     $env:WhatsappGateway__WebhookSecret = $Config["GATEWAY_WEBHOOK_SECRET"]

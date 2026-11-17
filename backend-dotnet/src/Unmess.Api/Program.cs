@@ -92,6 +92,7 @@ app.MapUsuarioEndpoints();
 app.MapGrupoDePermissaoEndpoints();
 app.MapEmpresaEndpoints();
 app.MapCadastroEndpoints();
+app.MapContatoEClienteEndpoints();
 app.MapHub<RealtimeHub>(RealtimeHub.Path);
 
 app.Run();

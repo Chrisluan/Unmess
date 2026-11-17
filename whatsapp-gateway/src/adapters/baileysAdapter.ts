@@ -3,11 +3,13 @@ import {
   DisconnectReason,
   downloadMediaMessage,
   getContentType,
+  isJidUser,
   jidNormalizedUser,
   makeWASocket,
   normalizeMessageContent,
   proto,
   type AnyMessageContent,
+  type Contact,
   type WAMessage,
   type WASocket
 } from "baileys";
@@ -15,7 +17,7 @@ import type { DeliveryStatus, InboundMessage, MessageKind, SendMessageCommand } 
 import type { Logger } from "../logger.ts";
 import type { MediaStore } from "../media.ts";
 import type { SecretStore } from "../storage/secretStore.ts";
-import type { AdapterListener, WhatsappAdapter } from "./adapter.ts";
+import { SessionUnavailableError, type AdapterListener, type NumberCheck, type PhoneContact, type WhatsappAdapter } from "./adapter.ts";
 import { useEncryptedAuthState } from "./baileysAuthState.ts";
 import { toChatId } from "./fakeAdapter.ts";
 
@@ -39,6 +41,7 @@ export class BaileysAdapter implements WhatsappAdapter {
   private readonly options: BaileysAdapterOptions;
   private readonly sockets = new Map<string, WASocket>();
   private readonly intentionalClose = new Map<string, boolean>();
+  private readonly contactBooks = new Map<string, Map<string, PhoneContact>>();
 
   constructor(store: SecretStore, media: MediaStore, logger: Logger, options: BaileysAdapterOptions) {
     this.store = store;
@@ -112,6 +115,26 @@ export class BaileysAdapter implements WhatsappAdapter {
       }
     });
 
+    const phoneContacts = new Map<string, PhoneContact>();
+    this.contactBooks.set(sessionId, phoneContacts);
+    const rememberContacts = (contacts: Partial<Contact>[]) => {
+      for (const contact of contacts) {
+        if (!contact.id || !isJidUser(contact.id)) {
+          continue;
+        }
+        const jid = jidNormalizedUser(contact.id);
+        const previous = phoneContacts.get(jid);
+        phoneContacts.set(jid, {
+          jid,
+          number: jid.split("@")[0] ?? jid,
+          name: contact.name ?? previous?.name,
+          pushName: contact.notify ?? previous?.pushName
+        });
+      }
+    };
+    socket.ev.on("contacts.upsert", rememberContacts);
+    socket.ev.on("contacts.update", rememberContacts);
+
     socket.ev.on("messages.update", (updates) => {
       for (const { key, update } of updates) {
         const status = update.status !== undefined && update.status !== null ? STATUS_MAP[update.status] : undefined;
@@ -157,12 +180,40 @@ export class BaileysAdapter implements WhatsappAdapter {
     return { messageId: sent.key.id, chatId };
   }
 
+  async checkNumber(sessionId: string, number: string): Promise<NumberCheck> {
+    const socket = this.connectedSocket(sessionId);
+    const [result] = (await socket.onWhatsApp(number.replace(/\D/g, ""))) ?? [];
+    return result?.exists ? { exists: true, jid: jidNormalizedUser(result.jid) } : { exists: false };
+  }
+
+  async profilePictureUrl(sessionId: string, jid: string): Promise<string | undefined> {
+    const socket = this.connectedSocket(sessionId);
+    try {
+      return (await socket.profilePictureUrl(toChatId(jid), "image")) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async contacts(sessionId: string): Promise<PhoneContact[]> {
+    this.connectedSocket(sessionId);
+    return [...(this.contactBooks.get(sessionId)?.values() ?? [])];
+  }
+
   async shutdown(): Promise<void> {
     for (const [sessionId, socket] of this.sockets) {
       this.intentionalClose.set(sessionId, false);
       socket.end(undefined);
     }
     this.sockets.clear();
+  }
+
+  private connectedSocket(sessionId: string): WASocket {
+    const socket = this.sockets.get(sessionId);
+    if (!socket?.user) {
+      throw new SessionUnavailableError("session is not connected");
+    }
+    return socket;
   }
 
   private async buildContent(command: SendMessageCommand): Promise<AnyMessageContent> {

@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import express, { type NextFunction, type Request, type Response } from "express";
 import QRCode from "qrcode";
 import type { SendMessageCommand } from "../contract.ts";
+import { SessionUnavailableError } from "../adapters/adapter.ts";
 import type { FakeAdapter } from "../adapters/fakeAdapter.ts";
 import type { Logger } from "../logger.ts";
 import type { Outbox } from "../outbox.ts";
@@ -104,6 +105,23 @@ export function createApp(deps: AppDependencies): express.Express {
     }
   });
 
+  v1.get("/sessions/:sessionId/numbers/:number", async (req, res) => {
+    res.json(await deps.sessions.checkNumber(req.params.sessionId as string, req.params.number as string));
+  });
+
+  v1.get("/sessions/:sessionId/profile-picture", async (req, res) => {
+    const jid = typeof req.query.jid === "string" ? req.query.jid : "";
+    if (!jid) {
+      res.status(400).json({ error: "jid_required" });
+      return;
+    }
+    res.json({ url: (await deps.sessions.profilePictureUrl(req.params.sessionId as string, jid)) ?? null });
+  });
+
+  v1.get("/sessions/:sessionId/contacts", async (req, res) => {
+    res.json(await deps.sessions.contacts(req.params.sessionId as string));
+  });
+
   if (deps.fake) {
     const fake = deps.fake;
     v1.post("/fake/sessions/:sessionId/inbound", (req, res) => {
@@ -127,6 +145,10 @@ export function createApp(deps: AppDependencies): express.Express {
   });
 
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if (error instanceof SessionUnavailableError) {
+      res.status(409).json({ error: "session_not_connected" });
+      return;
+    }
     deps.logger.error({ err: error }, "request failed");
     res.status(500).json({ error: "internal_error" });
   });

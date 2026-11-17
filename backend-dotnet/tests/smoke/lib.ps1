@@ -25,6 +25,57 @@ function Show($label, $result, $expected) {
 
 function Json($result) { $result.Body | ConvertFrom-Json }
 
+function Read-DevEnv {
+    $values = @{}
+    Get-Content (Join-Path $PSScriptRoot "..\..\..\.env") | ForEach-Object { if ($_ -match '^([A-Z_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2] } }
+    return $values
+}
+
+function Invoke-DevSql([string]$sql) {
+    $sql | docker exec -i unmess-dev-mysql-1 sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" --batch --skip-column-names 2>/dev/null'
+}
+
+function Add-ConnectedWhatsapp([int]$companyId) {
+    $id = Invoke-DevSql "INSERT INTO Whatsapps (name, status, isDefault, retries, companyId, createdAt, updatedAt) VALUES ('Simulado $companyId', 'CONNECTED', 1, 0, $companyId, NOW(), NOW()); SELECT LAST_INSERT_ID();"
+    $id = [int]($id | Select-Object -Last 1)
+    $envValues = Read-DevEnv
+    $headers = @{ Authorization = "Bearer $($envValues.GATEWAY_API_TOKEN)" }
+    $gateway = "http://localhost:$($envValues.GATEWAY_PORT)"
+    Invoke-RestMethod -Method Post "$gateway/v1/sessions/$id/connect" -Headers $headers | Out-Null
+    for ($i = 0; $i -lt 30; $i++) {
+        if ((Invoke-RestMethod "$gateway/v1/sessions/$id" -Headers $headers).status -eq "connected") { break }
+        Start-Sleep -Milliseconds 200
+    }
+    return $id
+}
+
+function New-TestImage {
+    Add-Type -AssemblyName System.Drawing
+    $path = Join-Path $env:TEMP "unmess-smoke-$(Get-Random).png"
+    $bitmap = New-Object System.Drawing.Bitmap 300, 200
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.Clear([System.Drawing.Color]::Orange)
+    $graphics.Dispose()
+    $bitmap.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bitmap.Dispose()
+    return $path
+}
+
+function Upload($path, $fields, $file, $contentType, $token) {
+    Add-Type -AssemblyName System.Net.Http
+    $client = New-Object System.Net.Http.HttpClient
+    $client.DefaultRequestHeaders.Authorization = New-Object System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", $token)
+    $form = New-Object System.Net.Http.MultipartFormDataContent
+    foreach ($key in $fields.Keys) { $form.Add((New-Object System.Net.Http.StringContent([string]$fields[$key])), $key) }
+    $bytes = New-Object System.Net.Http.ByteArrayContent(,[System.IO.File]::ReadAllBytes($file))
+    $bytes.Headers.ContentType = New-Object System.Net.Http.Headers.MediaTypeHeaderValue($contentType)
+    $form.Add($bytes, "file", [System.IO.Path]::GetFileName($file))
+    $response = $client.PostAsync("$base$path", $form).GetAwaiter().GetResult()
+    $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+    $client.Dispose()
+    return @{ Status = [int]$response.StatusCode; Body = $body }
+}
+
 function New-CompanyAdmin {
     $super = (Json (Call POST "/auth/login" @{ email = "super@whaticket.com"; password = "super123" })).token
     $suffix = Get-Random

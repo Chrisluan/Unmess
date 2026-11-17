@@ -107,9 +107,16 @@ test("full session lifecycle in fake mode", async () => {
   assert.deepEqual(types.slice(0, 3), ["connecting", "qr", "connected"]);
   assert.equal(new Set(events.map((envelope) => envelope.id)).size, events.length);
 
+  const check = await call("GET", "/v1/sessions/7/numbers/5585999990000");
+  assert.deepEqual(await check.json(), { exists: true, jid: "5585999990000@s.whatsapp.net" });
+  assert.deepEqual(await (await call("GET", "/v1/sessions/7/numbers/123")).json(), { exists: false });
+  assert.deepEqual(await (await call("GET", "/v1/sessions/7/profile-picture?jid=5585999990000")).json(), { url: null });
+  assert.equal(((await (await call("GET", "/v1/sessions/7/contacts")).json()) as unknown[]).length, 2);
+
   const logout = await call("POST", "/v1/sessions/7/disconnect", { logout: true });
   assert.equal(((await logout.json()) as { status: string }).status, "needs_qr");
   assert.equal((await call("POST", "/v1/sessions/7/messages", { to: "5511", text: "x" })).status, 409);
+  assert.equal((await call("GET", "/v1/sessions/7/numbers/5585999990000")).status, 409);
 });
 
 test("rejects invalid input", async () => {

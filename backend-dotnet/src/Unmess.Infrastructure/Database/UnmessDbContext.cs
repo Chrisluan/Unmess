@@ -3,7 +3,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Unmess.Application.Common;
 using Unmess.Domain.Atendimento;
+using Unmess.Domain.Clientes;
 using Unmess.Domain.Comum;
+using Unmess.Domain.Contatos;
+using Unmess.Domain.Figurinhas;
+using Unmess.Domain.Produtos;
 using Unmess.Domain.Configuracoes;
 using Unmess.Domain.Etiquetas;
 using Unmess.Domain.RespostasRapidas;
@@ -36,6 +40,11 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
     public DbSet<SituacaoDeTicket> SituacoesDeTicket => Set<SituacaoDeTicket>();
     public DbSet<HorarioDeAtendimento> HorariosDeAtendimento => Set<HorarioDeAtendimento>();
     public DbSet<Feriado> Feriados => Set<Feriado>();
+    public DbSet<Contato> Contatos => Set<Contato>();
+    public DbSet<CampoDoContato> CamposDosContatos => Set<CampoDoContato>();
+    public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<Produto> Produtos => Set<Produto>();
+    public DbSet<Figurinha> Figurinhas => Set<Figurinha>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -139,6 +148,88 @@ public sealed class UnmessDbContext(DbContextOptions<UnmessDbContext> options, D
             entity.Property(item => item.Protocolo).HasColumnName("protocol");
             entity.Property(item => item.SaudacaoEnviada).HasColumnName("greetingSent");
             entity.Property(item => item.UltimaMensagemEm).HasColumnName("lastMessageAt");
+            entity.HasOne(item => item.Contato).WithMany().HasForeignKey(item => item.ContatoId);
+            entity.HasOne(item => item.Usuario).WithMany().HasForeignKey(item => item.UsuarioId);
+            entity.HasOne(item => item.Fila).WithMany().HasForeignKey(item => item.FilaId);
+            entity.HasOne(item => item.ConexaoWhatsapp).WithMany().HasForeignKey(item => item.ConexaoWhatsappId);
+            entity.HasOne(item => item.SituacaoDeEncerramento).WithMany().HasForeignKey(item => item.SituacaoDeEncerramentoId);
+        });
+
+        modelBuilder.Entity<Contato>(entity =>
+        {
+            Table(entity, "Contacts");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Numero).HasColumnName("number");
+            entity.Property(item => item.Lid).HasColumnName("lid");
+            entity.Property(item => item.Email).HasColumnName("email");
+            entity.Property(item => item.FotoDePerfil).HasColumnName("profilePicUrl");
+            entity.Property(item => item.EhGrupo).HasColumnName("isGroup");
+            entity.Property(item => item.Conhecido).HasColumnName("isKnown");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+            entity.HasMany(item => item.CamposExtras).WithOne().HasForeignKey(campo => campo.ContatoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CampoDoContato>(entity =>
+        {
+            Table(entity, "ContactCustomFields");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Valor).HasColumnName("value");
+            entity.Property(item => item.ContatoId).HasColumnName("contactId");
+        });
+
+        modelBuilder.Entity<Cliente>(entity =>
+        {
+            Table(entity, "Customers");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.NomeFantasia).HasColumnName("tradeName");
+            entity.Property(item => item.TipoDePessoa).HasColumnName("personType");
+            entity.Property(item => item.Documento).HasColumnName("document");
+            entity.Property(item => item.InscricaoEstadual).HasColumnName("stateRegistration");
+            entity.Property(item => item.Email).HasColumnName("email");
+            entity.Property(item => item.Telefone).HasColumnName("phone");
+            entity.Property(item => item.Whatsapp).HasColumnName("whatsapp");
+            entity.Property(item => item.Cep).HasColumnName("zipCode");
+            entity.Property(item => item.Logradouro).HasColumnName("street");
+            entity.Property(item => item.Numero).HasColumnName("addressNumber");
+            entity.Property(item => item.Complemento).HasColumnName("complement");
+            entity.Property(item => item.Bairro).HasColumnName("neighborhood");
+            entity.Property(item => item.Cidade).HasColumnName("city");
+            entity.Property(item => item.Estado).HasColumnName("state");
+            entity.Property(item => item.Segmento).HasColumnName("segment");
+            entity.Property(item => item.Origem).HasColumnName("origin");
+            entity.Property(item => item.Situacao).HasColumnName("status");
+            entity.Property(item => item.Observacoes).HasColumnName("notes");
+            entity.Property(item => item.ContatoId).HasColumnName("contactId");
+            entity.Property(item => item.ResponsavelId).HasColumnName("responsibleUserId");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+            entity.HasOne(item => item.Contato).WithMany().HasForeignKey(item => item.ContatoId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(item => item.Responsavel).WithMany().HasForeignKey(item => item.ResponsavelId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Produto>(entity =>
+        {
+            Table(entity, "Products");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.Codigo).HasColumnName("code");
+            entity.Property(item => item.Descricao).HasColumnName("description");
+            entity.Property(item => item.Unidade).HasColumnName("unit");
+            entity.Property(item => item.Preco).HasColumnName("price").HasPrecision(15, 2);
+            entity.Property(item => item.Custo).HasColumnName("cost").HasPrecision(15, 2);
+            entity.Property(item => item.ModoDePreco).HasColumnName("pricingMode");
+            entity.Property(item => item.MedidaMinima).HasColumnName("minMeasure").HasPrecision(10, 3);
+            entity.Property(item => item.Categoria).HasColumnName("category");
+            entity.Property(item => item.Ativo).HasColumnName("active");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
+        });
+
+        modelBuilder.Entity<Figurinha>(entity =>
+        {
+            Table(entity, "Stickers");
+            entity.Property(item => item.Nome).HasColumnName("name");
+            entity.Property(item => item.NomeDoArquivo).HasColumnName("fileName");
+            entity.Property(item => item.Animada).HasColumnName("animated");
+            entity.Property(item => item.Tamanho).HasColumnName("size");
+            entity.Property(item => item.EmpresaId).HasColumnName("companyId");
         });
 
         modelBuilder.Entity<Configuracao>(entity =>

@@ -1,7 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Unmess.Domain.Atendimento;
+using Unmess.Domain.Clientes;
 using Unmess.Domain.Conexoes;
+using Unmess.Domain.Contatos;
+using Unmess.Domain.Figurinhas;
+using Unmess.Domain.Produtos;
 using Unmess.Domain.Configuracoes;
 using Unmess.Domain.Etiquetas;
 using Unmess.Domain.RespostasRapidas;
@@ -29,6 +33,11 @@ public interface IUnmessDbContext
     DbSet<SituacaoDeTicket> SituacoesDeTicket { get; }
     DbSet<HorarioDeAtendimento> HorariosDeAtendimento { get; }
     DbSet<Feriado> Feriados { get; }
+    DbSet<Contato> Contatos { get; }
+    DbSet<CampoDoContato> CamposDosContatos { get; }
+    DbSet<Cliente> Clientes { get; }
+    DbSet<Produto> Produtos { get; }
+    DbSet<Figurinha> Figurinhas { get; }
     DatabaseFacade Database { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

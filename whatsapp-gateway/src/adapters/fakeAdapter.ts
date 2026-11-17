@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { SendMessageCommand } from "../contract.ts";
-import type { AdapterListener, WhatsappAdapter } from "./adapter.ts";
+import { SessionUnavailableError, type AdapterListener, type NumberCheck, type PhoneContact, type WhatsappAdapter } from "./adapter.ts";
 
 export interface FakeAdapterOptions {
   pairingDelayMs: number;
@@ -60,6 +60,25 @@ export class FakeAdapter implements WhatsappAdapter {
     return { messageId, chatId };
   }
 
+  async checkNumber(sessionId: string, number: string): Promise<NumberCheck> {
+    this.requireConnected(sessionId);
+    const digits = number.replace(/\D/g, "");
+    return digits.length >= 10 ? { exists: true, jid: `${digits}@s.whatsapp.net` } : { exists: false };
+  }
+
+  async profilePictureUrl(sessionId: string): Promise<string | undefined> {
+    this.requireConnected(sessionId);
+    return undefined;
+  }
+
+  async contacts(sessionId: string): Promise<PhoneContact[]> {
+    this.requireConnected(sessionId);
+    return [
+      { jid: "5585900000001@s.whatsapp.net", number: "5585900000001", name: "Cliente Simulado 1" },
+      { jid: "5585900000002@s.whatsapp.net", number: "5585900000002", pushName: "Cliente Simulado 2" }
+    ];
+  }
+
   simulateInbound(sessionId: string, from: string, text: string, pushName?: string): string {
     const listener = this.listeners.get(sessionId);
     if (!listener || !this.paired.has(sessionId)) {
@@ -87,6 +106,12 @@ export class FakeAdapter implements WhatsappAdapter {
     }
     this.timers.clear();
     this.listeners.clear();
+  }
+
+  private requireConnected(sessionId: string): void {
+    if (!this.listeners.has(sessionId) || !this.paired.has(sessionId)) {
+      throw new SessionUnavailableError("session is not connected");
+    }
   }
 
   private later(delayMs: number, work: () => void): void {

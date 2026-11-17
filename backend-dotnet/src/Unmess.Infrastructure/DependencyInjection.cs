@@ -5,7 +5,9 @@ using Microsoft.Extensions.Options;
 using Unmess.Application.Authentication;
 using Unmess.Application.Common;
 using Unmess.Application.WhatsappGateway;
+using Unmess.Application.Figurinhas;
 using Unmess.Infrastructure.Database;
+using Unmess.Infrastructure.Media;
 using Unmess.Infrastructure.Security;
 using Unmess.Infrastructure.Storage;
 using Unmess.Infrastructure.WhatsappGateway;
@@ -47,6 +49,8 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<ITokenIssuer, JwtTokenIssuer>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
+        services.Configure<MediaOptions>(configuration.GetSection(MediaOptions.SectionName));
+        services.AddSingleton<IConversorDeFigurinha, FfmpegConversorDeFigurinha>();
 
         services.AddHttpClient<IWhatsappGateway, WhatsappGatewayClient>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddScoped<IGatewayEventHandler, LoggingGatewayEventHandler>();

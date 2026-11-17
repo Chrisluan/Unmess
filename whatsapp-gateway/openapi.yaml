@@ -102,6 +102,58 @@ paths:
                   chatId: { type: string }
         "400": { description: Invalid command }
         "409": { description: Session is not connected }
+  /v1/sessions/{sessionId}/numbers/{number}:
+    parameters:
+      - { $ref: "#/components/parameters/SessionId" }
+      - { name: number, in: path, required: true, schema: { type: string } }
+    get:
+      responses:
+        "200":
+          description: Whether the number has WhatsApp
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exists]
+                properties:
+                  exists: { type: boolean }
+                  jid: { type: string }
+        "409": { description: Session is not connected }
+  /v1/sessions/{sessionId}/profile-picture:
+    parameters:
+      - { $ref: "#/components/parameters/SessionId" }
+      - { name: jid, in: query, required: true, schema: { type: string } }
+    get:
+      responses:
+        "200":
+          description: Profile picture URL, or null when hidden or missing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: [string, "null"] }
+        "409": { description: Session is not connected }
+  /v1/sessions/{sessionId}/contacts:
+    parameters: [{ $ref: "#/components/parameters/SessionId" }]
+    get:
+      description: Contacts the phone shared since the session connected. Kept in memory only.
+      responses:
+        "200":
+          description: Phone contacts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [jid, number]
+                  properties:
+                    jid: { type: string }
+                    number: { type: string }
+                    name: { type: string }
+                    pushName: { type: string }
+        "409": { description: Session is not connected }
   /v1/metrics:
     get:
       responses:
