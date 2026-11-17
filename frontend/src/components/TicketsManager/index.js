@@ -26,7 +26,7 @@ import TicketsList from "../TicketsList";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
-import { Can } from "../Can";
+import usePermissions from "../../hooks/usePermissions";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import TicketsWhatsappSelect from "../TicketsWhatsappSelect";
 import TicketsTagSelect from "../TicketsTagSelect";
@@ -184,6 +184,7 @@ const TicketsManager = () => {
   const [atendendo, setAtendendo] = useState(false);
   const buscaTimeout = useRef();
   const { user } = useContext(AuthContext);
+  const { can } = usePermissions();
   const { isEnabled } = useContext(AttendanceSettingsContext);
   const [contagens, setContagens] = useState({});
   const [fila, setFila] = useState([]);
@@ -223,8 +224,11 @@ const TicketsManager = () => {
     }
   }, [selectedWhatsappIds]);
 
+  // Quem supervisiona abre a tela já vendo tudo -- era o comportamento de
+  // quem tinha profile "admin", agora amarrado à permissão que de fato
+  // controla isso no servidor.
   useEffect(() => {
-    if (user.profile.toUpperCase() === "ADMIN") {
+    if (can("tickets:viewAll")) {
       setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

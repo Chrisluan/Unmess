@@ -535,14 +535,10 @@ const hasMedia = (msg: WAMessage): boolean => {
   ].includes(messageType || "");
 };
 
-const mapMessageAck = (status: number | null | undefined): MessageAck => {
-  if (status === null || status === undefined) return 0;
-  if (status >= 4) return 4;
-  if (status >= 3) return 3;
-  if (status >= 2) return 2;
-  if (status >= 1) return 1;
-  return 0;
-};
+// traduzirAck tolerando a ausência de status: o histórico importado do
+// celular nem sempre traz o campo.
+const mapMessageAck = (status: number | null | undefined): MessageAck =>
+  status === null || status === undefined ? 0 : traduzirAck(status);
 
 const shouldHandleMessage = (msg: WAMessage): boolean => {
   const messageType = getContentType(msg.message || undefined);
@@ -576,6 +572,22 @@ const shouldHandleMessage = (msg: WAMessage): boolean => {
   return hasMedia(msg) || allowedFromMeTypes.includes(messageType || "");
 };
 
+/**
+ * Converte o estado do Baileys para a escala do sistema.
+ *
+ * O Baileys numera ERROR=0, PENDING=1, SERVER_ACK=2, DELIVERY_ACK=3, READ=4,
+ * PLAYED=5; aqui dentro a escala é a do WhatsApp Web clássico, com -1 para
+ * falha e 0 para "ainda enviando". Sem esta tradução o número cru entrava no
+ * banco e cada estado aparecia um passo adiantado: mensagem apenas aceita
+ * pelo servidor era exibida como entregue ao contato, e a entrega como
+ * leitura. É a origem do "consta como enviada mas o cliente não recebeu".
+ */
+const traduzirAck = (status: number): MessageAck => {
+  if (status <= 0) return -1;
+  const convertido = status - 1;
+  return (convertido > 4 ? 4 : convertido) as MessageAck;
+};
+
 const convertToMessagePayload = (msg: WAMessage): MessagePayload => {
   const fromJid = msg.key.remoteJid || "";
   const toJid = msg.key.fromMe ? fromJid : msg.key.participant || fromJid;
@@ -596,7 +608,15 @@ const convertToMessagePayload = (msg: WAMessage): MessagePayload => {
     to: toJid,
     hasQuotedMsg: Boolean(getQuotedMessageId(msg)),
     quotedMsgId: getQuotedMessageId(msg),
-    ack: fromMe ? 1 : 0,
+    // Estado real informado pelo provedor. Antes era fixo em 1, então toda
+    // mensagem própria nascia "enviada" mesmo quando o WhatsApp ainda não
+    // tinha confirmado nada. Sem status conhecido mantém o 1 de antes: é o
+    // caso das enviadas pelo aplicativo no celular, que já saíram de lá.
+    ack: fromMe
+      ? msg.status === undefined || msg.status === null
+        ? 1
+        : traduzirAck(msg.status)
+      : 0,
     // Mensagem própria que não saiu daqui veio do aplicativo no celular.
     fromApp: fromMe && !systemSentIds.has(msg.key.id || "")
   };
@@ -1287,10 +1307,13 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     await Promise.all(
       updates.map(async event => {
         try {
-          if (!event.update.status || !event.key.id) return;
+          // Status 0 do Baileys significa ERRO, e o teste de veracidade antigo
+          // o descartava junto com o indefinido: a falha de envio nunca
+          // chegava à tela.
+          const { status } = event.update;
+          if (status === undefined || status === null || !event.key.id) return;
 
-          const ack = (event.update.status as MessageAck) || 0;
-          await handleMessageAck(event.key.id, ack);
+          await handleMessageAck(event.key.id, traduzirAck(status));
         } catch (err) {
           logger.error({
             info: "Error handling message update",
@@ -1424,7 +1447,10 @@ const sendMessage = async (
       : Math.floor(Date.now() / 1000),
     from: wbot.user?.id || "",
     to,
-    ack: 1
+    // O que o provedor diz, não um 1 fixo: sendMessage devolve com status
+    // PENDING, que aqui é 0 ("enviando"). O 1 só aparece quando o servidor
+    // do WhatsApp confirma, pelo evento messages.update.
+    ack: mapMessageAck(sentMsg.status)
   };
 };
 
@@ -1533,7 +1559,9 @@ const sendMedia = async (
       : Math.floor(Date.now() / 1000),
     from: wbot.user?.id || "",
     to,
-    ack: 1
+    // Ver sendMessage: o estado vem do provedor, e o envio resolve com a
+    // mensagem ainda pendente de confirmação do servidor.
+    ack: mapMessageAck(sent.status)
   };
 };
 
@@ -1587,6 +1615,19 @@ const deleteMessage = async (
   await wbot.sendMessage(normalizedChatId, { delete: key });
 };
 
+/**
+ * Confere se o número existe no WhatsApp e devolve o número **sem domínio**.
+ *
+ * O Baileys responde com o JID completo ("5544xxxxxxxxx@s.whatsapp.net"), mas
+ * quem chama grava o retorno em `Contact.number` -- e o domínio ia junto para
+ * o banco. Um contato gravado assim nunca é reencontrado quando a mensagem
+ * chega, porque a busca do atendimento normaliza para só dígitos: nascia um
+ * segundo cadastro e, com ele, um segundo atendimento para a mesma pessoa.
+ *
+ * O número da resposta é o que vale, e não o digitado: o WhatsApp corrige o
+ * nono dígito de celulares brasileiros antigos, e é o corrigido que identifica
+ * a conversa.
+ */
 const checkNumber = async (
   sessionId: number,
   number: string
@@ -1601,7 +1642,7 @@ const checkNumber = async (
     throw new AppError("ERR_NUMBER_NOT_ON_WHATSAPP", 404);
   }
 
-  return result.jid;
+  return jidDecode(result.jid)?.user || cleanNumber;
 };
 
 const getProfilePicUrl = async (

@@ -7,6 +7,7 @@ import ShowDealService from "./ShowDealService";
 import Board from "../../models/Board";
 import { descreverMotivo } from "../../helpers/MotivosDePerda";
 import AdvanceDealService, { resolverDestino } from "./AdvanceDealService";
+import MarcarGanhoService from "./MarcarGanhoService";
 import sequelize from "../../database";
 
 interface Request {
@@ -235,6 +236,22 @@ const MoveDealService = async ({
       dealId: deal.id,
       userId: userId || null,
       companyId
+    });
+  }
+
+  /**
+   * Coluna de ganho que não conclui o quadro.
+   *
+   * O card fica onde está e continua trabalhável, mas a venda já está fechada:
+   * é o que o faturamento soma. Sem isto, marcar a coluna como GANHO não tinha
+   * efeito nenhum fora do quadro final.
+   */
+  if (stage.isWon && stage.type !== "lost") {
+    await MarcarGanhoService({
+      deal,
+      companyId,
+      userId,
+      origem: stage.name
     });
   }
 

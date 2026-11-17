@@ -13,8 +13,13 @@ const toastError = err => {
 				toastId: errorMsg,
 			});
 		}
+	} else if (!err.response && err.message) {
+		// Erro que não veio de uma resposta HTTP -- popup bloqueado, rede fora,
+		// arquivo grande demais. A mensagem local é a única explicação que existe,
+		// e engoli-la deixava o usuário com "An error occurred!" sem saber o motivo.
+		toast.error(err.message, { toastId: err.message });
 	} else {
-		toast.error("An error occurred!");
+		toast.error(i18n.t("errors.generic"));
 	}
 };
 

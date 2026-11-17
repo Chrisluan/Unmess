@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from "express";
 
 import AppError from "../errors/AppError";
 import authConfig from "../config/auth";
+import { etiquetar } from "../helpers/permissions/routeGuard";
 
 interface TokenPayload {
   id: string;
@@ -43,4 +44,4 @@ const isAuth = (req: Request, res: Response, next: NextFunction): void => {
   return next();
 };
 
-export default isAuth;
+export default etiquetar(isAuth, { tipo: "auth" });

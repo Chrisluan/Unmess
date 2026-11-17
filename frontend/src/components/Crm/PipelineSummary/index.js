@@ -12,11 +12,11 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(3),
     padding: theme.spacing(1, 2),
     marginBottom: theme.spacing(1),
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor:
       theme.palette.mode === "dark"
         ? "rgba(255,255,255,0.04)"
-        : "rgba(37,118,210,0.06)",
+        : "rgba(11,92,255,0.05)",
   },
 
   indicador: {

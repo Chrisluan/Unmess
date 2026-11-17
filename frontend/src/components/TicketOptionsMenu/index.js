@@ -99,6 +99,8 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransfer
 				}?`}
 				open={confirmationOpen}
 				onClose={setConfirmationOpen}
+				danger
+				confirmLabel={i18n.t("ticketOptionsMenu.buttons.delete")}
 				onConfirm={handleDeleteTicket}
 			>
 				{i18n.t("ticketOptionsMenu.confirmationModal.message")}

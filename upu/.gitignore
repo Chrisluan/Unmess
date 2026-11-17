@@ -1,0 +1,10 @@
+# Saída de compilação do .NET
+bin/
+obj/
+
+# Executável publicado: é desta máquina, e é regerado por scripts/compilar.ps1
+publicacao/
+
+# Configuração, releases, avisos e inscrições de push desta instalação.
+# Contém a chave privada VAPID e o hash da senha do painel.
+dados/

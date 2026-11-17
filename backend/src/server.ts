@@ -8,7 +8,9 @@ import { logger } from "./utils/logger";
 import { initRedis } from "./libs/redisStore";
 import { StartAllWhatsAppsSessions } from "./services/WbotServices/StartAllWhatsAppsSessions";
 import { startCloseInactiveTicketsJob } from "./jobs/CloseInactiveTicketsJob";
+import { startBloqueioPorInadimplenciaJob } from "./jobs/BloqueioPorInadimplenciaJob";
 import { resetAllUsersPresence } from "./helpers/ResetPresence";
+import { verificarRotasProtegidas } from "./helpers/permissions/routeGuard";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -43,6 +45,17 @@ const criarServidor = () => {
   return http.createServer(app);
 };
 
+/**
+ * Confere que toda rota declara como se protege.
+ *
+ * O jeito como um endpoint desprotegido aparece é ninguém reparar nele — foi
+ * assim que iniciar, reiniciar e desconectar o WhatsApp da empresa ficaram
+ * pedindo login e mais nada. Fora de produção isso lança e quebra o boot; em
+ * produção vira erro no log e o sistema sobe, porque um alarme com defeito não
+ * pode ter o poder de desligar o produto.
+ */
+verificarRotasProtegidas(mensagem => logger.error(mensagem));
+
 const server = criarServidor().listen(PORT, "0.0.0.0", () => {
   logger.info(`Server started on port ${PORT}`);
 });
@@ -55,6 +68,7 @@ initRedis();
 resetAllUsersPresence();
 StartAllWhatsAppsSessions();
 startCloseInactiveTicketsJob();
+startBloqueioPorInadimplenciaJob();
 gracefulShutdown(server);
 
 process.on("uncaughtException", err => {

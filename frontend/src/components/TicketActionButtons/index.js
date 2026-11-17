@@ -18,7 +18,7 @@ import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import CloseTicketModal from "../CloseTicketModal";
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
 	actionButtons: {
 		flex: "none",
 		display: "flex",

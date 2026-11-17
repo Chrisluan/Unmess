@@ -3,7 +3,6 @@ import { toast } from "react-toastify";
 import { format, parseISO } from "date-fns";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 import {
 	Button,
 	TableBody,
@@ -26,13 +25,16 @@ import {
 	CropFree,
 	DeleteOutline,
 	ErrorOutline,
+	Add,
 } from "@mui/icons-material";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
+import TableEmpty from "../../components/EmptyState/TableEmpty";
 
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
@@ -41,14 +43,43 @@ import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 import toastError from "../../errors/toastError";
+import { Can } from "../../components/Can";
+import usePermissions from "../../hooks/usePermissions";
 
 const useStyles = makeStyles(theme => ({
-	mainPaper: {
-		flex: 1,
-		padding: theme.spacing(1),
-		overflowY: "scroll",
-		...theme.scrollbarStyles,
-	},
+  /**
+   * Painel de conteúdo das telas de listagem.
+   *
+   * Ganhou borda e margem: o Paper deixou de ter sombra no tema novo, e sem
+   * nenhuma das duas a tabela ficava solta no meio da página, encostada nas
+   * bordas da janela sem nada dizendo onde ela começa.
+   */
+  cabecalhoEmbutido: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+  },
+
+  textoCabecalho: {
+    minWidth: 0,
+    maxWidth: 640,
+  },
+
+  mainPaper: {
+    flex: 1,
+    margin: theme.spacing(0, 2, 2),
+    padding: theme.spacing(0.5),
+    // "auto" e não "scroll": a barra vazia desenhava uma faixa cinza fixa na
+    // direita de toda listagem, inclusive nas que cabem na tela.
+    overflowY: "auto",
+    // Sem isto a tabela larga estoura o painel e rola a página inteira.
+    overflowX: "auto",
+    border: `1px solid ${theme.palette.divider}`,
+    ...theme.scrollbarStyles,
+  },
 	customTableCell: {
 		display: "flex",
 		alignItems: "center",
@@ -65,7 +96,7 @@ const useStyles = makeStyles(theme => ({
 		textAlign: "center",
 	},
 	buttonProgress: {
-		color: green[500],
+		color: theme.palette.primary.main,
 	},
 }));
 
@@ -99,6 +130,7 @@ const CustomToolTip = ({ title, content, children }) => {
  */
 const Connections = ({ embedded = false }) => {
 	const classes = useStyles();
+	const { can } = usePermissions();
 
 	const { whatsApps, loading } = useContext(WhatsAppsContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
@@ -163,6 +195,7 @@ const Connections = ({ embedded = false }) => {
 				action: action,
 				title: i18n.t("connections.confirmationModal.disconnectTitle"),
 				message: i18n.t("connections.confirmationModal.disconnectMessage"),
+				confirmLabel: i18n.t("connections.confirmationModal.disconnectConfirm"),
 				whatsAppId: whatsAppId,
 			});
 		}
@@ -171,6 +204,7 @@ const Connections = ({ embedded = false }) => {
 			setConfirmModalInfo({
 				action: action,
 				title: i18n.t("connections.confirmationModal.deleteTitle"),
+				confirmLabel: i18n.t("connections.confirmationModal.deleteConfirm"),
 				message: i18n.t("connections.confirmationModal.deleteMessage"),
 				whatsAppId: whatsAppId,
 			});
@@ -200,6 +234,13 @@ const Connections = ({ embedded = false }) => {
 	};
 
 	const renderActionButtons = whatsApp => {
+		/**
+		 * Ler o QR, religar e desconectar são a mesma permissão: quem faz
+		 * qualquer uma das três decide se a empresa está no ar. Sem ela,
+		 * a linha mostra só o status — e não botões que respondem 403.
+		 */
+		if (!can("connections:session")) return null;
+
 		return (
             <>
                 {whatsApp.status === "qrcode" && (
@@ -280,7 +321,7 @@ const Connections = ({ embedded = false }) => {
 				)}
 				{whatsApp.status === "CONNECTED" && (
 					<CustomToolTip title={i18n.t("connections.toolTips.connected.title")}>
-						<SignalCellular4Bar style={{ color: green[500] }} />
+						<SignalCellular4Bar color="success" />
 					</CustomToolTip>
 				)}
 				{(whatsApp.status === "TIMEOUT" || whatsApp.status === "PAIRING") && (
@@ -311,6 +352,8 @@ const Connections = ({ embedded = false }) => {
 				title={confirmModalInfo.title}
 				open={confirmModalOpen}
 				onClose={setConfirmModalOpen}
+				danger={confirmModalInfo.action === "delete"}
+				confirmLabel={confirmModalInfo.confirmLabel}
 				onConfirm={handleSubmitConfirmationModal}
 			>
 				{confirmModalInfo.message}
@@ -326,36 +369,40 @@ const Connections = ({ embedded = false }) => {
 				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
 			/>
 			{embedded ? (
-				<div
-					style={{
-						display: "flex",
-						justifyContent: "space-between",
-						alignItems: "center",
-						marginBottom: 16,
-					}}
-				>
-					<Typography variant="h6">
-						{i18n.t("connections.title")}
-					</Typography>
-					<Button
-						variant="contained"
-						color="primary"
-						onClick={handleOpenWhatsAppModal}
-					>
-						{i18n.t("connections.buttons.add")}
-					</Button>
+				<div className={classes.cabecalhoEmbutido}>
+					<div className={classes.textoCabecalho}>
+						<Typography variant="h6">
+							{i18n.t("connections.title")}
+						</Typography>
+						<Typography variant="body2" color="textSecondary">
+							{i18n.t("connections.description")}
+						</Typography>
+					</div>
+					<Can permission="connections:create">
+						<Button
+							variant="contained"
+							color="primary"
+							startIcon={<Add />}
+							onClick={handleOpenWhatsAppModal}
+						>
+							{i18n.t("connections.buttons.add")}
+						</Button>
+					</Can>
 				</div>
 			) : (
 				<MainHeader>
 					<Title>{i18n.t("connections.title")}</Title>
 					<MainHeaderButtonsWrapper>
-						<Button
-							variant="contained"
-							color="primary"
-							onClick={handleOpenWhatsAppModal}
-						>
-							{i18n.t("connections.buttons.add")}
-						</Button>
+						<Can permission="connections:create">
+							<Button
+								variant="contained"
+								color="primary"
+								startIcon={<Add />}
+								onClick={handleOpenWhatsAppModal}
+							>
+								{i18n.t("connections.buttons.add")}
+							</Button>
+						</Can>
 					</MainHeaderButtonsWrapper>
 				</MainHeader>
 			)}
@@ -363,12 +410,8 @@ const Connections = ({ embedded = false }) => {
 				<Table size="small">
 					<TableHead>
 						<TableRow>
-							<TableCell align="center">
-								{i18n.t("connections.table.name")}
-							</TableCell>
-							<TableCell align="center">
-								{i18n.t("connections.table.number")}
-							</TableCell>
+							<TableCell>{i18n.t("connections.table.name")}</TableCell>
+							<TableCell>{i18n.t("connections.table.number")}</TableCell>
 							<TableCell align="center">
 								{i18n.t("connections.table.status")}
 							</TableCell>
@@ -391,13 +434,29 @@ const Connections = ({ embedded = false }) => {
 							<TableRowSkeleton />
 						) : (
 							<>
+								{whatsApps?.length === 0 && (
+									<TableEmpty
+										colSpan={7}
+										icon={WhatsAppIcon}
+										title={i18n.t("connections.empty.title")}
+										description={i18n.t("connections.empty.message")}
+										action={
+											<Button
+												variant="contained"
+												color="primary"
+												startIcon={<Add />}
+												onClick={handleOpenWhatsAppModal}
+											>
+												{i18n.t("connections.buttons.add")}
+											</Button>
+										}
+									/>
+								)}
 								{whatsApps?.length > 0 &&
 									whatsApps.map(whatsApp => (
 										<TableRow key={whatsApp.id}>
-											<TableCell align="center">{whatsApp.name}</TableCell>
-											<TableCell align="center">
-												{whatsApp.number || "—"}
-											</TableCell>
+											<TableCell>{whatsApp.name}</TableCell>
+											<TableCell>{whatsApp.number || "—"}</TableCell>
 											<TableCell align="center">
 												{renderStatusToolTips(whatsApp)}
 											</TableCell>
@@ -410,26 +469,36 @@ const Connections = ({ embedded = false }) => {
 											<TableCell align="center">
 												{whatsApp.isDefault && (
 													<div className={classes.customTableCell}>
-														<CheckCircle style={{ color: green[500] }} />
+														<CheckCircle color="success" />
 													</div>
 												)}
 											</TableCell>
 											<TableCell align="center">
-												<IconButton
-													size="small"
-													onClick={() => handleEditWhatsApp(whatsApp)}
-												>
-													<Edit />
-												</IconButton>
+												<Can permission="connections:edit">
+													<Tooltip title={i18n.t("connections.actions.edit")} arrow>
+														<IconButton
+															size="small"
+															aria-label={i18n.t("connections.actions.edit")}
+															onClick={() => handleEditWhatsApp(whatsApp)}
+														>
+															<Edit />
+														</IconButton>
+													</Tooltip>
+												</Can>
 
-												<IconButton
-													size="small"
-													onClick={e => {
-														handleOpenConfirmationModal("delete", whatsApp.id);
-													}}
-												>
-													<DeleteOutline />
-												</IconButton>
+												<Can permission="connections:delete">
+													<Tooltip title={i18n.t("connections.actions.delete")} arrow>
+														<IconButton
+															size="small"
+															aria-label={i18n.t("connections.actions.delete")}
+															onClick={() => {
+																handleOpenConfirmationModal("delete", whatsApp.id);
+															}}
+														>
+															<DeleteOutline />
+														</IconButton>
+													</Tooltip>
+												</Can>
 											</TableCell>
 										</TableRow>
 									))}

@@ -1,6 +1,7 @@
 import React from "react";
 
 import makeStyles from "@mui/styles/makeStyles";
+import { useTheme } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
@@ -85,7 +86,7 @@ const useStyles = makeStyles((theme) => ({
   // Linha fina que mostra onde o card vai cair.
   marcador: {
     height: 3,
-    borderRadius: 2,
+    borderRadius: 0,
     backgroundColor: theme.palette.primary.main,
     margin: theme.spacing(0.25, 0),
   },
@@ -108,6 +109,7 @@ const useStyles = makeStyles((theme) => ({
 const KanbanColumn = ({
   stage,
   deals,
+  noFunil,
   dragging,
   dropTarget,
   podeMover,
@@ -119,6 +121,8 @@ const KanbanColumn = ({
   onAddDeal,
 }) => {
   const classes = useStyles();
+  // A cor da coluna é configurável; sem uma escolhida, o acento do tema.
+  const theme = useTheme();
 
   const total = deals.reduce((acc, deal) => acc + (Number(deal.value) || 0), 0);
   const arrastandoAqui = dropTarget?.stageId === stage.id;
@@ -207,6 +211,7 @@ const KanbanColumn = ({
                 deal={deal}
                 arrastavel={podeMover}
                 arrastando={dragging?.deal?.id === deal.id}
+                noFunil={noFunil}
                 onDragStart={() => onDragStart(deal, indice)}
                 onDragEnd={onDragEnd}
                 onClick={() => onCardClick(deal.id)}

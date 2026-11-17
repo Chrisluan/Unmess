@@ -9,6 +9,8 @@ import ListItemButton from "@mui/material/ListItemButton";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import ReplyIcon from "@mui/icons-material/ReplyOutlined";
 
 import { i18n } from "../../translate/i18n";
 import { formatWaitingTime, waitingLevel } from "../../helpers/waitingTime";
@@ -182,6 +184,9 @@ const TicketListItem = ({ ticket, mostrarProtocolo = false }) => {
 		const t = setInterval(() => setAgora(new Date()), 60000);
 		return () => clearInterval(t);
 	}, [ticket.status]);
+
+	// Quantas mensagens o cliente mandou desde a última vez que alguém leu.
+	const naoLidas = ticket.unreadMessages > 0 ? ticket.unreadMessages : 0;
 
 	const espera =
 		ticket.status === "pending"

@@ -4,6 +4,7 @@ import { Response as Res } from "express";
 import User from "../../models/User";
 import AppError from "../../errors/AppError";
 import ShowUserService from "../UserServices/ShowUserService";
+import GarantirEmpresaAtiva from "../../helpers/GarantirEmpresaAtiva";
 import authConfig from "../../config/auth";
 import {
   createAccessToken,
@@ -42,6 +43,11 @@ export const RefreshTokenService = async (
       throw new AppError("ERR_SESSION_EXPIRED", 401);
     }
 
+    // Bloquear a empresa precisa valer para quem já está com a tela aberta,
+    // e não só no próximo login. O frontend renova o token de tempos em
+    // tempos; é aqui que a sessão cai.
+    await GarantirEmpresaAtiva(user);
+
     const userForToken =
       user.profile === "super" && companyOverride?.companyId
         ? ({
@@ -57,6 +63,10 @@ export const RefreshTokenService = async (
     return { user: userForToken, newToken, refreshToken };
   } catch (err) {
     res.clearCookie("jrt");
+    // Um AppError daqui de dentro já é uma explicação — trocá-la por "sessão
+    // expirada" mandaria o usuário tentar de novo para sempre, sem descobrir
+    // que a empresa está suspensa.
+    if (err instanceof AppError) throw err;
     throw new AppError("ERR_SESSION_EXPIRED", 401);
   }
 };

@@ -27,7 +27,7 @@ const useStyles = makeStyles((theme) => ({
     gap: 1,
     background: theme.palette.divider,
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     overflow: "hidden",
     marginBottom: 12,
   },
@@ -50,7 +50,7 @@ const useStyles = makeStyles((theme) => ({
 
   compositor: {
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     padding: 12,
     marginBottom: 20,
   },
@@ -74,7 +74,7 @@ const useStyles = makeStyles((theme) => ({
 
   registro: {
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 6,
+    borderRadius: 0,
     marginBottom: 8,
     overflow: "hidden",
   },

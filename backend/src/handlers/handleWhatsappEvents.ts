@@ -16,7 +16,9 @@ import Message from "../models/Message";
 
 import CreateMessageService from "../services/MessageServices/CreateMessageService";
 import CreateOrUpdateContactService from "../services/ContactServices/CreateOrUpdateContactService";
-import FindOrCreateTicketService from "../services/TicketServices/FindOrCreateTicketService";
+import FindOrCreateTicketService, {
+  ContagemNaoLidas
+} from "../services/TicketServices/FindOrCreateTicketService";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
 import CreateContactService from "../services/ContactServices/CreateContactService";
@@ -24,6 +26,7 @@ import CreateContactService from "../services/ContactServices/CreateContactServi
 import { whatsappProvider } from "../providers/WhatsApp/whatsappProvider";
 import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 import IsWithinBusinessHours from "../helpers/IsWithinBusinessHours";
+import { ROTULO_AUDIO } from "../helpers/RotuloAudio";
 import Setting from "../models/Setting";
 
 const writeFileAsync = promisify(writeFile);
@@ -323,11 +326,21 @@ export const handleMessage = async (
       return;
     }
 
+    // Reentrega da mesma mensagem (reconexão, fila offline do WhatsApp) não
+    // pode somar de novo: o contador passaria a anunciar mensagens que o
+    // cliente nunca mandou. O id vem do próprio WhatsApp, então é a chave.
+    const jaGravada = await Message.findByPk(processedMessage.id, {
+      attributes: ["id"]
+    });
+
+    let contagemNaoLidas: ContagemNaoLidas = "somar";
+    if (processedMessage.fromMe) contagemNaoLidas = "zerar";
+    else if (jaGravada) contagemNaoLidas = "manter";
 
     const ticket = await FindOrCreateTicketService(
       contact,
       contextPayload.whatsappId,
-      contextPayload.unreadMessages,
+      contagemNaoLidas,
       groupContact
     );
 
@@ -383,19 +396,6 @@ export const handleMessage = async (
     if (mediaPayload && processedMessage.hasMedia) {
       const filename = await saveMediaFile(mediaPayload);
       messageData.mediaUrl = filename;
-      // saveMediaFile insere um sufixo aleatório para os arquivos não
-      // colidirem em disco. Na conversa deve aparecer o nome original, não o
-      // nome de armazenamento.
-      //
-      // Figurinha é a exceção: ela não tem nome que interesse a ninguém, e
-      // guardar o do arquivo fazia a conversa exibir "sticker-1786938287793
-      // .webp" embaixo do desenho -- e esse mesmo texto virava a prévia na
-      // lista de conversas.
-      messageData.body =
-        processedMessage.type === "sticker"
-          ? processedMessage.body || ""
-          : processedMessage.body || mediaPayload.filename || filename;
-
       const [mediaType] = mediaPayload.mimetype.split("/");
 
       // Figurinha chega como "image/webp", e derivar o tipo do mimetype
@@ -404,6 +404,23 @@ export const handleMessage = async (
       // O tipo que veio do provedor sabe a diferença e tem a palavra final.
       messageData.mediaType =
         processedMessage.type === "sticker" ? "sticker" : mediaType;
+
+      // saveMediaFile insere um sufixo aleatório para os arquivos não
+      // colidirem em disco. Na conversa deve aparecer o nome original, não o
+      // nome de armazenamento.
+      //
+      // Figurinha e áudio são a exceção: nenhum dos dois tem nome que
+      // interesse a alguém, e guardar o do arquivo fazia a conversa exibir
+      // "sticker-1786938287793.webp" embaixo do desenho, ou "1756938287793
+      // .ogg" embaixo do player -- e esse mesmo texto virava a prévia na
+      // lista de conversas.
+      const semNomeParaMostrar =
+        processedMessage.type === "sticker" ||
+        messageData.mediaType === "audio";
+
+      messageData.body = semNomeParaMostrar
+        ? processedMessage.body || ""
+        : processedMessage.body || mediaPayload.filename || filename;
     }
 
     let lastMessageText = "";
@@ -411,6 +428,13 @@ export const handleMessage = async (
       lastMessageText = processedMessage.body.includes("Localization")
         ? processedMessage.body
         : "Localization";
+    } else if (
+      messageData.mediaType === "audio" ||
+      messageData.mediaType === "ptt"
+    ) {
+      // Idem na lista de conversas: o nome do arquivo de áudio não diz nada a
+      // quem lê a prévia, e é justamente o texto que não deve ficar gravado.
+      lastMessageText = ROTULO_AUDIO;
     } else {
       lastMessageText = processedMessage.body || mediaPayload?.filename || "";
     }
@@ -419,8 +443,32 @@ export const handleMessage = async (
     // horário exibido dentro da conversa, então lista e conversa concordam.
     await ticket.update({
       lastMessage: lastMessageText,
-      lastMessageAt: messageData.timestamp || new Date()
+      lastMessageAt: messageData.timestamp || new Date(),
+      lastMessageFromMe: processedMessage.fromMe
     });
+
+    // A mensagem citada pode não existir por aqui: o contato respondeu a algo
+    // de antes de o número ser conectado, ou a uma mensagem já apagada.
+    // Gravar o id assim mesmo violava a chave estrangeira e derrubava a
+    // gravação inteira — o cliente escrevia e nada aparecia na conversa. A
+    // citação some, a mensagem fica.
+    if (messageData.quotedMsgId) {
+      const citada = await Message.findByPk(messageData.quotedMsgId, {
+        attributes: ["id"]
+      });
+
+      if (!citada) {
+        logger.warn(
+          {
+            messageId: messageData.id,
+            quotedMsgId: messageData.quotedMsgId,
+            ticketId: ticket.id
+          },
+          "Mensagem citada desconhecida; a citação foi ignorada"
+        );
+        messageData.quotedMsgId = undefined;
+      }
+    }
 
     await CreateMessageService({ messageData });
 
@@ -464,16 +512,26 @@ export const handleMessage = async (
   }
 };
 
-export const handleMessageAck = async (
-  messageId: string,
-  ack: MessageAck
-): Promise<void> => {
-  await new Promise(r => setTimeout(r, 500));
+/**
+ * Localiza a mensagem para aplicar a confirmação.
+ *
+ * O WhatsApp costuma confirmar o envio antes de o eco da própria mensagem
+ * chegar e ser gravado, então a primeira busca falha com frequência. Antes
+ * havia uma pausa fixa de meio segundo e uma única tentativa: quando o eco
+ * demorava mais que isso, a confirmação era perdida em silêncio e a mensagem
+ * ficava parada em "enviando" para sempre.
+ */
+const aguardarMensagem = async (messageId: string): Promise<Message | null> => {
+  const tentativas = [0, 500, 1500, 3000];
 
-  const io = getIO();
+  for (let i = 0; i < tentativas.length; i += 1) {
+    if (tentativas[i] > 0) {
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise(r => setTimeout(r, tentativas[i]));
+    }
 
-  try {
-    const messageToUpdate = await Message.findByPk(messageId, {
+    // eslint-disable-next-line no-await-in-loop
+    const mensagem = await Message.findByPk(messageId, {
       include: [
         "contact",
         {
@@ -489,11 +547,57 @@ export const handleMessageAck = async (
       ]
     });
 
+    if (mensagem) return mensagem;
+  }
+
+  return null;
+};
+
+export const handleMessageAck = async (
+  messageId: string,
+  ack: MessageAck
+): Promise<void> => {
+  const io = getIO();
+
+  try {
+    const messageToUpdate = await aguardarMensagem(messageId);
+
     if (!messageToUpdate) {
+      logger.warn(
+        { messageId, ack },
+        "Confirmação recebida para mensagem desconhecida"
+      );
+      return;
+    }
+
+    const atual = messageToUpdate.ack ?? 0;
+
+    // Os estados só avançam. O WhatsApp reenvia confirmações fora de ordem —
+    // o recibo de entrega chega depois do de leitura com alguma frequência —
+    // e gravar o número cru fazia a mensagem voltar de "lida" para "entregue"
+    // na tela do atendente.
+    //
+    // A falha é a exceção: ela vale enquanto o servidor não tiver confirmado
+    // nada, e nunca depois, para não apagar um envio que deu certo.
+    const avanca = ack > atual;
+    const falhaValida = ack === -1 && atual < 1;
+
+    if (!avanca && !falhaValida) {
       return;
     }
 
     await messageToUpdate.update({ ack });
+
+    if (ack === -1) {
+      logger.error(
+        {
+          messageId,
+          ticketId: messageToUpdate.ticketId,
+          body: messageToUpdate.body?.slice(0, 120)
+        },
+        "WhatsApp recusou a mensagem"
+      );
+    }
 
     io.to(companyRoom(messageToUpdate.ticket.companyId))
       .to(
@@ -505,6 +609,6 @@ export const handleMessageAck = async (
       });
   } catch (err) {
     Sentry.captureException(err);
-    logger.error(`Error handling message ack: ${err}`);
+    logger.error({ err, messageId, ack }, "Error handling message ack");
   }
 };

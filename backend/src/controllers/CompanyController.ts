@@ -15,6 +15,7 @@ import AppError from "../errors/AppError";
 type IndexQuery = {
   searchParam: string;
   pageNumber: string;
+  status: string;
 };
 
 interface CompanyData {
@@ -67,11 +68,12 @@ export const updateBranding = async (
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const { searchParam, pageNumber } = req.query as IndexQuery;
+  const { searchParam, pageNumber, status } = req.query as IndexQuery;
 
   const { companies, count, hasMore } = await ListCompaniesService({
     searchParam,
-    pageNumber
+    pageNumber,
+    status
   });
 
   return res.json({ companies, count, hasMore });

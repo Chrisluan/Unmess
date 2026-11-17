@@ -128,7 +128,7 @@ const MainListItems = () => {
 
   return (
     <>
-      {can("tickets:access") && (
+      {can("tickets:view") && (
         <ItemTrilho
           to="/tickets"
           rotulo="Conversas"
@@ -136,28 +136,28 @@ const MainListItems = () => {
           ativo={caminho.startsWith("/tickets")}
         />
       )}
-      {can("crm:access") && (
+      {can("crm:view") && (
         <ItemTrilho to="/crm" rotulo="Funil" Icone={ViewKanbanOutlinedIcon} ativo={caminho.startsWith("/crm")} />
       )}
-      {(can("contacts:access") || can("clients:access")) && (
+      {(can("contacts:view") || can("clients:view")) && (
         <ItemTrilho
-          to={can("contacts:access") ? "/contacts" : "/customers"}
+          to={can("contacts:view") ? "/contacts" : "/customers"}
           rotulo="Contatos"
           Icone={PeopleAltOutlinedIcon}
           ativo={caminho.startsWith("/contacts") || caminho.startsWith("/customers")}
         />
       )}
-      {can("dashboard:access") && (
+      {can("dashboard:view") && (
         <ItemTrilho to="/" rotulo="Painel" Icone={InsertChartOutlinedIcon} ativo={caminho === "/"} />
       )}
       {primeiroAjuste && (
         <ItemTrilho
-          to={numeroCaido && can("settings:access") ? "/Settings?aba=conexoes" : primeiroAjuste}
+          to={numeroCaido && can("settings:view") ? "/Settings?aba=conexoes" : primeiroAjuste}
           rotulo="Ajustes"
           Icone={SettingsOutlinedIcon}
           ativo={ehRotaDeAjustes(caminho)}
-          alerta={numeroCaido && can("settings:access") ? "!" : null}
-          dica={numeroCaido && can("settings:access") ? "Um número de WhatsApp está desconectado" : null}
+          alerta={numeroCaido && can("settings:view") ? "!" : null}
+          dica={numeroCaido && can("settings:view") ? "Um número de WhatsApp está desconectado" : null}
         />
       )}
     </>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect, useReducer, useContext } from "react";
 import openSocket from "../../services/socket-io";
 import toastError from "../../errors/toastError";
 
 import api from "../../services/api";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const reducer = (state, action) => {
 	if (action.type === "LOAD_WHATSAPPS") {
@@ -56,8 +57,18 @@ const reducer = (state, action) => {
 const useWhatsApps = () => {
 	const [whatsApps, dispatch] = useReducer(reducer, []);
 	const [loading, setLoading] = useState(true);
+	const { user } = useContext(AuthContext);
+
+	// O super navegando pelo painel de empresas não está dentro de nenhuma
+	// delas, e conexões de WhatsApp só existem dentro de uma empresa.
+	const semEmpresa = user?.profile === "super" && !user?.companyId;
 
 	useEffect(() => {
+		if (semEmpresa) {
+			setLoading(false);
+			return;
+		}
+
 		setLoading(true);
 		const fetchSession = async () => {
 			try {
@@ -70,7 +81,7 @@ const useWhatsApps = () => {
 			}
 		};
 		fetchSession();
-	}, []);
+	}, [semEmpresa]);
 
 	useEffect(() => {
 		const socket = openSocket();

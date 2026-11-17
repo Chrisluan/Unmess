@@ -7,6 +7,8 @@ import OrdemDeServicoService from "../services/DealServices/OrdemDeServicoServic
 import getCompanyId from "../helpers/GetCompanyId";
 import { getIO } from "../libs/socket";
 import { companyRoom } from "../libs/socketRooms";
+import AppError from "../errors/AppError";
+import { usuarioPode } from "../helpers/permissions/resolve";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
@@ -20,6 +22,28 @@ export const sync = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
   const { items } = req.body;
   const companyId = getCompanyId(req);
+
+  /**
+   * Desconto na linha do orçamento pede `crm:discount`.
+   *
+   * A conferência é só quando existe desconto de verdade: sem isto, quem não
+   * pode descontar não conseguiria salvar nem um orçamento com todos os
+   * descontos zerados, porque a tela manda o campo em toda linha.
+   */
+  const temDesconto = Array.isArray(items)
+    ? items.some((item: { discount?: unknown }) => Number(item?.discount) > 0)
+    : false;
+
+  if (temDesconto) {
+    const pode = await usuarioPode(Number(req.user.id), "crm:discount");
+
+    if (!pode) {
+      throw new AppError(
+        "Você não tem permissão para dar desconto. Peça a quem administra o sistema.",
+        403
+      );
+    }
+  }
 
   const resultado = await SyncDealItemsService({ dealId, companyId, items });
 

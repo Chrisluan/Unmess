@@ -5,7 +5,6 @@ import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Dialog from "@mui/material/Dialog";
@@ -38,7 +37,7 @@ const useStyles = makeStyles(theme => ({
 		position: "relative",
 	},
 	buttonProgress: {
-		color: green[500],
+		color: theme.palette.primary.main,
 		position: "absolute",
 		top: "50%",
 		left: "50%",
@@ -60,7 +59,7 @@ const CompanySchema = Yup.object().shape({
 	email: Yup.string().email("Invalid email"),
 	phone: Yup.string(),
 	plan: Yup.string(),
-	status: Yup.string(),
+
 	adminName: Yup.string().when("$isEdit", {
 		is: false,
 		then: Yup.string().min(2, "Too Short!").required("Required"),
@@ -230,26 +229,14 @@ const CompanyModal = ({ open, onClose, companyId }) => {
 											{i18n.t("companyModal.form.planEnterprise")}
 										</MenuItem>
 									</Field>
-									<Field
-										as={TextField}
-										select
-										label={i18n.t("companyModal.form.status")}
-										name="status"
-										variant="outlined"
-										margin="dense"
-										className={classes.textField}
-									>
-										<MenuItem value="active">
-											{i18n.t("companyModal.form.statusActive")}
-										</MenuItem>
-										<MenuItem value="suspended">
-											{i18n.t("companyModal.form.statusSuspended")}
-										</MenuItem>
-										<MenuItem value="canceled">
-											{i18n.t("companyModal.form.statusCanceled")}
-										</MenuItem>
-									</Field>
 								</div>
+
+								{isEdit && (
+									<Typography variant="caption" color="textSecondary" display="block">
+										Bloquear ou liberar o acesso desta empresa acontece na aba
+										Acesso da ficha dela.
+									</Typography>
+								)}
 
 								{!isEdit && (
 									<>

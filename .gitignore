@@ -52,3 +52,9 @@ certs/
 
 !whatsapp-gateway/package-lock.json
 .vs/
+
+# UPU (Unmess Production Updater): compilacao, executavel publicado e os dados
+# desta instalacao -- que incluem a chave privada de notificacao e o hash da
+# senha do painel.
+/upu/publicacao/
+/upu/dados/

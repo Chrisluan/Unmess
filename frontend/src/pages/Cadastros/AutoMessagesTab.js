@@ -41,7 +41,7 @@ const VariablesHelper = () => {
 	);
 };
 
-const AutoMessagesTab = ({ settings, getSettingValue, onSettingSaved }) => {
+const AutoMessagesTab = ({ getSettingValue, onSettingSaved }) => {
 	const classes = useStyles();
 
 	const handleToggle = async (key, checked) => {

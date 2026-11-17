@@ -149,7 +149,10 @@ const ForwardMessageService = async ({
       }
     );
 
-    await targetTicket.update({ lastMessage: message.body || mediaFileName });
+    await targetTicket.update({
+      lastMessage: message.body || mediaFileName,
+      lastMessageFromMe: true
+    });
 
     return targetTicket;
   }

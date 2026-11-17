@@ -2,65 +2,117 @@ import React, { useState, useContext } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import {
-  Avatar,
   Button,
   CssBaseline,
   TextField,
-  Grid,
-  Box,
   Typography,
-  Container,
   InputAdornment,
   IconButton,
-  Link
-} from '@mui/material';
+  Link,
+  CircularProgress
+} from "@mui/material";
 
-import { LockOutlined, Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
-import makeStyles from '@mui/styles/makeStyles';
+import makeStyles from "@mui/styles/makeStyles";
 
 import { i18n } from "../../translate/i18n";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
-
-// const Copyright = () => {
-// 	return (
-// 		<Typography variant="body2" color="textSecondary" align="center">
-// 			{"Copyleft "}
-// 			<Link color="inherit" href="https://github.com/canove">
-// 				Canove
-// 			</Link>{" "}
-// 			{new Date().getFullYear()}
-// 			{"."}
-// 		</Typography>
-// 	);
-// };
+import { useBranding } from "../../context/Branding";
 
 const useStyles = makeStyles((theme) => ({
-  paper: {
-    marginTop: theme.spacing(8),
+  /**
+   * Tela inteira, com o cartão centrado.
+   *
+   * O formulário antigo ficava colado no topo de um contêiner estreito, sem
+   * moldura: era a única tela do sistema em que nada dizia onde a página
+   * começava. Aqui o bloco tem borda, e a borda é o que separa.
+   */
+  tela: {
+    minHeight: "100vh",
     display: "flex",
-    flexDirection: "column",
     alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(3),
+    backgroundColor: theme.palette.background.default
   },
-  avatar: {
-    margin: theme.spacing(1),
-    backgroundColor: theme.palette.secondary.main,
+
+  cartao: {
+    width: "100%",
+    maxWidth: 380,
+    padding: theme.spacing(4),
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`
   },
-  form: {
-    width: "100%", // Fix IE 11 issue.
-    marginTop: theme.spacing(1),
+
+  marca: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: theme.spacing(3)
   },
-  submit: {
-    margin: theme.spacing(3, 0, 2),
+
+  logo: {
+    width: 36,
+    height: 36,
+    objectFit: "contain",
+    flexShrink: 0
   },
+
+  // Sem logo, a inicial sobre o azul dá alguma identidade em vez de um vazio.
+  inicial: {
+    width: 36,
+    height: 36,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 700,
+    fontSize: "1.05rem",
+    color: theme.palette.primary.contrastText,
+    backgroundColor: theme.palette.primary.main
+  },
+
+  nomeMarca: {
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap"
+  },
+
+  titulo: {
+    fontWeight: 700,
+    letterSpacing: "-0.02em",
+    marginBottom: theme.spacing(0.5)
+  },
+
+  apoio: {
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(3)
+  },
+
+  entrar: {
+    marginTop: theme.spacing(3),
+    minHeight: 42
+  },
+
+  rodape: {
+    marginTop: theme.spacing(3),
+    paddingTop: theme.spacing(2),
+    borderTop: `1px solid ${theme.palette.divider}`,
+    textAlign: "center"
+  }
 }));
 
 const Login = () => {
   const classes = useStyles();
+  const { name: nomeDaMarca, logo } = useBranding();
 
   const [user, setUser] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const [entrando, setEntrando] = useState(false);
 
   const { handleLogin } = useContext(AuthContext);
 
@@ -68,22 +120,44 @@ const Login = () => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
-  const handlSubmit = (e) => {
+  const handlSubmit = async (e) => {
     e.preventDefault();
-    handleLogin(user);
+    setEntrando(true);
+    try {
+      await handleLogin(user);
+    } finally {
+      // Em caso de erro a tela continua aqui e o botão precisa voltar; no
+      // sucesso o componente é desmontado antes disso importar.
+      setEntrando(false);
+    }
   };
 
   return (
-    <Container component="main" maxWidth="xs">
+    <div className={classes.tela}>
       <CssBaseline />
-      <div className={classes.paper}>
-        <Avatar className={classes.avatar}>
-          <LockOutlined />
-        </Avatar>
-        <Typography component="h1" variant="h5">
+
+      <div className={classes.cartao}>
+        <div className={classes.marca}>
+          {logo ? (
+            <img src={logo} alt={nomeDaMarca} className={classes.logo} />
+          ) : (
+            <div className={classes.inicial}>
+              {nomeDaMarca.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <Typography variant="subtitle1" className={classes.nomeMarca}>
+            {nomeDaMarca}
+          </Typography>
+        </div>
+
+        <Typography component="h1" variant="h5" className={classes.titulo}>
           {i18n.t("login.title")}
         </Typography>
-        <form className={classes.form} noValidate onSubmit={handlSubmit}>
+        <Typography variant="body2" className={classes.apoio}>
+          {i18n.t("login.subtitle")}
+        </Typography>
+
+        <form noValidate onSubmit={handlSubmit}>
           <TextField
             variant="outlined"
             margin="normal"
@@ -108,45 +182,48 @@ const Login = () => {
             value={user.password}
             onChange={handleChangeInput}
             autoComplete="current-password"
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword ? "text" : "password"}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label="toggle password visibility"
+                    aria-label={
+                      showPassword ? "Ocultar a senha" : "Mostrar a senha"
+                    }
                     onClick={() => setShowPassword((e) => !e)}
-                    size="large">
+                    edge="end"
+                  >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
                 </InputAdornment>
               )
             }}
           />
+
           <Button
             type="submit"
             fullWidth
             variant="contained"
             color="primary"
-            className={classes.submit}
+            className={classes.entrar}
+            disabled={entrando}
+            startIcon={
+              entrando ? <CircularProgress size={16} color="inherit" /> : null
+            }
           >
-            {i18n.t("login.buttons.submit")}
+            {entrando
+              ? i18n.t("login.buttons.submitting")
+              : i18n.t("login.buttons.submit")}
           </Button>
-          <Grid container>
-            <Grid item>
-              <Link
-                href="#"
-                variant="body2"
-                component={RouterLink}
-                to="/signup"
-              >
-                {i18n.t("login.buttons.register")}
-              </Link>
-            </Grid>
-          </Grid>
         </form>
+
+        <div className={classes.rodape}>
+          <Link variant="body2" component={RouterLink} to="/signup">
+            {i18n.t("login.buttons.register")}
+          </Link>
+        </div>
       </div>
-      <Box mt={8}>{/* <Copyright /> */}</Box>
-    </Container>
+    </div>
   );
 };
 

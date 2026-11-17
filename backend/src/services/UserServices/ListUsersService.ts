@@ -1,4 +1,5 @@
 import { Sequelize, Op } from "sequelize";
+import Role from "../../models/Role";
 import Queue from "../../models/Queue";
 import User from "../../models/User";
 import Whatsapp from "../../models/Whatsapp";
@@ -43,6 +44,10 @@ const ListUsersService = async ({
       "id",
       "email",
       "profile",
+      "roleId",
+      // A tela de acessos marca quem foge do cargo. É o JSON das exceções, e
+      // não segredo nenhum — só quem tem "users:view" chega aqui.
+      "accessExceptions",
       "createdAt",
       "maxSimultaneousTickets",
       "online",
@@ -53,7 +58,13 @@ const ListUsersService = async ({
     order: [["createdAt", "DESC"]],
     include: [
       { model: Queue, as: "queues", attributes: ["id", "name", "color"] },
-      { model: Whatsapp, as: "whatsapp", attributes: ["id", "name"] }
+      { model: Whatsapp, as: "whatsapp", attributes: ["id", "name"] },
+      {
+        model: Role,
+        as: "role",
+        attributes: ["id", "name", "isSystem"],
+        required: false
+      }
     ]
   });
 

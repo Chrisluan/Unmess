@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UPU — Unmess Production Updater</title>
+    <link rel="stylesheet" href="/estilo.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>UPU <span class="discreta">Unmess Production Updater</span></h1>
+        <div class="discreta" id="linha-versao">carregando…</div>
+      </div>
+      <div class="acoes">
+        <span class="discreta" id="momento">—</span>
+        <button class="discreto" id="sair">Sair</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="recado" id="recado"></div>
+
+      <h2>Produção agora</h2>
+      <section class="cartoes" id="cartoes"></section>
+      <p class="discreta mono" id="linha-git"></p>
+
+      <h2>
+        Branch de produção
+        <button class="discreto" id="ver-branch">Ver o que há de novo</button>
+      </h2>
+      <section id="branch" class="lista"></section>
+
+      <h2>
+        Atualizações
+        <button class="discreto" id="nova-release">Nova atualização</button>
+      </h2>
+      <section id="releases" class="lista"></section>
+
+      <!-- O formulário dos campos obrigatórios. Fica escondido até alguém
+           abrir uma release, porque é ele, e não a lista, que ocupa a tela
+           quando se está trabalhando. -->
+      <section id="area-formulario" hidden>
+        <h2 id="titulo-formulario">Nova atualização</h2>
+
+        <form class="release" id="formulario" autocomplete="off">
+          <div class="linha">
+            <div class="campo" data-campo="versao">
+              <label for="versao">Versão *</label>
+              <input type="text" id="versao" placeholder="1.4.0" />
+              <div class="ajuda">
+                É por este número que o usuário vai chamar o que está vendo ao
+                relatar um problema.
+              </div>
+            </div>
+
+            <div class="campo" data-campo="tipo">
+              <label for="tipo">Tipo *</label>
+              <select id="tipo">
+                <option value="">escolha…</option>
+                <option value="correcao">Correção</option>
+                <option value="melhoria">Melhoria</option>
+                <option value="recurso">Recurso novo</option>
+                <option value="seguranca">Segurança</option>
+                <option value="critica">Crítica</option>
+              </select>
+              <div class="ajuda">
+                Segurança e crítica passam a exigir plano de volta escrito.
+              </div>
+            </div>
+          </div>
+
+          <div class="campo" data-campo="titulo">
+            <label for="titulo">Título *</label>
+            <input type="text" id="titulo" placeholder="Pedidos com itens e ordem de serviço" />
+          </div>
+
+          <div class="campo" data-campo="resumoParaUsuarios">
+            <label for="resumo">O que muda para quem usa *</label>
+            <textarea id="resumo" placeholder="Agora dá para lançar os itens do pedido direto na conversa, e o total do funil se atualiza sozinho."></textarea>
+            <div class="ajuda">
+              Este texto aparece na tela de todos os clientes. Escreva para quem
+              atende, não para quem programa.
+            </div>
+          </div>
+
+          <div class="campo" data-campo="alteracoes">
+            <label for="alteracoes">Alterações *</label>
+            <textarea id="alteracoes" placeholder="Uma por linha"></textarea>
+            <div class="ajuda">Uma por linha. É a lista que aparece no aviso e no histórico.</div>
+          </div>
+
+          <div class="linha">
+            <div class="campo" data-campo="impacto">
+              <label for="impacto">Impacto no uso *</label>
+              <select id="impacto">
+                <option value="">escolha…</option>
+                <option value="nenhum">Nenhum — ninguém percebe</option>
+                <option value="leve">Leve — a tela pode piscar</option>
+                <option value="interrupcao">Interrupção — o sistema para</option>
+              </select>
+            </div>
+
+            <div class="campo" data-campo="duracaoEstimadaMinutos" id="area-duracao" hidden>
+              <label for="duracao">Quantos minutos parado *</label>
+              <input type="number" id="duracao" min="1" max="240" />
+              <div class="ajuda">O usuário precisa saber se espera ou se vai almoçar.</div>
+            </div>
+          </div>
+
+          <div class="linha">
+            <div class="campo" data-campo="responsavel">
+              <label for="responsavel">Responsável *</label>
+              <input type="text" id="responsavel" placeholder="quem assume esta atualização" />
+            </div>
+
+            <div class="campo" data-campo="commitAlvo">
+              <label for="commit">Commit alvo *</label>
+              <select id="commit"></select>
+              <div class="ajuda mono" id="commit-atual"></div>
+            </div>
+          </div>
+
+          <div class="campo" data-campo="planoDeVolta">
+            <label for="plano">Plano de volta</label>
+            <textarea id="plano" placeholder="O UPU restaura código e build sozinho. Escreva aqui o que ele não desfaz."></textarea>
+            <div class="ajuda">
+              Obrigatório quando o tipo é segurança ou crítica, ou quando o
+              sistema para. Migration destrutiva e dado de cliente já gravado
+              não voltam sozinhos.
+            </div>
+          </div>
+
+          <div class="linha">
+            <div class="campo" data-campo="janela">
+              <label for="janela">Horário programado</label>
+              <input type="datetime-local" id="janela" />
+              <div class="ajuda">Vazio = aplicar na hora, pelo botão.</div>
+            </div>
+
+            <div class="campo" data-campo="avisoPrevioMinutos">
+              <label for="aviso">Avisar os usuários quantos minutos antes</label>
+              <input type="number" id="aviso" min="0" max="1440" />
+            </div>
+          </div>
+
+          <div class="campo" data-campo="testadoEmDesenvolvimento">
+            <label class="caixa-marcavel">
+              <input type="checkbox" id="testado" />
+              <span>
+                Confirmo que este código rodou em desenvolvimento. *
+                <div class="ajuda">Produção não é o primeiro lugar onde um código roda.</div>
+              </span>
+            </label>
+          </div>
+
+          <div class="campo" data-campo="forcar">
+            <label class="caixa-marcavel">
+              <input type="checkbox" id="forcar" />
+              <span>
+                Recompilar mesmo sem commit novo
+                <div class="ajuda">Para quando o código está certo e o que quebrou foi o build.</div>
+              </span>
+            </label>
+          </div>
+
+          <div class="rodape-do-form">
+            <button type="button" class="principal" id="salvar">Salvar</button>
+            <button type="button" id="agendar">Agendar</button>
+            <button type="button" id="aplicar">Aplicar agora</button>
+            <button type="button" class="discreto" id="fechar-formulario">Fechar</button>
+            <button type="button" class="perigo" id="cancelar-release" hidden>Cancelar atualização</button>
+          </div>
+        </form>
+      </section>
+
+      <h2>
+        Avisos na tela dos usuários
+        <button class="discreto" id="novo-aviso">Publicar aviso</button>
+      </h2>
+      <section id="avisos" class="lista"></section>
+
+      <h2>Diário</h2>
+      <div id="diario"></div>
+
+      <h2>Configuração</h2>
+      <form class="release" id="configuracao">
+        <div class="linha">
+          <div class="campo">
+            <label for="cfg-branch">Branch</label>
+            <input type="text" id="cfg-branch" />
+          </div>
+          <div class="campo">
+            <label for="cfg-janela">Horário sugerido</label>
+            <input type="text" id="cfg-janela" placeholder="03:00" />
+          </div>
+        </div>
+
+        <div class="linha">
+          <div class="campo">
+            <label for="cfg-aviso">Aviso prévio padrão (minutos)</label>
+            <input type="number" id="cfg-aviso" min="0" max="1440" />
+          </div>
+          <div class="campo">
+            <label for="cfg-vigia">Intervalo da vigia da branch (minutos)</label>
+            <input type="number" id="cfg-vigia" min="1" max="1440" />
+          </div>
+        </div>
+
+        <div class="campo">
+          <label class="caixa-marcavel">
+            <input type="checkbox" id="cfg-vigiar" />
+            <span>
+              Vigiar a branch e criar rascunho quando houver commit novo
+              <div class="ajuda">O rascunho não aplica nada; só lembra que faltam os campos.</div>
+            </span>
+          </label>
+        </div>
+
+        <div class="campo">
+          <label for="cfg-webhook">Webhook (opcional)</label>
+          <input type="text" id="cfg-webhook" placeholder="https://…" />
+          <div class="ajuda">Recebe um POST a cada evento. Vazio desliga.</div>
+        </div>
+
+        <div class="linha">
+          <div class="campo">
+            <label for="cfg-caminho">Caminho público do UPU</label>
+            <input type="text" id="cfg-caminho" placeholder="/upu" />
+            <div class="ajuda">
+              Onde o navegador do usuário alcança o UPU. Só é usado para a
+              notificação com a aba fechada.
+            </div>
+          </div>
+          <div class="campo">
+            <label for="cfg-contato">Contato VAPID</label>
+            <input type="text" id="cfg-contato" placeholder="mailto:suporte@…" />
+          </div>
+        </div>
+
+        <div class="rodape-do-form">
+          <button type="button" class="principal" id="salvar-configuracao">Salvar configuração</button>
+          <span class="discreta" id="estado-push"></span>
+        </div>
+      </form>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

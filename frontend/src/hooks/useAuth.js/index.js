@@ -25,6 +25,16 @@ const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
 
+  /**
+   * Os módulos que esta pessoa fixou no topo do menu.
+   *
+   * Vive fora do objeto `user` de propósito: `user` é remontado do zero em
+   * meia dúzia de caminhos (login, refresh, entrar numa empresa, sair dela),
+   * e cada um deles teria de lembrar de recarregar as preferências junto —
+   * até o dia em que um esquecesse e os favoritos sumissem só naquele fluxo.
+   */
+  const [favoritos, setFavoritos] = useState([]);
+
   api.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem("token");
@@ -60,12 +70,27 @@ const useAuth = () => {
     }
   );
 
-  const loadUserPermissions = async (userId) => {
+  /**
+   * O que esta pessoa pode fazer, perguntado ao servidor.
+   *
+   * A resposta vem da mesma conta que as rotas fazem antes de deixar passar —
+   * cargo + exceções individuais —, então a tela nunca mostra um botão que a
+   * API vai recusar, nem esconde um que ela aceitaria.
+   *
+   * Em caso de erro, devolve lista vazia. A pessoa vê o menu recolhido e
+   * recarrega a página; o contrário — assumir acesso quando a consulta falha —
+   * mostraria portas que se abrem em 403.
+   */
+  const carregarAcesso = async () => {
     try {
-      const { data } = await api.get(`/permission-groups/user/${userId}`);
-      return data.permissions || [];
+      const { data } = await api.get("/access/me");
+      return {
+        permissions: data.permissions || [],
+        role: data.role || null,
+        isSuper: !!data.isSuper,
+      };
     } catch {
-      return [];
+      return { permissions: [], role: null, isSuper: false };
     }
   };
 
@@ -76,8 +101,10 @@ const useAuth = () => {
     const { data: refreshData } = await api.post("/auth/refresh_token");
     const userData = refreshData.user;
 
-    const permissions = skipPermissions ? [] : await loadUserPermissions(userData.id);
-    setUser({ ...userData, permissions });
+    const acesso = skipPermissions
+      ? { permissions: [], role: null, isSuper: false }
+      : await carregarAcesso();
+    setUser({ ...userData, ...acesso });
     setIsAuth(true);
     return userData;
   };
@@ -103,14 +130,96 @@ const useAuth = () => {
 
   useEffect(() => {
     const socket = openSocket();
+
     socket.on("user", async (data) => {
       if (data.action === "update" && data.user.id === user.id) {
-        const permissions = await loadUserPermissions(data.user.id);
-        setUser({ ...data.user, permissions });
+        const acesso = await carregarAcesso();
+        setUser({ ...data.user, ...acesso });
       }
     });
+
+    /**
+     * Mudança de acesso chega na hora, sem relogar.
+     *
+     * A API já negava a ação imediatamente — ela consulta o banco a cada
+     * requisição —, mas o menu continuava mostrando as portas antigas até o
+     * próximo login, e a pessoa levava um 403 sem entender o motivo.
+     *
+     * O evento não traz permissão nenhuma: só avisa que vale a pena perguntar
+     * de novo. Quem responde é `/access/me`, com as mesmas conferências de
+     * sempre.
+     */
+    socket.on("access", async (data) => {
+      const mexeuNestaPessoa =
+        data.action === "userAccessChanged" && data.userId === user?.id;
+      const mexeuNoCargoDela =
+        data.action === "roleUpdated" && data.roleId === user?.role?.id;
+      const cargoSumiu = data.action === "roleDeleted";
+
+      if (!mexeuNestaPessoa && !mexeuNoCargoDela && !cargoSumiu) return;
+
+      const acesso = await carregarAcesso();
+      setUser((atual) => ({ ...atual, ...acesso }));
+    });
+
     return () => socket.disconnect();
   }, [user]);
+
+  /**
+   * Preferências acompanham a pessoa, não a sessão: são buscadas quando se
+   * sabe quem está logado, e limpas quando não há mais ninguém.
+   *
+   * Falha silenciosa, sem toast: não conseguir ler os favoritos é o menu sem
+   * a seção Favoritos, e não um erro que valha interromper quem acabou de
+   * entrar no sistema.
+   */
+  useEffect(() => {
+    if (!user?.id) {
+      setFavoritos([]);
+      return undefined;
+    }
+
+    let ativo = true;
+    (async () => {
+      try {
+        const { data } = await api.get("/preferences");
+        if (ativo) {
+          setFavoritos(Array.isArray(data?.favoritos) ? data.favoritos : []);
+        }
+      } catch {
+        if (ativo) setFavoritos([]);
+      }
+    })();
+
+    return () => {
+      ativo = false;
+    };
+  }, [user?.id]);
+
+  /**
+   * Favoritar e desfavoritar.
+   *
+   * A barra reordena antes da resposta do servidor: é a estrela de um menu,
+   * o custo de estar errado por 200ms é nenhum, e esperar o ida-e-volta faria
+   * o clique parecer que não pegou. Se a gravação falhar, a lista volta ao
+   * que era e o erro aparece — o contrário, deixar a tela mostrando um estado
+   * que o banco não tem, é o que não pode acontecer.
+   */
+  const alternarFavorito = async (chave) => {
+    const anterior = favoritos;
+    const proximo = anterior.includes(chave)
+      ? anterior.filter((f) => f !== chave)
+      : [...anterior, chave];
+
+    setFavoritos(proximo);
+
+    try {
+      await api.put("/preferences", { favoritos: proximo });
+    } catch (err) {
+      setFavoritos(anterior);
+      toastError(err);
+    }
+  };
 
   const handleLogin = async (userData) => {
     setLoading(true);
@@ -119,9 +228,8 @@ const useAuth = () => {
       localStorage.setItem("token", JSON.stringify(data.token));
       api.defaults.headers.Authorization = `Bearer ${data.token}`;
 
-      const permissions = await loadUserPermissions(data.user.id);
-      const enrichedUser = { ...data.user, permissions };
-      setUser(enrichedUser);
+      const acesso = await carregarAcesso();
+      setUser({ ...data.user, ...acesso });
       setIsAuth(true);
 
       toast.success(i18n.t("auth.toasts.success"));
@@ -155,8 +263,8 @@ const useAuth = () => {
     api.defaults.headers.Authorization = `Bearer ${data.token}`;
 
     const { data: refreshData } = await api.post("/auth/refresh_token");
-    const permissions = await loadUserPermissions(refreshData.user.id);
-    setUser({ ...refreshData.user, permissions, isSuperInCompany: true });
+    const acesso = await carregarAcesso();
+    setUser({ ...refreshData.user, ...acesso, isSuperInCompany: true });
   };
 
   /**
@@ -175,7 +283,9 @@ const useAuth = () => {
       api.defaults.headers.Authorization = `Bearer ${JSON.parse(superToken)}`;
 
       const { data } = await api.post("/auth/refresh_token");
-      setUser({ ...data.user, permissions: [] });
+      // O super fora de qualquer empresa não opera nada: ele só escolhe em
+      // qual entrar. Sem permissões até escolher.
+      setUser({ ...data.user, permissions: [], role: null, isSuper: true });
       history.push("/select-company");
     } catch {
       handleLogout();
@@ -200,6 +310,8 @@ const useAuth = () => {
     isAuth,
     user,
     loading,
+    favoritos,
+    alternarFavorito,
     handleLogin,
     handleLogout,
     handleSelectCompany,

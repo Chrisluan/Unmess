@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import makeStyles from "@mui/styles/makeStyles";
@@ -8,16 +8,24 @@ import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import TextField from "@mui/material/TextField";
 import Chip from "@mui/material/Chip";
+import Tooltip from "@mui/material/Tooltip";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/DeleteOutline";
 import PrintIcon from "@mui/icons-material/Print";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
+import { toast } from "react-toastify";
+
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import usePermissions from "../../hooks/usePermissions";
-import { getBackendUrl } from "../../config";
+import abrirOrdemDeServico from "../../helpers/ordemDeServico";
+import { descreverNegocio } from "../Crm/identidade";
 
 const useStyles = makeStyles(theme => ({
   bloco: {
@@ -95,9 +103,16 @@ const totalDaLinha = item =>
  * é assim que o backend espera, e evita deixar o pedido pela metade se a
  * conexão cair no meio da digitação.
  */
-const TicketDeals = () => {
+const TicketDeals = ({ onCarregado }) => {
   const classes = useStyles();
   const { ticketId } = useParams();
+  // Em ref para o `carregar` não depender da identidade da função: o pai
+  // costuma passar uma seta nova a cada render, e isso reiniciaria a busca
+  // em laço.
+  const avisar = useRef(onCarregado);
+  useEffect(() => {
+    avisar.current = onCarregado;
+  }, [onCarregado]);
   const history = useHistory();
   const { can } = usePermissions();
 
@@ -106,6 +121,9 @@ const TicketDeals = () => {
   const [aberto, setAberto] = useState(null);
   const [rascunho, setRascunho] = useState([]);
   const [salvando, setSalvando] = useState(false);
+  const [dialogoAberto, setDialogoAberto] = useState(false);
+  const [novoTitulo, setNovoTitulo] = useState("");
+  const [criando, setCriando] = useState(false);
 
   const podeEditar = can("crm:edit");
   const podeCriar = can("crm:create");
@@ -116,6 +134,7 @@ const TicketDeals = () => {
     try {
       const { data } = await api.get(`/tickets/${ticketId}/deals`);
       setDeals(data.deals || []);
+      avisar.current?.(data.deals || []);
     } catch (err) {
       toastError(err);
     } finally {
@@ -179,21 +198,40 @@ const TicketDeals = () => {
    * página pronta, e é o próprio navegador que imprime ou salva em PDF.
    */
   const emitirOrdem = dealId => {
-    window.open(`${getBackendUrl()}/deals/${dealId}/ordem-servico`, "_blank", "noopener");
+    abrirOrdemDeServico(dealId).catch(toastError);
   };
 
   const criarPedido = async () => {
-    const titulo = window.prompt("Descrição do novo pedido:");
-    if (!titulo?.trim()) return;
+    const titulo = novoTitulo.trim();
+    if (!titulo) return;
 
+    setCriando(true);
     try {
       // Nasce sem etapa: o backend coloca no início do quadro padrão, e o card
       // já sai vinculado a esta conversa.
-      const { data } = await api.post("/deals", { title: titulo.trim(), ticketId });
-      await api.put(`/deals/${data.id}/ticket`, { ticketId }).catch(() => {});
+      const { data } = await api.post("/deals", { title: titulo, ticketId });
+
+      // Reforço do vínculo. Se falhar, o pedido existe mas não aparece nesta
+      // conversa — e quem acabou de criá-lo precisa saber disso.
+      try {
+        await api.put(`/deals/${data.id}/ticket`, { ticketId });
+      } catch {
+        toast.warning(
+          "Pedido criado, mas não foi possível ligá-lo a esta conversa. Procure por ele no CRM."
+        );
+      }
+
+      setDialogoAberto(false);
+      setNovoTitulo("");
       await carregar();
+      // Abre o pedido novo já expandido: quem acabou de criar quer lançar os
+      // itens, não procurar o card na lista.
+      setAberto(data.id);
+      setRascunho([]);
     } catch (err) {
       toastError(err);
+    } finally {
+      setCriando(false);
     }
   };
 
@@ -210,19 +248,66 @@ const TicketDeals = () => {
       <div className={classes.cabecalho}>
         <Typography component="h3" style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>
           Pedidos e orçamentos
+          {deals.length > 0 ? ` (${deals.length})` : ""}
         </Typography>
         {podeCriar && (
-          <Button size="small" startIcon={<AddIcon />} onClick={criarPedido}>
-            Novo
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => setDialogoAberto(true)}
+          >
+            Novo pedido
           </Button>
         )}
       </div>
 
       {deals.length === 0 && (
         <Typography className={classes.vazio}>
-          Nenhum pedido ligado a esta conversa ainda.
+          Nada orçado para esta conversa ainda. Crie um pedido aqui e ele já
+          nasce no funil, ligado a este cliente.
         </Typography>
       )}
+
+      <Dialog
+        open={dialogoAberto}
+        onClose={() => setDialogoAberto(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Novo pedido para esta conversa</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            autoFocus
+            fullWidth
+            size="small"
+            variant="outlined"
+            label="O que o cliente pediu"
+            placeholder="Ex: Banner 2x1m em lona"
+            value={novoTitulo}
+            onChange={(e) => setNovoTitulo(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                criarPedido();
+              }
+            }}
+            helperText="O card entra no início do quadro padrão. Os itens e valores você lança em seguida."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button color="inherit" onClick={() => setDialogoAberto(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!novoTitulo.trim() || criando}
+            onClick={criarPedido}
+          >
+            {criando ? "Criando…" : "Criar pedido"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {deals.map(deal => {
         const estaAberto = aberto === deal.id;
@@ -235,8 +320,11 @@ const TicketDeals = () => {
               <div style={{ minWidth: 0 }}>
                 <div className={classes.titulo}>{deal.title}</div>
                 <div className={classes.etapa}>
-                  {deal.board?.name ? `${deal.board.name} · ` : ""}
-                  {deal.stage?.name || "sem etapa"}
+                  {/* Orçamento ou pedido, com o número pelo qual o cliente
+                      pergunta -- é a primeira coisa que se procura aqui. */}
+                  {descreverNegocio(deal)}
+                  {deal.board?.name ? ` · ${deal.board.name}` : ""}
+                  {deal.stage?.name ? ` · ${deal.stage.name}` : ""}
                   {deal.archivedAt ? " · arquivado" : ""}
                 </div>
               </div>
@@ -292,9 +380,15 @@ const TicketDeals = () => {
                       inputProps={{ min: 0, step: "0.01" }}
                     />
                     {podeEditar && (
-                      <IconButton size="small" onClick={() => removerLinha(i)} title="Remover item">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Remover item" arrow>
+                        <IconButton
+                          size="small"
+                          aria-label="Remover item"
+                          onClick={() => removerLinha(i)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </div>
                 ))}
@@ -308,7 +402,7 @@ const TicketDeals = () => {
                   {podeEditar && (
                     <>
                       <Button size="small" startIcon={<AddIcon />} onClick={adicionarLinha}>
-                        Item
+                        Adicionar item
                       </Button>
                       <Button
                         size="small"

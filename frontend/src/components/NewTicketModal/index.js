@@ -170,7 +170,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 				onClose={handleCloseContactModal}
 				onSave={handleAddNewContactTicket}
 			></ContactModal>
-			<Dialog open={modalOpen} onClose={handleClose}>
+			<Dialog open={modalOpen} onClose={handleClose} maxWidth="xs" fullWidth>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("newTicketModal.title")}
 				</DialogTitle>
@@ -178,7 +178,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 					<Autocomplete
 						options={options}
 						loading={loading}
-						style={{ width: 300 }}
+						fullWidth
 						clearOnBlur
 						autoHighlight
 						freeSolo
@@ -217,7 +217,8 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 					<FormControl
 						variant="outlined"
 						margin="dense"
-						style={{ width: 300, marginTop: 16 }}
+						fullWidth
+						style={{ marginTop: 16 }}
 					>
 						<InputLabel id="new-ticket-whatsapp-label">
 							{i18n.t("newTicketModal.connection")}

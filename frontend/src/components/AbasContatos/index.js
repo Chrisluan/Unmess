@@ -34,8 +34,8 @@ const useStyles = makeStyles((theme) => {
 });
 
 const ABAS = [
-  { para: "/contacts", rotulo: "Contatos", permissao: "contacts:access" },
-  { para: "/customers", rotulo: "Clientes", permissao: "clients:access" },
+  { para: "/contacts", rotulo: "Contatos", permissao: "contacts:view" },
+  { para: "/customers", rotulo: "Clientes", permissao: "clients:view" },
 ];
 
 const AbasContatos = () => {

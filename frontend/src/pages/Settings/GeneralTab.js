@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from "react";
 
-import { Paper, Typography, TextField, Button, Switch, FormControlLabel, Divider } from "@mui/material";
+import {
+	Paper,
+	Typography,
+	TextField,
+	Button,
+	Switch,
+	FormControlLabel,
+	Divider,
+	IconButton,
+	InputAdornment,
+	Tooltip,
+} from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
 
 import { i18n } from "../../translate/i18n.js";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const useStyles = makeStyles(theme => ({
-	paper: {
-		padding: theme.spacing(2),
-		display: "flex",
-		alignItems: "center",
-		marginBottom: 12,
-		gap: theme.spacing(2),
-	},
 	section: {
 		padding: theme.spacing(2),
 		marginBottom: theme.spacing(2),
@@ -35,6 +41,18 @@ const useStyles = makeStyles(theme => ({
 	helper: {
 		display: "block",
 		marginTop: 2,
+	},
+
+	linhaToken: {
+		display: "flex",
+		alignItems: "center",
+		flexWrap: "wrap",
+		gap: theme.spacing(2),
+	},
+
+	botaoToken: {
+		whiteSpace: "nowrap",
+		flexShrink: 0,
 	},
 }));
 
@@ -65,6 +83,10 @@ const BOOLEAN_SETTINGS = [
 const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	const classes = useStyles();
 	const [numbers, setNumbers] = useState(NUMBER_SETTINGS);
+	const [confirmarToken, setConfirmarToken] = useState(false);
+
+	const token =
+		settings && settings.length > 0 ? getSettingValue("userApiToken") || "" : "";
 
 	// Sincroniza os campos numéricos quando as settings chegam do backend.
 	useEffect(() => {
@@ -104,13 +126,24 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	};
 
 	const handleGenerateToken = async () => {
+		setConfirmarToken(false);
 		try {
 			const newToken = generateUuid();
 			await api.put("/settings/userApiToken", { value: newToken });
-			toast.success(i18n.t("settings.success"));
+			toast.success(i18n.t("settings.settings.apiToken.generated"));
 			onSettingSaved();
 		} catch (err) {
 			toastError(err);
+		}
+	};
+
+	const handleCopyToken = async () => {
+		try {
+			await navigator.clipboard.writeText(token);
+			toast.success(i18n.t("settings.settings.apiToken.copied"));
+		} catch {
+			// Sem permissão de área de transferência (acesso por HTTP, por
+			// exemplo): o token está visível e dá para copiar à mão.
 		}
 	};
 
@@ -176,32 +209,67 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 				{renderSwitch("notificationSound")}
 			</Paper>
 
-			<Paper className={classes.paper} variant="outlined">
-				<TextField
-					id="api-token-setting"
-					label={i18n.t("settings.settings.apiToken.name")}
-					margin="dense"
-					variant="outlined"
-					fullWidth
-					InputProps={{ readOnly: true }}
-					value={
-						settings && settings.length > 0
-							? getSettingValue("userApiToken") || ""
-							: ""
-					}
-				/>
-				<Button
-					variant="outlined"
-					color="primary"
-					onClick={handleGenerateToken}
-					style={{ whiteSpace: "nowrap" }}
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					{i18n.t("settings.general.sections.integrations")}
+				</Typography>
+				<Divider />
+
+				<Typography
+					variant="caption"
+					color="textSecondary"
+					className={classes.helper}
 				>
-					{i18n.t("settings.settings.apiToken.generate")}
-				</Button>
+					{i18n.t("settings.settings.apiToken.helper")}
+				</Typography>
+
+				<div className={classes.linhaToken}>
+					<TextField
+						id="api-token-setting"
+						label={i18n.t("settings.settings.apiToken.name")}
+						margin="dense"
+						variant="outlined"
+						fullWidth
+						InputProps={{
+							readOnly: true,
+							endAdornment: token ? (
+								<InputAdornment position="end">
+									<Tooltip title={i18n.t("settings.settings.apiToken.copy")} arrow>
+										<IconButton
+											size="small"
+											aria-label={i18n.t("settings.settings.apiToken.copy")}
+											onClick={handleCopyToken}
+										>
+											<ContentCopyIcon fontSize="small" />
+										</IconButton>
+									</Tooltip>
+								</InputAdornment>
+							) : null,
+						}}
+						value={token}
+						placeholder={i18n.t("settings.settings.apiToken.empty")}
+					/>
+					<Button
+						variant="outlined"
+						color="primary"
+						onClick={() => setConfirmarToken(true)}
+						className={classes.botaoToken}
+					>
+						{i18n.t("settings.settings.apiToken.generate")}
+					</Button>
+				</div>
 			</Paper>
-			<Typography variant="caption" color="textSecondary">
-				{i18n.t("settings.settings.apiToken.helper")}
-			</Typography>
+
+			<ConfirmationModal
+				title={i18n.t("settings.settings.apiToken.confirmTitle")}
+				open={confirmarToken}
+				onClose={setConfirmarToken}
+				danger
+				confirmLabel={i18n.t("settings.settings.apiToken.confirmButton")}
+				onConfirm={handleGenerateToken}
+			>
+				{i18n.t("settings.settings.apiToken.confirmMessage")}
+			</ConfirmationModal>
 		</>
 	);
 };

@@ -12,6 +12,7 @@ import {
     Chip,
 } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
+import { useTheme } from "@mui/material/styles";
 import {
 	BarChart,
 	Bar,
@@ -34,12 +35,22 @@ import { i18n } from "../../translate/i18n";
 import PeriodFilter, { PRESETS } from "./PeriodFilter";
 
 const useStyles = makeStyles(theme => ({
+	// Os blocos do painel perderam a sombra junto com o tema; sem borda eles
+	// desapareciam contra o fundo da página.
 	paper: {
 		padding: theme.spacing(2),
 		display: "flex",
 		flexDirection: "column",
 		height: "100%",
+		border: `1px solid ${theme.palette.divider}`,
 	},
+	/**
+	 * Cartão de número.
+	 *
+	 * Alinhado à esquerda, e não centrado: uma fileira de números centrados
+	 * não tem eixo comum, e o olho precisa reencontrar cada um. Encostados na
+	 * margem, os quatro se leem numa varrida só.
+	 */
 	metricCard: {
 		padding: theme.spacing(2.25, 2.5),
 		borderRadius: 16,
@@ -48,6 +59,14 @@ const useStyles = makeStyles(theme => ({
 	chartWrapper: {
 		width: "100%",
 		height: 280,
+	},
+
+	tituloSecao: {
+		fontSize: "0.7rem",
+		fontWeight: 700,
+		letterSpacing: "0.1em",
+		textTransform: "uppercase",
+		color: theme.palette.text.secondary,
 	},
 }));
 
@@ -64,6 +83,7 @@ const formatSeconds = seconds => {
 
 const DashboardMetrics = () => {
 	const classes = useStyles();
+	const theme = useTheme();
 	const [metrics, setMetrics] = useState(null);
 	const [loading, setLoading] = useState(true);
 	// Semana como padrão: o histórico inteiro dilui a leitura do momento atual.
@@ -92,23 +112,30 @@ const DashboardMetrics = () => {
 
 	// O filtro continua visível durante o carregamento: escondê-lo faria a
 	// página saltar a cada troca de período.
-	const filtro = (
-		<Grid item xs={12}>
-			<PeriodFilter value={periodo} onChange={setPeriodo} />
-		</Grid>
+	const cabecalho = (
+		<>
+			<Grid item xs={12}>
+				<Typography component="h2" className={classes.tituloSecao}>
+					{i18n.t("dashboard.period.title")}
+				</Typography>
+			</Grid>
+			<Grid item xs={12}>
+				<PeriodFilter value={periodo} onChange={setPeriodo} />
+			</Grid>
+		</>
 	);
 
 	if (loading || !metrics) {
 		return (
 			<Grid container spacing={3} style={{ marginTop: 8 }}>
-				{filtro}
+				{cabecalho}
 			</Grid>
 		);
 	}
 
 	return (
 		<Grid container spacing={3} style={{ marginTop: 8 }}>
-			{filtro}
+			{cabecalho}
 			<Grid item xs={12} sm={6} md={3}>
 				<Paper className={classes.metricCard} variant="outlined">
 					<Typography variant="body2" color="textSecondary">
@@ -178,7 +205,7 @@ const DashboardMetrics = () => {
 					    daqui que pede ação imediata. */}
 					<Typography
 						variant="h5"
-						style={{ color: metrics.stalePending > 0 ? "#d64545" : undefined }}
+						color={metrics.stalePending > 0 ? "error" : undefined}
 					>
 						{metrics.stalePending}
 					</Typography>

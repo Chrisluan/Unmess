@@ -20,6 +20,8 @@ import CircularProgress from "@mui/material/CircularProgress";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
+import { useTheme } from "@mui/material/styles";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -43,6 +45,23 @@ const useStyles = makeStyles((theme) => ({
   currentInfo: {
     marginBottom: 4,
   },
+
+  ajuda: {
+    marginBottom: theme.spacing(2),
+  },
+
+  presenca: {
+    width: 8,
+    height: 8,
+    borderRadius: 0,
+    display: "inline-block",
+    flexShrink: 0,
+  },
+
+  offline: {
+    fontSize: "0.75rem",
+    color: theme.palette.text.secondary,
+  },
 }));
 
 const filterOptions = createFilterOptions({
@@ -60,6 +79,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 	const [selectedQueue, setSelectedQueue] = useState(currentQueueId || '');
 	const [selectedWhatsapp, setSelectedWhatsapp] = useState(ticketWhatsappId);
 	const classes = useStyles();
+	const theme = useTheme();
 	const { findAll: findAllQueues } = useQueues();
 	const { loadingWhatsapps, whatsApps } = useWhatsApps();
 
@@ -193,15 +213,27 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 	};
 
 	return (
-		<Dialog open={modalOpen} onClose={handleClose} maxWidth="lg" scroll="paper">
+		<Dialog
+			open={modalOpen}
+			onClose={handleClose}
+			maxWidth="sm"
+			fullWidth
+			scroll="paper"
+		>
 			<form onSubmit={handleSaveTicket}>
 				<DialogTitle id="form-dialog-title">
 					{i18n.t("transferTicketModal.title")}
 				</DialogTitle>
 				<DialogContent dividers>
+					{/* O que cada campo faz não era óbvio: dá para transferir só
+					    de atendente, só de setor, ou os dois — e o resultado
+					    muda conforme o que se preenche. */}
+					<Typography variant="body2" color="textSecondary" className={classes.ajuda}>
+						{i18n.t("transferTicketModal.helper")}
+					</Typography>
 					<div className={classes.fieldRow}>
 						<Autocomplete
-							style={{ width: 300 }}
+							className={classes.maxWidth}
 							getOptionLabel={option => `${option.name}`}
 							value={selectedUser}
 							onChange={(e, newValue) => {
@@ -229,19 +261,16 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 										}}
 									>
 										<span
+											className={classes.presenca}
 											style={{
-												width: 8,
-												height: 8,
-												borderRadius: "50%",
-												display: "inline-block",
 												backgroundColor: option.online
-													? "#2ecc71"
-													: "#bdc3c7",
+													? theme.palette.success.main
+													: theme.palette.text.disabled,
 											}}
 										/>
 										{option.name}
 										{!option.online && (
-											<em style={{ fontSize: "0.75rem", color: "#7f8c8d" }}>
+											<em className={classes.offline}>
 												{i18n.t("users.table.offline")}
 											</em>
 										)}
@@ -274,14 +303,18 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 							)}
 						/>
 						{currentUserId && (
-							<IconButton
-								size="small"
-								title={i18n.t("transferTicketModal.buttons.removeUser")}
-								onClick={handleRemoveUser}
-								disabled={loading}
-							>
-								<ClearIcon fontSize="small" />
-							</IconButton>
+							<Tooltip title={i18n.t("transferTicketModal.buttons.removeUser")} arrow>
+								<span>
+									<IconButton
+										size="small"
+										aria-label={i18n.t("transferTicketModal.buttons.removeUser")}
+										onClick={handleRemoveUser}
+										disabled={loading}
+									>
+										<ClearIcon fontSize="small" />
+									</IconButton>
+								</span>
+							</Tooltip>
 						)}
 					</div>
 					<div className={classes.fieldRow}>
@@ -292,30 +325,37 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 								onChange={(e) => setSelectedQueue(e.target.value)}
 								label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
 							>
-								<MenuItem value={''}>&nbsp;</MenuItem>
+								<MenuItem value={""}>
+									<em>{i18n.t("transferTicketModal.noQueue")}</em>
+								</MenuItem>
 								{queues.map((queue) => (
 									<MenuItem key={queue.id} value={queue.id}>{queue.name}</MenuItem>
 								))}
 							</Select>
 						</FormControl>
 						{currentQueueId && (
-							<IconButton
-								size="small"
-								title={i18n.t("transferTicketModal.buttons.removeQueue")}
-								onClick={handleRemoveQueue}
-								disabled={loading}
-							>
-								<ClearIcon fontSize="small" />
-							</IconButton>
+							<Tooltip title={i18n.t("transferTicketModal.buttons.removeQueue")} arrow>
+								<span>
+									<IconButton
+										size="small"
+										aria-label={i18n.t("transferTicketModal.buttons.removeQueue")}
+										onClick={handleRemoveQueue}
+										disabled={loading}
+									>
+										<ClearIcon fontSize="small" />
+									</IconButton>
+								</span>
+							</Tooltip>
 						)}
 					</div>
 					<Typography variant="caption" color="textSecondary" className={classes.currentInfo}>
 						{i18n.t("transferTicketModal.removeQueueHelp")}
 					</Typography>
-					<Can
-						role={loggedInUser.profile}
-						perform="ticket-options:transferWhatsapp"
-						yes={() => (!loadingWhatsapps && 
+					{/* Trocar a conversa de número é decisão de quem cuida das
+					    conexões, não de quem atende: o cliente passa a receber
+					    mensagem de outro WhatsApp da empresa. */}
+					<Can permission="connections:view">
+						{!loadingWhatsapps && (
 							<FormControl variant="outlined" className={classes.maxWidth} style={{ marginTop: 20 }}>
 								<InputLabel>{i18n.t("transferTicketModal.fieldConnectionLabel")}</InputLabel>
 								<Select
@@ -329,7 +369,7 @@ const TransferTicketModal = ({ modalOpen, onClose, ticketid, ticketWhatsappId, c
 								</Select>
 							</FormControl>
 						)}
-					/>
+					</Can>
 				</DialogContent>
 				<DialogActions>
 					<Button

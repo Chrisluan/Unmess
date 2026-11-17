@@ -18,33 +18,33 @@ export const SECOES_AJUSTES = [
   {
     titulo: "Atendimento",
     itens: [
-      { rotulo: "Números de WhatsApp", para: "/Settings?aba=conexoes", permissao: "settings:access", Icone: WhatsAppIcon },
-      { rotulo: "Filas", para: "/Queues", permissao: "queues:access", Icone: AccountTreeOutlinedIcon },
-      { rotulo: "Respostas rápidas", para: "/quickAnswers", permissao: "quickAnswers:access", Icone: BoltOutlinedIcon },
-      { rotulo: "Etiquetas", para: "/Settings?aba=etiquetas", permissao: "settings:access", Icone: LocalOfferOutlinedIcon },
-      { rotulo: "Horário de atendimento", para: "/Settings?aba=horarios", permissao: "settings:access", Icone: ScheduleOutlinedIcon },
-      { rotulo: "Motivos de encerramento", para: "/Settings?aba=status", permissao: "settings:access", Icone: TaskAltOutlinedIcon },
-      { rotulo: "Mensagens automáticas", para: "/Settings?aba=mensagens", permissao: "settings:access", Icone: SmsOutlinedIcon }
+      { rotulo: "Números de WhatsApp", para: "/Settings?aba=conexoes", permissao: "settings:view", Icone: WhatsAppIcon },
+      { rotulo: "Filas", para: "/Queues", permissao: "queues:view", Icone: AccountTreeOutlinedIcon },
+      { rotulo: "Respostas rápidas", para: "/quickAnswers", permissao: "quickAnswers:view", Icone: BoltOutlinedIcon },
+      { rotulo: "Etiquetas", para: "/Settings?aba=etiquetas", permissao: "settings:view", Icone: LocalOfferOutlinedIcon },
+      { rotulo: "Horário de atendimento", para: "/Settings?aba=horarios", permissao: "settings:view", Icone: ScheduleOutlinedIcon },
+      { rotulo: "Motivos de encerramento", para: "/Settings?aba=status", permissao: "settings:view", Icone: TaskAltOutlinedIcon },
+      { rotulo: "Mensagens automáticas", para: "/Settings?aba=mensagens", permissao: "settings:view", Icone: SmsOutlinedIcon }
     ]
   },
   {
     titulo: "Vendas",
     itens: [
-      { rotulo: "Produtos", para: "/products", permissao: "products:access", Icone: Inventory2OutlinedIcon }
+      { rotulo: "Produtos", para: "/products", permissao: "products:view", Icone: Inventory2OutlinedIcon }
     ]
   },
   {
     titulo: "Equipe",
     itens: [
-      { rotulo: "Usuários", para: "/users", permissao: "users:access", Icone: PeopleAltOutlinedIcon },
-      { rotulo: "Grupos de permissão", para: "/permission-groups", permissao: "permissionGroups:access", Icone: ShieldOutlinedIcon }
+      { rotulo: "Usuários", para: "/users", permissao: "users:view", Icone: PeopleAltOutlinedIcon },
+      { rotulo: "Cargos e permissões", para: "/roles", permissao: "roles:view", Icone: ShieldOutlinedIcon }
     ]
   },
   {
     titulo: "Conta",
     itens: [
-      { rotulo: "Geral", para: "/Settings?aba=geral", permissao: "settings:access", Icone: TuneOutlinedIcon },
-      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:access", Icone: PaletteOutlinedIcon }
+      { rotulo: "Geral", para: "/Settings?aba=geral", permissao: "settings:view", Icone: TuneOutlinedIcon },
+      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:view", Icone: PaletteOutlinedIcon }
     ]
   },
   {
@@ -56,7 +56,7 @@ export const SECOES_AJUSTES = [
   }
 ];
 
-export const ROTAS_AJUSTES = ["/settings", "/queues", "/quickanswers", "/products", "/users", "/permission-groups", "/companies"];
+export const ROTAS_AJUSTES = ["/settings", "/queues", "/quickanswers", "/products", "/users", "/roles", "/companies"];
 
 export const ehRotaDeAjustes = (pathname) =>
   ROTAS_AJUSTES.some((rota) => pathname.toLowerCase().startsWith(rota));

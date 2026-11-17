@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import AppError from "../errors/AppError";
+import { etiquetar } from "../helpers/permissions/routeGuard";
 
 // Deve ser usado sempre depois do isAuth na cadeia de middlewares da rota.
 // Garante que só o super-admin (profile "super", sem empresa vinculada)
@@ -12,4 +13,4 @@ const isSuper = (req: Request, res: Response, next: NextFunction): void => {
   return next();
 };
 
-export default isSuper;
+export default etiquetar(isSuper, { tipo: "super" });

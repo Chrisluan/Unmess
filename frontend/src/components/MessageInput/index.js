@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useContext, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useMemo,
+  useRef,
+} from "react";
 // emoji-mart v5: os dados vêm de um pacote separado, o componente React de
 // outro, e o CSS deixou de existir (os estilos vão embutidos no componente).
 import emojiData from "@emoji-mart/data";
@@ -23,6 +29,7 @@ import ClearIcon from "@mui/icons-material/Clear";
 import MicIcon from "@mui/icons-material/Mic";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import {
   FormControlLabel,
   Hidden,
@@ -36,16 +43,44 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import RecordingTimer from "./RecordingTimer";
 import StickerPicker from "../StickerPicker";
+import usePermissions from "../../hooks/usePermissions";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { useOutgoingMessages } from "../../context/OutgoingMessages/OutgoingMessagesContext";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 import VoiceRecorder, { formatoSuportado } from "../../helpers/VoiceRecorder";
 
 // Uma instância por aba: o gravador segura o microfone enquanto ativo.
 const gravador = new VoiceRecorder();
+
+const CHAVE_RASCUNHO = "unmess:rascunho:";
+
+const lerRascunho = (ticketId) => {
+  if (!ticketId) return "";
+  try {
+    return localStorage.getItem(CHAVE_RASCUNHO + ticketId) || "";
+  } catch {
+    // Navegador com armazenamento bloqueado: o compositor abre vazio, que é
+    // exatamente o comportamento antigo.
+    return "";
+  }
+};
+
+const gravarRascunho = (ticketId, texto) => {
+  if (!ticketId) return;
+  try {
+    if (texto && texto.trim()) {
+      localStorage.setItem(CHAVE_RASCUNHO + ticketId, texto);
+    } else {
+      localStorage.removeItem(CHAVE_RASCUNHO + ticketId);
+    }
+  } catch {
+    // Sem armazenamento, o rascunho vale só enquanto a tela estiver aberta.
+  }
+};
 
 const useStyles = makeStyles(theme => ({
   mainWrapper: {
@@ -90,7 +125,31 @@ const useStyles = makeStyles(theme => ({
   },
 
   sendMessageIcons: {
-    color: theme.palette.unmess.textoApagado,
+    color: theme.palette.text.secondary,
+  },
+
+  nomeAnexo: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    padding: "0 8px",
+  },
+
+  rotuloSwitch: {
+    marginRight: 7,
+    color: theme.palette.text.secondary,
+  },
+
+  // Nota interna: fundo âmbar para não haver dúvida de que aquilo não sai
+  // para o cliente. O amarelo fixo ficava branco-gelo no modo escuro, com o
+  // texto claro por cima -- ilegível justamente no campo em que um engano
+  // manda recado interno para o cliente.
+  notaInterna: {
+    backgroundColor:
+      theme.palette.mode === "dark" ? "rgba(224,163,58,0.16)" : "#fff8c4",
+    border: `1px solid ${theme.palette.warning.main}`,
   },
 
   uploadInput: {
@@ -99,12 +158,85 @@ const useStyles = makeStyles(theme => ({
 
   viewMediaInputWrapper: {
     display: "flex",
+    flexDirection: "column",
     padding: "10px 13px",
     position: "relative",
-    justifyContent: "space-between",
+    gap: 8,
+    backgroundColor: theme.palette.background.paper,
+    borderTop: `1px solid ${theme.palette.divider}`,
+  },
+
+  // Prévia dos anexos. Antes daqui o compositor mostrava só o nome do
+  // arquivo, então quem escolhia a foto errada na caixa de diálogo só
+  // descobria depois de o cliente ter recebido.
+  faixaAnexos: {
+    display: "flex",
+    gap: 8,
+    overflowX: "auto",
+    paddingBottom: 4,
+    ...theme.scrollbarStyles,
+  },
+
+  cartaoAnexo: {
+    position: "relative",
+    width: 88,
+    height: 88,
+    flex: "0 0 auto",
+    borderRadius: 4,
+    overflow: "hidden",
+    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+    display: "flex",
+    flexDirection: "column",
     alignItems: "center",
-    backgroundColor: theme.palette.unmess.superficie,
-    borderTop: `1px solid ${theme.palette.unmess.linha}`,
+    justifyContent: "center",
+  },
+
+  miniatura: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+
+  iconeAnexo: {
+    color: theme.palette.text.secondary,
+  },
+
+  nomeCartaoAnexo: {
+    fontSize: "0.62rem",
+    lineHeight: 1.2,
+    padding: "2px 4px",
+    maxWidth: "100%",
+    textAlign: "center",
+    color: theme.palette.text.secondary,
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    wordBreak: "break-all",
+  },
+
+  removerAnexo: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    padding: 2,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    color: "#fff",
+    "&:hover": { backgroundColor: "rgba(0,0,0,0.75)" },
+  },
+
+  linhaEnvioAnexo: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  campoLegenda: {
+    flex: 1,
+    padding: "4px 10px",
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.divider}`,
   },
 
   emojiBox: {
@@ -196,41 +328,84 @@ const useStyles = makeStyles(theme => ({
     color: theme.palette.unmess.primariaSuaveTexto,
     fontWeight: 600,
   },
+  /**
+   * Sugestões de resposta rápida.
+   *
+   * A borda e o cinza do hover eram fixos, então no modo escuro a lista era
+   * um retângulo claro flutuando sobre a conversa. E cada item comprimia
+   * atalho e texto numa linha só, cortada em 32px de altura: dava para ver o
+   * atalho e o começo da frase, nunca a frase inteira.
+   */
   messageQuickAnswersWrapper: {
     margin: 0,
+    padding: 0,
     position: "absolute",
-    bottom: "calc(100% + 8px)",
-    background: theme.palette.unmess.superficie,
-    padding: 6,
-    border: `1px solid ${theme.palette.unmess.linha}`,
-    borderRadius: 12,
-    boxShadow: theme.palette.unmess.sombraFlutuante,
-    zIndex: 10,
+    bottom: "100%",
+    marginBottom: 6,
     left: 0,
     width: "100%",
-    "& li": {
-      listStyle: "none",
-      "& a": {
-        display: "block",
-        padding: "8px 10px",
-        borderRadius: 8,
-        textOverflow: "ellipsis",
-        overflow: "hidden",
-        maxHeight: "38px",
-        "&:hover": {
-          background: theme.palette.unmess.primariaSuave,
-          cursor: "pointer",
-        },
-      },
-    },
+    maxHeight: 260,
+    overflowY: "auto",
+    zIndex: 20,
+    background: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: theme.shadows[3],
+    ...theme.scrollbarStyles,
+  },
+
+  itemResposta: {
+    listStyle: "none",
+    display: "flex",
+    alignItems: "baseline",
+    gap: 8,
+    padding: "6px 10px",
+    cursor: "pointer",
+    "&:hover": { background: theme.palette.action.hover },
+  },
+
+  // O item que o Enter vai inserir. Fundo, e não só hover: o teclado move a
+  // seleção sem mexer o ponteiro.
+  itemRespostaAtivo: {
+    background: theme.palette.action.selected,
+  },
+
+  atalhoResposta: {
+    flexShrink: 0,
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    fontWeight: 700,
+    fontSize: "0.8rem",
+    color: theme.palette.primary.main,
+  },
+
+  textoResposta: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: "0.82rem",
+    color: theme.palette.text.secondary,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  dicaResposta: {
+    padding: "4px 10px",
+    fontSize: "0.7rem",
+    color: theme.palette.text.disabled,
+    borderTop: `1px solid ${theme.palette.divider}`,
+    position: "sticky",
+    bottom: 0,
+    background: theme.palette.background.paper,
   },
 }));
 
 const MessageInput = ({ ticketStatus }) => {
   const classes = useStyles();
+  const { can } = usePermissions();
   const { ticketId } = useParams();
 
   const [medias, setMedias] = useState([]);
+  // Legenda dos anexos. Vai junto do primeiro arquivo, como no WhatsApp.
+  const [legenda, setLegenda] = useState("");
   const [inputMessage, setInputMessage] = useState("");
   const [showEmoji, setShowEmoji] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
@@ -238,10 +413,14 @@ const MessageInput = ({ ticketStatus }) => {
   const [recording, setRecording] = useState(false);
   const [quickAnswers, setQuickAnswer] = useState([]);
   const [typeBar, setTypeBar] = useState(false);
+  // Qual sugestão o Enter insere. Sem isso a lista só respondia ao clique —
+  // numa função cujo motivo de existir é não tirar a mão do teclado.
+  const [quickIndice, setQuickIndice] = useState(0);
   const inputRef = useRef();
   const [anchorEl, setAnchorEl] = useState(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
+  const { enviar } = useOutgoingMessages();
   const { user } = useContext(AuthContext);
   const { isEnabled, loading: settingsLoading } = useContext(
     AttendanceSettingsContext
@@ -262,27 +441,66 @@ const MessageInput = ({ ticketStatus }) => {
   }, [settingsLoading]);
 
   useEffect(() => {
-    inputRef.current.focus();
+    inputRef.current?.focus();
   }, [replyingMessage]);
 
+  // O texto atual, para a limpeza do efeito abaixo poder gravá-lo: a função
+  // de cleanup enxerga o estado do render em que foi criada, e esse render é
+  // sempre anterior à última tecla digitada.
+  const mensagemRef = useRef("");
   useEffect(() => {
-    inputRef.current.focus();
+    mensagemRef.current = inputMessage;
+  }, [inputMessage]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    setInputMessage(lerRascunho(ticketId));
+
     return () => {
+      gravarRascunho(ticketId, mensagemRef.current);
       setInputMessage("");
       setShowEmoji(false);
       setMedias([]);
+      setLegenda("");
       setReplyingMessage(null);
     };
   }, [ticketId, setReplyingMessage]);
 
+  /**
+   * Miniaturas dos anexos escolhidos.
+   *
+   * A URL temporária precisa ser devolvida ao navegador quando a lista muda:
+   * sem isso cada arquivo escolhido e descartado deixava o conteúdo inteiro
+   * preso na memória da aba até a próxima recarga.
+   */
+  const previas = useMemo(
+    () =>
+      medias.map(media => ({
+        nome: media.name,
+        tipo: media.type,
+        url: media.type?.startsWith("image/")
+          ? URL.createObjectURL(media)
+          : null,
+      })),
+    [medias]
+  );
+
+  useEffect(
+    () => () => {
+      previas.forEach(previa => previa.url && URL.revokeObjectURL(previa.url));
+    },
+    [previas]
+  );
+
   const handleChangeInput = e => {
     setInputMessage(e.target.value);
-    handleLoadQuickAnswer(e.target.value);
   };
 
   const handleQuickAnswersClick = value => {
     setInputMessage(value);
     setTypeBar(false);
+    setQuickIndice(0);
+    inputRef.current?.focus();
   };
 
   const handleAddEmoji = e => {
@@ -295,8 +513,23 @@ const MessageInput = ({ ticketStatus }) => {
       return;
     }
 
-    const selectedMedias = Array.from(e.target.files);
-    setMedias(selectedMedias);
+    // Acumula em vez de substituir: com a prévia aberta é natural clicar no
+    // clipe de novo para juntar mais um arquivo ao mesmo envio.
+    const escolhidos = Array.from(e.target.files);
+    setMedias(anteriores => [...anteriores, ...escolhidos]);
+
+    // Sem isso, escolher de novo um arquivo que acabou de ser removido não
+    // dispara evento nenhum: o valor do campo não mudou.
+    e.target.value = "";
+  };
+
+  const removerMedia = indice => {
+    setMedias(anteriores => anteriores.filter((_, i) => i !== indice));
+  };
+
+  const limparAnexos = () => {
+    setMedias([]);
+    setLegenda("");
   };
 
   const handleInputPaste = e => {
@@ -305,25 +538,32 @@ const MessageInput = ({ ticketStatus }) => {
     }
   };
 
-  const handleUploadMedia = async e => {
-    setLoading(true);
+  const handleUploadMedia = e => {
     e.preventDefault();
+    if (medias.length === 0) return;
 
-    const formData = new FormData();
-    formData.append("fromMe", true);
-    medias.forEach(media => {
-      formData.append("medias", media);
-      formData.append("body", media.name);
+    // O envio segue pela fila, fora daqui: o compositor volta a ficar livre
+    // na hora e o andamento aparece na própria conversa.
+    //
+    // As miniaturas do balão são URLs novas, e não as da prévia do compositor:
+    // estas são devolvidas ao navegador assim que a lista de anexos é limpa,
+    // logo abaixo, e a imagem do balão apareceria quebrada. Quem as libera
+    // agora é a fila, quando a mensagem sai da tela.
+    enviar({
+      ticketId,
+      medias,
+      caption: legenda,
+      previas: medias.map(media => ({
+        nome: media.name,
+        tipo: media.type,
+        url: media.type?.startsWith("image/")
+          ? URL.createObjectURL(media)
+          : null,
+      })),
     });
 
-    try {
-      await api.post(`/messages/${ticketId}`, formData);
-    } catch (err) {
-      toastError(err);
-    }
-
-    setLoading(false);
-    setMedias([]);
+    limparAnexos();
+    inputRef.current?.focus();
   };
 
   const handleSendMessage = async () => {
@@ -336,37 +576,39 @@ const MessageInput = ({ ticketStatus }) => {
         await api.post(`/messages/${ticketId}/notes`, {
           body: inputMessage.trim(),
         });
+        gravarRascunho(ticketId, "");
         setInputMessage("");
         setShowEmoji(false);
         setReplyingMessage(null);
       } catch (err) {
+        // Idem para a nota interna: falhou, o texto fica.
         toastError(err);
       }
       setLoading(false);
+      inputRef.current?.focus();
       return;
     }
 
-    setLoading(true);
-
-    const message = {
-      read: 1,
-      fromMe: true,
-      mediaUrl: "",
+    // Daqui em diante quem cuida do envio é a fila: a mensagem já aparece na
+    // conversa como "enviando" e a caixa de texto é liberada no mesmo
+    // instante. Se falhar, o erro aparece no próprio balão, com a opção de
+    // tentar de novo — em vez de o texto voltar para cá sem explicação.
+    enviar({
+      ticketId,
       body: signMessage
         ? `*${user?.name}:*\n${inputMessage.trim()}`
         : inputMessage.trim(),
       quotedMsg: replyingMessage,
-    };
-    try {
-      await api.post(`/messages/${ticketId}`, message);
-    } catch (err) {
-      toastError(err);
-    }
+    });
 
+    gravarRascunho(ticketId, "");
     setInputMessage("");
-    setShowEmoji(false);
-    setLoading(false);
     setReplyingMessage(null);
+    setShowEmoji(false);
+
+    // O cursor volta para a caixa: depois de enviar, o passo seguinte é quase
+    // sempre continuar escrevendo.
+    inputRef.current?.focus();
   };
 
   const handleStartRecording = async () => {
@@ -393,23 +635,73 @@ const MessageInput = ({ ticketStatus }) => {
     }
   };
 
-  const handleLoadQuickAnswer = async value => {
-    if (value && value.indexOf("/") === 0) {
+  /**
+   * Sugestões enquanto se digita "/".
+   *
+   * Roda em efeito, sobre o valor já aplicado ao estado, com uma pausa curta:
+   * assim a consulta corresponde ao que está na tela e uma frase inteira não
+   * vira uma requisição por letra.
+   */
+  useEffect(() => {
+    if (!inputMessage.startsWith("/") || internalNote) {
+      setTypeBar(false);
+      return undefined;
+    }
+
+    const termo = inputMessage.substring(1);
+    const cronometro = setTimeout(async () => {
       try {
         const { data } = await api.get("/quick-answers", {
-          params: { searchParam: inputMessage.substring(1) },
+          params: { searchParam: termo },
         });
-        setQuickAnswer(data.quickAnswers);
-        if (data.quickAnswers.length > 0) {
-          setTypeBar(true);
-        } else {
-          setTypeBar(false);
-        }
-      } catch (err) {
+        const lista = data.quickAnswers || [];
+        setQuickAnswer(lista);
+        setQuickIndice(0);
+        setTypeBar(lista.length > 0);
+      } catch {
+        // Buscar sugestão é apoio: falhar aqui não pode atrapalhar quem só
+        // queria escrever uma barra na mensagem.
         setTypeBar(false);
       }
-    } else {
-      setTypeBar(false);
+    }, 250);
+
+    return () => clearTimeout(cronometro);
+  }, [inputMessage, internalNote]);
+
+  /**
+   * Teclas enquanto a lista de sugestões está aberta.
+   *
+   * Antes o Enter mandava a mensagem com a barra e o atalho crus para o
+   * cliente, mesmo com a lista aberta na frente do atendente.
+   */
+  const handleTeclaNaCaixa = e => {
+    if (typeBar && quickAnswers.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setQuickIndice(i => (i + 1) % quickAnswers.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setQuickIndice(i => (i - 1 + quickAnswers.length) % quickAnswers.length);
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleQuickAnswersClick(quickAnswers[quickIndice].message);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setTypeBar(false);
+        return;
+      }
+    }
+
+    if (loading || e.shiftKey) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -427,19 +719,25 @@ const MessageInput = ({ ticketStatus }) => {
         return;
       }
 
-      const formData = new FormData();
       const filename = `${new Date().getTime()}.${gravacao.extensao}`;
-      formData.append("medias", gravacao.blob, filename);
-      formData.append("body", filename);
-      formData.append("fromMe", true);
+      const arquivo = new File([gravacao.blob], filename, {
+        type: gravacao.blob.type || "audio/ogg",
+      });
 
-      await api.post(`/messages/${ticketId}`, formData);
+      // Pela fila, como os demais anexos: o atendente pode gravar o próximo
+      // áudio ou trocar de conversa enquanto este sobe.
+      enviar({
+        ticketId,
+        medias: [arquivo],
+        previas: [{ nome: i18n.t("messageInput.recording.label"), url: null }],
+      });
     } catch (err) {
       toastError(err);
     }
 
     setRecording(false);
     setLoading(false);
+    inputRef.current?.focus();
   };
 
   const handleCancelAudio = async () => {
@@ -492,35 +790,104 @@ const MessageInput = ({ ticketStatus }) => {
     );
   };
 
+  /**
+   * Sem permissão de responder, a conversa fica só de leitura.
+   *
+   * Um cargo pode legitimamente ver o atendimento sem participar dele —
+   * supervisão, auditoria, treinamento. O servidor já recusa o envio; sem
+   * este aviso, a caixa de texto aceitaria a mensagem, o botão pareceria
+   * funcionar e o erro só apareceria depois de escrever tudo.
+   */
+  if (!can("tickets:edit")) {
+    return (
+      <Paper square elevation={0} className={classes.mainWrapper}>
+        <div className={classes.newMessageBox}>
+          <span style={{ padding: "12px 16px", fontSize: 13, opacity: 0.7 }}>
+            Você tem acesso de leitura a esta conversa e não pode responder.
+          </span>
+        </div>
+      </Paper>
+    );
+  }
+
   if (medias.length > 0)
     return (
       <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
-        <IconButton
-          aria-label="cancel-upload"
-          component="span"
-          onClick={e => setMedias([])}
-          size="large">
-          <CancelIcon className={classes.sendMessageIcons} />
-        </IconButton>
+        <div className={classes.faixaAnexos}>
+          {previas.map((previa, indice) => (
+            <div
+              key={`${previa.nome}-${indice}`}
+              className={classes.cartaoAnexo}
+            >
+              {previa.url ? (
+                <img
+                  src={previa.url}
+                  alt={previa.nome}
+                  className={classes.miniatura}
+                />
+              ) : (
+                <>
+                  <InsertDriveFileIcon className={classes.iconeAnexo} />
+                  <span className={classes.nomeCartaoAnexo}>{previa.nome}</span>
+                </>
+              )}
+              <Tooltip
+                title={i18n.t("messagesInput.tooltips.removeAttach")}
+                arrow
+              >
+                <IconButton
+                  aria-label={i18n.t("messagesInput.tooltips.removeAttach")}
+                  className={classes.removerAnexo}
+                  onClick={() => removerMedia(indice)}
+                  size="small"
+                >
+                  <ClearIcon fontSize="inherit" />
+                </IconButton>
+              </Tooltip>
+            </div>
+          ))}
+        </div>
 
-        {loading ? (
-          <div>
-            <CircularProgress className={classes.circleLoading} />
-          </div>
-        ) : (
-          <span>
-            {medias[0]?.name}
-            {/* <img src={media.preview} alt=""></img> */}
-          </span>
-        )}
-        <IconButton
-          aria-label="send-upload"
-          component="span"
-          onClick={handleUploadMedia}
-          disabled={loading}
-          size="large">
-          <SendIcon className={classes.sendMessageIcons} />
-        </IconButton>
+        <div className={classes.linhaEnvioAnexo}>
+          <Tooltip title={i18n.t("messagesInput.tooltips.cancelAttach")} arrow>
+            <IconButton
+              aria-label={i18n.t("messagesInput.tooltips.cancelAttach")}
+              component="span"
+              onClick={limparAnexos}
+              size="large"
+            >
+              <CancelIcon className={classes.sendMessageIcons} />
+            </IconButton>
+          </Tooltip>
+
+          <InputBase
+            className={classes.campoLegenda}
+            placeholder={i18n.t("messagesInput.captionPlaceholder")}
+            multiline
+            maxRows={3}
+            value={legenda}
+            onChange={e => setLegenda(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleUploadMedia(e);
+              }
+            }}
+          />
+
+          <Tooltip title={i18n.t("messagesInput.tooltips.sendAttach")} arrow>
+            <span>
+              <IconButton
+                aria-label={i18n.t("messagesInput.tooltips.sendAttach")}
+                component="span"
+                onClick={handleUploadMedia}
+                size="large"
+              >
+                <SendIcon className={classes.sendMessageIcons} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </div>
       </Paper>
     );
   else {
@@ -529,14 +896,18 @@ const MessageInput = ({ ticketStatus }) => {
         {replyingMessage && renderReplyingMessage(replyingMessage)}
         <div className={classes.newMessageBox}>
           <Hidden only={["sm", "xs"]}>
-            <IconButton
-              aria-label="emojiPicker"
-              component="span"
-              disabled={loading || recording || ticketStatus !== "open"}
-              onClick={e => setShowEmoji(prevState => !prevState)}
-              size="large">
-              <MoodIcon className={classes.sendMessageIcons} />
-            </IconButton>
+            <Tooltip title={i18n.t("messagesInput.tooltips.emoji")} arrow>
+              <span>
+                <IconButton
+                  aria-label={i18n.t("messagesInput.tooltips.emoji")}
+                  component="span"
+                  disabled={loading || recording || ticketStatus !== "open"}
+                  onClick={() => setShowEmoji(prevState => !prevState)}
+                  size="large">
+                  <MoodIcon className={classes.sendMessageIcons} />
+                </IconButton>
+              </span>
+            </Tooltip>
             {showEmoji ? (
               <div className={classes.emojiBox}>
                 <ClickAwayListener onClickAway={e => setShowEmoji(false)}>
@@ -552,18 +923,20 @@ const MessageInput = ({ ticketStatus }) => {
               </div>
             ) : null}
 
-            <Tooltip title="Figurinhas">
-              <span>
-                <IconButton
-                  aria-label="stickerPicker"
-                  component="span"
-                  disabled={loading || recording || ticketStatus !== "open"}
-                  onClick={() => setShowStickers(prev => !prev)}
-                  size="large">
-                  <EmojiEmotionsIcon className={classes.sendMessageIcons} />
-                </IconButton>
-              </span>
-            </Tooltip>
+            {can("stickers:send") && (
+              <Tooltip title={i18n.t("messagesInput.tooltips.stickers")} arrow>
+                <span>
+                  <IconButton
+                    aria-label="stickerPicker"
+                    component="span"
+                    disabled={loading || recording || ticketStatus !== "open"}
+                    onClick={() => setShowStickers(prev => !prev)}
+                    size="large">
+                    <EmojiEmotionsIcon className={classes.sendMessageIcons} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            )}
             {showStickers ? (
               <div className={classes.stickerBox}>
                 <ClickAwayListener onClickAway={() => setShowStickers(false)}>
@@ -586,15 +959,17 @@ const MessageInput = ({ ticketStatus }) => {
               onChange={handleChangeMedias}
             />
             <label htmlFor="upload-button">
+              <Tooltip title={i18n.t("messagesInput.tooltips.attach")} arrow>
               <IconButton
-                aria-label="upload"
+                aria-label={i18n.t("messagesInput.tooltips.attach")}
                 component="span"
                 disabled={loading || recording || ticketStatus !== "open"}
                 size="large">
                 <AttachFileIcon className={classes.sendMessageIcons} />
               </IconButton>
+              </Tooltip>
             </label>
-            <Tooltip title={i18n.t("messagesInput.internalNoteTooltip")}>
+            <Tooltip title={i18n.t("messagesInput.internalNoteTooltip")} arrow>
               <span>
                 <IconButton
                   aria-label="internal-note"
@@ -603,13 +978,13 @@ const MessageInput = ({ ticketStatus }) => {
                   size="large">
                   <NoteIcon
                     className={classes.sendMessageIcons}
-                    style={internalNote ? { color: "#C27C0E" } : undefined}
+                    color={internalNote ? "warning" : undefined}
                   />
                 </IconButton>
               </span>
             </Tooltip>
             <FormControlLabel
-              style={{ marginRight: 7, color: "gray" }}
+              className={classes.rotuloSwitch}
               label={i18n.t("messagesInput.signMessage")}
               labelPlacement="start"
               control={
@@ -672,7 +1047,7 @@ const MessageInput = ({ ticketStatus }) => {
               </MenuItem>
               <MenuItem onClick={handleMenuItemClick}>
                 <FormControlLabel
-                  style={{ marginRight: 7, color: "gray" }}
+                  className={classes.rotuloSwitch}
                   label={i18n.t("messagesInput.signMessage")}
                   labelPlacement="start"
                   control={
@@ -691,18 +1066,12 @@ const MessageInput = ({ ticketStatus }) => {
             </Menu>
           </Hidden>
           <div
-            className={classes.messageInputWrapper}
-            style={
-              internalNote
-                ? { backgroundColor: "rgba(240,184,90,.16)" }
-                : undefined
-            }
+            className={clsx(classes.messageInputWrapper, {
+              [classes.notaInterna]: internalNote,
+            })}
           >
             <InputBase
-              inputRef={input => {
-                input && input.focus();
-                input && (inputRef.current = input);
-              }}
+              inputRef={inputRef}
               className={classes.messageInput}
               placeholder={
                 ticketStatus !== "open"
@@ -719,42 +1088,60 @@ const MessageInput = ({ ticketStatus }) => {
               onPaste={e => {
                 ticketStatus === "open" && handleInputPaste(e);
               }}
-              onKeyPress={e => {
-                if (loading || e.shiftKey) return;
-                else if (e.key === "Enter") {
-                  handleSendMessage();
-                }
+              onKeyDown={handleTeclaNaCaixa}
+              inputProps={{
+                "aria-autocomplete": "list",
+                "aria-expanded": typeBar,
+                "aria-controls": typeBar ? "sugestoes-resposta-rapida" : undefined,
               }}
             />
-            {typeBar ? (
-              <ul className={classes.messageQuickAnswersWrapper}>
-                {quickAnswers.map((value, index) => {
-                  return (
-                    <li
-                      className={classes.messageQuickAnswersWrapperItem}
-                      key={index}
-                    >
-                      {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-                      <a onClick={() => handleQuickAnswersClick(value.message)}>
-                        {`${value.shortcut} - ${value.message}`}
-                      </a>
-                    </li>
-                  );
-                })}
+            {typeBar && (
+              <ul
+                id="sugestoes-resposta-rapida"
+                role="listbox"
+                className={classes.messageQuickAnswersWrapper}
+              >
+                {quickAnswers.map((value, index) => (
+                  <li
+                    key={value.id ?? index}
+                    role="option"
+                    aria-selected={index === quickIndice}
+                    className={clsx(classes.itemResposta, {
+                      [classes.itemRespostaAtivo]: index === quickIndice,
+                    })}
+                    // mousedown, e não click: o clique só chega depois do
+                    // blur da caixa, e o blur já teria fechado a lista.
+                    onMouseDown={e => {
+                      e.preventDefault();
+                      handleQuickAnswersClick(value.message);
+                    }}
+                    onMouseEnter={() => setQuickIndice(index)}
+                  >
+                    <span className={classes.atalhoResposta}>
+                      /{value.shortcut}
+                    </span>
+                    <span className={classes.textoResposta}>{value.message}</span>
+                  </li>
+                ))}
+                <li className={classes.dicaResposta}>
+                  {i18n.t("messagesInput.quickAnswersHint")}
+                </li>
               </ul>
-            ) : (
-              <div></div>
             )}
           </div>
           {inputMessage ? (
-            <IconButton
-              aria-label="sendMessage"
-              component="span"
-              onClick={handleSendMessage}
-              disabled={loading}
-              size="large">
-              <SendIcon className={classes.sendMessageIcons} />
-            </IconButton>
+            <Tooltip title={i18n.t("messagesInput.tooltips.send")} arrow>
+              <span>
+                <IconButton
+                  aria-label={i18n.t("messagesInput.tooltips.send")}
+                  component="span"
+                  onClick={handleSendMessage}
+                  disabled={loading}
+                  size="large">
+                  <SendIcon className={classes.sendMessageIcons} />
+                </IconButton>
+              </span>
+            </Tooltip>
           ) : recording ? (
             <div className={classes.recorderWrapper}>
               <IconButton
@@ -784,14 +1171,18 @@ const MessageInput = ({ ticketStatus }) => {
               </IconButton>
             </div>
           ) : (
-            <IconButton
-              aria-label="showRecorder"
-              component="span"
-              disabled={loading || ticketStatus !== "open"}
-              onClick={handleStartRecording}
-              size="large">
-              <MicIcon className={classes.sendMessageIcons} />
-            </IconButton>
+            <Tooltip title={i18n.t("messagesInput.tooltips.record")} arrow>
+              <span>
+                <IconButton
+                  aria-label={i18n.t("messagesInput.tooltips.record")}
+                  component="span"
+                  disabled={loading || ticketStatus !== "open"}
+                  onClick={handleStartRecording}
+                  size="large">
+                  <MicIcon className={classes.sendMessageIcons} />
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
         </div>
       </Paper>

@@ -53,7 +53,6 @@ const TicketsTagSelect = ({ selectedTagIds = [], onChange, style }) => {
             MenuProps={{
               anchorOrigin: { vertical: "bottom", horizontal: "left" },
               transformOrigin: { vertical: "top", horizontal: "left" },
-              getContentAnchorEl: null,
             }}
             renderValue={renderValue}
           >

@@ -9,6 +9,7 @@ import ReorderBoardsService from "../services/BoardServices/ReorderBoardsService
 import DeleteBoardService from "../services/BoardServices/DeleteBoardService";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
+import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
 
 interface BoardData {
   name: string;
@@ -16,7 +17,10 @@ interface BoardData {
 }
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
-  const boards = await ListBoardsService(getCompanyId(req));
+  const boards = await ListBoardsService(
+    getCompanyId(req),
+    await escopoDaRequisicao(req, "board")
+  );
 
   return res.json(boards);
 };

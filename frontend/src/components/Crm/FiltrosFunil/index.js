@@ -20,6 +20,20 @@ const useStyles = makeStyles((theme) => ({
     gap: 12,
   },
 
+  cabecalho: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: 8,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    paddingBottom: 8,
+  },
+
+  tituloPainel: {
+    fontWeight: 700,
+    fontSize: "0.9rem",
+  },
+
   titulo: {
     fontSize: 11,
     fontWeight: 700,
@@ -146,6 +160,13 @@ const FiltrosFunil = ({ filtros, onAplicar }) => {
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
       >
         <div className={classes.painel}>
+          <div className={classes.cabecalho}>
+            <span className={classes.tituloPainel}>Filtrar oportunidades</span>
+            {ativos > 0 && (
+              <span className={classes.titulo}>{ativos} ativo(s)</span>
+            )}
+          </div>
+
           <div className={classes.grupo}>
             <span className={classes.titulo}>Atalhos</span>
             <div className={classes.etiquetas}>
@@ -198,7 +219,7 @@ const FiltrosFunil = ({ filtros, onAplicar }) => {
             <TextField
               select
               size="small"
-              label="Atendimento"
+              label="Andamento"
               fullWidth
               SelectProps={{ native: true }}
               InputLabelProps={{ shrink: true }}
@@ -275,8 +296,15 @@ const FiltrosFunil = ({ filtros, onAplicar }) => {
           )}
 
           <div className={classes.rodape}>
-            <Button size="small" onClick={limpar}>Limpar</Button>
-            <Button size="small" variant="contained" onClick={aplicar}>
+            <Button size="small" disabled={ativos === 0} onClick={limpar}>
+              Limpar filtros
+            </Button>
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              onClick={aplicar}
+            >
               Aplicar
             </Button>
           </div>

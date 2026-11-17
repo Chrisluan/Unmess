@@ -9,13 +9,12 @@ import Typography from "@mui/material/Typography";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n.js";
 import toastError from "../../errors/toastError";
+import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
+import PaginaComAbas from "../../components/PaginaComAbas";
 import GeneralTab from "./GeneralTab";
 import BusinessHoursTab from "./BusinessHoursTab";
-import TicketStatusesTab from "./TicketStatusesTab";
-import AutoMessagesTab from "./AutoMessagesTab";
 import Connections from "../Connections";
-import TagsTab from "./TagsTab";
 import BrandingTab from "./BrandingTab";
 
 import Title from "../../components/Title";
@@ -57,7 +56,7 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const Settings = () => {
-	const classes = useStyles();
+	const { whatsApps } = useContext(WhatsAppsContext);
 
 	const [settings, setSettings] = useState([]);
 	const { search } = useLocation();
@@ -81,11 +80,11 @@ const Settings = () => {
 	useEffect(() => {
 		const socket = openSocket();
 
-		socket.on("settings", data => {
+		socket.on("settings", (data) => {
 			if (data.action === "update") {
-				setSettings(prevState => {
+				setSettings((prevState) => {
 					const aux = [...prevState];
-					const settingIndex = aux.findIndex(s => s.key === data.setting.key);
+					const settingIndex = aux.findIndex((s) => s.key === data.setting.key);
 					if (settingIndex !== -1) {
 						aux[settingIndex] = { ...aux[settingIndex], value: data.setting.value };
 					} else {
@@ -103,8 +102,8 @@ const Settings = () => {
 
 	// Nunca lança erro mesmo se a chave ainda não existir no banco para esta
 	// empresa (ex: primeira vez que a tela é aberta, antes de qualquer save).
-	const getSettingValue = key => {
-		const setting = settings.find(s => s.key === key);
+	const getSettingValue = (key) => {
+		const setting = settings.find((s) => s.key === key);
 		return setting ? setting.value : "";
 	};
 

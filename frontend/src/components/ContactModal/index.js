@@ -5,7 +5,6 @@ import { Formik, FieldArray, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Dialog from "@mui/material/Dialog";
@@ -43,7 +42,7 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	buttonProgress: {
-		color: green[500],
+		color: theme.palette.primary.main,
 		position: "absolute",
 		top: "50%",
 		left: "50%",

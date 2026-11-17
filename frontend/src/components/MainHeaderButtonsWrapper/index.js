@@ -4,7 +4,6 @@ import makeStyles from '@mui/styles/makeStyles';
 
 const useStyles = makeStyles(theme => ({
 	MainHeaderButtonsWrapper: {
-		flex: "none",
 		marginLeft: "auto",
 		display: "flex",
 		alignItems: "center",

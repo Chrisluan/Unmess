@@ -7,6 +7,7 @@ import DealTicket from "../../models/DealTicket";
 import sequelize from "../../database";
 import Order from "../../models/Order";
 import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
+import MarcarGanhoService from "./MarcarGanhoService";
 
 interface Request {
   deal: Deal;
@@ -128,6 +129,23 @@ const AdvanceDealService = async ({
   // Chave da cadeia: este card pode já ser derivado de outro.
   const rootDealId = deal.rootDealId || deal.id;
 
+  /**
+   * Coluna marcada como ganho fecha a venda aqui mesmo, ainda que o trabalho
+   * siga para o quadro seguinte.
+   *
+   * Antes o ganho só existia no fim da fila de quadros: um card que passava por
+   * "Ganho" no funil e ia para a Produção virava "moved", e o faturamento
+   * ficava parado até a jornada terminar no último quadro.
+   */
+  if (stage.isWon) {
+    await MarcarGanhoService({
+      deal,
+      companyId,
+      userId,
+      origem: boardAtual ? `${boardAtual.name} → ${stage.name}` : stage.name
+    });
+  }
+
   // Fim da linha: a coluna final fatura a venda.
   if (!destino) {
     await deal.update({
@@ -136,12 +154,13 @@ const AdvanceDealService = async ({
       closedAt: new Date()
     });
 
-    await DealActivity.create({
-      type: "won",
-      body: boardAtual ? boardAtual.name : stage.name,
-      dealId: deal.id,
-      userId: userId || null,
-      companyId
+    // Devolve false quando a venda já tinha sido ganha antes na jornada — daí o
+    // registro não se repete na timeline.
+    await MarcarGanhoService({
+      deal,
+      companyId,
+      userId,
+      origem: boardAtual ? boardAtual.name : stage.name
     });
 
     return { origem: deal, destino: null, nextBoard: null };
@@ -168,6 +187,22 @@ const AdvanceDealService = async ({
   }
 
   const { board: nextBoard, coluna: colunaDestino } = destino;
+
+  /**
+   * O número da ordem de produção.
+   *
+   * Sai do funil: o trabalho vendido vira produção e ganha número novo, da
+   * contagem da empresa. Já estava fora: continua com o mesmo número, porque
+   * de Produção para Expedição é o mesmo trabalho -- numerar de novo criaria
+   * dois números para uma coisa só.
+   *
+   * Fica antes da transação de propósito: o contador tem transação própria, e
+   * abri-la de dentro desta seguraria as duas ao mesmo tempo.
+   */
+  const saindoDoFunil = Boolean(boardAtual?.isSalesFunnel);
+  const numeroDeProducao = saindoDoFunil
+    ? await ProximoNumeroService(companyId, "order")
+    : deal.orderNumber || null;
 
   const novo = await sequelize.transaction(async t => {
     // O card que sai deixa de ocupar posição na coluna de origem.
@@ -198,6 +233,11 @@ const AdvanceDealService = async ({
         customerId: deal.customerId,
         contactId: deal.contactId,
         responsibleUserId: deal.responsibleUserId,
+        // Os dois números acompanham a jornada. Sem isto o card recém-criado
+        // no quadro seguinte não tinha número nenhum, e a tela voltava a
+        // mostrar o id da linha no banco.
+        quoteNumber: deal.quoteNumber || null,
+        orderNumber: numeroDeProducao,
         stageId: colunaDestino.id,
         boardId: nextBoard.id,
         rootDealId,
@@ -224,11 +264,9 @@ const AdvanceDealService = async ({
    * sendo o mesmo pedido, e numerar de novo criaria dois números para o mesmo
    * trabalho.
    */
-  if (boardAtual?.isSalesFunnel) {
-    const numero = await ProximoNumeroService(companyId, "order");
-
+  if (saindoDoFunil) {
     await Order.create({
-      number: numero,
+      number: numeroDeProducao as number,
       quoteNumber: deal.quoteNumber || null,
       dealId: novo.id,
       value: deal.value,

@@ -99,6 +99,19 @@ export const ChipNegocio = ({ ticketId, onClick }) => {
 	);
 };
 
+/**
+ * Identificação da conversa aberta.
+ *
+ * Um atendente que acaba de abrir um atendimento precisa responder quatro
+ * perguntas antes de escrever qualquer coisa: com quem estou falando, em que
+ * pé está, de quem é, e por qual número/setor isso chegou. As duas do meio
+ * simplesmente não estavam aqui -- o status só dava para inferir pelos botões
+ * do canto oposto, e a fila não aparecia em lugar nenhum da conversa.
+ *
+ * O `#id` que vinha colado no nome saiu: o protocolo já identifica o
+ * atendimento, é ele que o cliente informa, e dois números diferentes lado a
+ * lado só fazem duvidar de qual é qual.
+ */
 const TicketInfo = ({ contact, ticket, onClick }) => {
 	const classes = useStyles();
 

@@ -70,6 +70,8 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
   const c = ehEscuro ? escuro : claro;
   const raio = 12;
 
+  const primaria = escuro ? azul.claro : azul.medio;
+
   return createTheme(
     {
       palette: {
@@ -113,7 +115,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
       shadows: ["none", c.sombra, c.sombra, c.sombra, ...Array(21).fill(c.sombraFlutuante)],
 
       scrollbarStyles: {
-        "&::-webkit-scrollbar": { width: "8px", height: "8px" },
+        "&::-webkit-scrollbar": { width: "10px", height: "10px" },
         "&::-webkit-scrollbar-track": { background: "transparent" },
         "&::-webkit-scrollbar-thumb": {
           borderRadius: 8,
@@ -144,6 +146,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             }
           }
         },
+
         MuiButton: {
           defaultProps: { disableElevation: true },
           styleOverrides: {
@@ -181,6 +184,15 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             sizeLarge: { padding: 8 }
           }
         },
+
+        MuiIconButton: {
+          styleOverrides: { root: { borderRadius: RAIO } }
+        },
+
+        MuiToggleButton: {
+          styleOverrides: { root: { borderRadius: RAIO } }
+        },
+
         MuiPaper: {
           defaultProps: { elevation: 0 },
           styleOverrides: {
@@ -221,6 +233,21 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             }
           }
         },
+
+        MuiDialogTitle: {
+          styleOverrides: {
+            root: { fontWeight: 700, letterSpacing: "-0.015em" }
+          }
+        },
+
+        MuiMenu: {
+          styleOverrides: { paper: { borderRadius: RAIO } }
+        },
+
+        MuiPopover: {
+          styleOverrides: { paper: { borderRadius: RAIO } }
+        },
+
         MuiChip: {
           styleOverrides: {
             root: { borderRadius: 999, fontWeight: 600 },
@@ -233,6 +260,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             colorPrimary: { backgroundColor: c.sinal, color: c.sinalTexto }
           }
         },
+
         MuiOutlinedInput: {
           styleOverrides: {
             root: {
@@ -248,6 +276,11 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
         MuiInputLabel: {
           styleOverrides: { root: { "&.Mui-focused": { color: c.primariaSuaveTexto } } }
         },
+
+        MuiFilledInput: {
+          styleOverrides: { root: { borderRadius: RAIO } }
+        },
+
         MuiTooltip: {
           defaultProps: { arrow: true },
           styleOverrides: {
@@ -261,6 +294,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             arrow: { color: ehEscuro ? "#E4E6EA" : "#1D2129" }
           }
         },
+
         MuiTableCell: {
           styleOverrides: {
             head: {
@@ -282,6 +316,7 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             indicator: { height: 3, borderRadius: "3px 3px 0 0" }
           }
         },
+
         MuiTab: {
           styleOverrides: {
             root: {
@@ -302,6 +337,15 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
             }
           }
         },
+
+        MuiTabs: {
+          styleOverrides: {
+            // A faixa do indicador é o que marca a aba ativa; deixá-la fina
+            // demais some no meio da borda de baixo.
+            indicator: { height: 2 }
+          }
+        },
+
         MuiAvatar: {
           styleOverrides: {
             root: {

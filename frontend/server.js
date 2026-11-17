@@ -4,10 +4,15 @@
 const compression = require("compression");
 const express = require("express");
 const fs = require("fs");
+const http = require("http");
 const path = require("path");
 
 const build = path.join(__dirname, "build");
 const porta = Number(process.env.FRONTEND_PORT) || 3333;
+
+// O UPU escuta só em 127.0.0.1, e é assim que deve ser: ele reinicia serviços e
+// troca o código da produção.
+const upu = process.env.UPU_ENDERECO || "http://127.0.0.1:8091";
 
 const app = express();
 
@@ -20,6 +25,68 @@ const app = express();
  * para perto de 400 KB.
  */
 app.use(compression());
+
+/**
+ * Encaminha /upu/* para as rotas públicas do UPU.
+ *
+ * Existe por causa de uma regra do navegador, não por gosto de arquitetura: a
+ * inscrição de notificação precisa sair da mesma origem que serviu a página.
+ * Uma página em https falando com um http://127.0.0.1:8090 é bloqueada como
+ * conteúdo misto, e o usuário não vê nem o erro.
+ *
+ * Só as rotas públicas passam por aqui (ler avisos, inscrever e cancelar
+ * notificação). O painel do UPU, que agenda e aplica atualização, continua
+ * alcançável apenas de dentro da máquina.
+ *
+ * A lista explícita abaixo é o que garante isso, e ela existe por um motivo
+ * concreto: encaminhar "/upu/" + o resto do caminho deixava `/upu/../api/estado`
+ * chegar à API do painel. A sessão barrava a chamada, mas a superfície não
+ * deveria nem estar exposta.
+ *
+ * Sem o UPU instalado, a resposta é 503 e o widget desiste em silêncio: a faixa
+ * de avisos continua funcionando pelo arquivo estático.
+ */
+const ROTAS_DO_UPU = new Set([
+  "/avisos",
+  "/versao",
+  "/chave-vapid",
+  "/inscrever",
+  "/desinscrever"
+]);
+
+app.use("/upu", (req, res) => {
+  // Sem a query e sem normalizar nada: o caminho tem que ser, literalmente, um
+  // dos cinco.
+  const rota = req.url.split("?")[0];
+
+  if (!ROTAS_DO_UPU.has(rota)) return res.status(404).json({ erro: "rota inexistente" });
+
+  const destino = new URL(upu);
+
+  const requisicao = http.request(
+    {
+      host: destino.hostname,
+      port: destino.port || 80,
+      // O prefixo /upu é trocado por /publico: o caminho de fora é escolha
+      // desta instalação, o de dentro é do UPU.
+      path: "/publico" + rota,
+      method: req.method,
+      headers: { ...req.headers, host: destino.host },
+      timeout: 10000
+    },
+    resposta => {
+      res.writeHead(resposta.statusCode, resposta.headers);
+      resposta.pipe(res);
+    }
+  );
+
+  requisicao.on("timeout", () => requisicao.destroy());
+  requisicao.on("error", () => {
+    if (!res.headersSent) res.status(503).json({ erro: "UPU indisponível" });
+  });
+
+  req.pipe(requisicao);
+});
 
 // Endereço público em tempo de execução.
 //

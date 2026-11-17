@@ -244,14 +244,15 @@ const messages = {
       crm: {
         title: "CRM",
         searchPlaceholder: "Buscar por negocio o cliente...",
+        emptyBoards: "Ningún tablero en tu acceso. Pide a quien administra el sistema que te incluya en los tableros en los que trabajas.",
         emptyStages: "Ninguna columna configurada en este tablero.",
         emptyStage: "Ningún negocio en esta columna",
         filters: {
           responsible: "Responsable",
           all: "Todos",
-          status: "Mostrar",
-          onlyOpen: "Abiertos",
-          withClosed: "Con cerrados",
+          status: "Perdidos",
+          onlyOpen: "Ocultos",
+          withClosed: "Visibles",
         },
         buttons: {
           addDeal: "Nuevo Negocio",
@@ -461,7 +462,6 @@ const messages = {
           password: "Contraseña",
           profile: "Perfil",
           whatsapp: "Conexión estándar",
-          permissionGroup: "Grupo de permisos",
           maxSimultaneousTickets: "Límite de chats simultáneos",
           maxSimultaneousTicketsHelper:
             "0 = sin límite. Usado por la distribución automática de chats.",
@@ -478,51 +478,6 @@ const messages = {
           cancel: "Cancelar",
         },
         success: "Usuario guardado satisfactoriamente.",
-      },
-      permissionGroups: {
-        title: "Equipo - Grupos de Permisos",
-        table: {
-          name: "Nombre",
-          actions: "Acciones",
-        },
-        buttons: {
-          add: "Agregar grupo",
-        },
-        confirmationModal: {
-          deleteTitle: "Eliminar",
-          deleteMessage:
-            "¿Estás seguro? ¡Esta acción no se puede revertir! Solo se pueden eliminar grupos sin usuarios vinculados.",
-        },
-        toasts: {
-          deleted: "¡Grupo eliminado con éxito!",
-        },
-      },
-      permissionGroupModal: {
-        title: {
-          add: "Agregar Grupo de Permisos",
-          edit: "Editar Grupo de Permisos",
-        },
-        form: {
-          name: "Nombre del grupo",
-          permissions: "Permisos",
-        },
-        permissions: {
-          "chats:viewAll": "Ver todos los chats",
-          "chats:delete": "Eliminar chats",
-          "chats:transfer": "Transferir chats",
-          "customers:manage": "Gestionar clientes",
-          "users:manage": "Gestionar usuarios",
-          "queues:manage": "Gestionar sectores",
-          "settings:manage": "Gestionar configuraciones",
-          "reports:view": "Ver informes",
-          "financial:manage": "Gestionar finanzas",
-        },
-        buttons: {
-          okAdd: "Agregar",
-          okEdit: "Guardar",
-          cancel: "Cancelar",
-        },
-        success: "¡Grupo guardado con éxito!",
       },
       chat: {
         noTicketMessage: "Selecciona un chat para empezar a chatear.",
@@ -581,6 +536,7 @@ const messages = {
         },
       },
       ticketsList: {
+        lastMessageFromMe: "El último mensaje fue nuestro",
         pendingHeader: "Cola",
         assignedHeader: "Trabajando en",
         myTicketsHeader: "Míos",
@@ -591,6 +547,7 @@ const messages = {
         connectionTitle: "Conexión que se está utilizando actualmente.",
         waitingFor: "Tiempo que el cliente está esperando",
         protocol: "Protocolo de la atención",
+        unread: "{{count}} mensaje(s) nuevo(s) sin leer",
         pendingBar: {
           readOnly: "Solo está visualizando. Acepte la atención para responder.",
           accept: "Aceptar atención",
@@ -673,6 +630,18 @@ const messages = {
         },
       },
       mainDrawer: {
+        sections: {
+          favorites: "Favoritos",
+          operation: "Operación",
+          commercial: "Comercial",
+          finance: "Financiero",
+          system: "Administración del sistema",
+          platform: "Plataforma",
+        },
+        favorites: {
+          add: "Fijar en Favoritos",
+          remove: "Quitar de Favoritos",
+        },
         listItems: {
           dashboard: "Dashboard",
           connections: "Conexiones",
@@ -680,13 +649,18 @@ const messages = {
           contacts: "Contactos",
           customers: "Clientes",
           crm: "CRM",
-          quickAnswers: "Respuestas rápidas",
+          financePos: "Punto de venta",
+          financeMetrics: "Métricas",
+          financeReceivables: "Cuentas por cobrar",
+          financePayables: "Cuentas por pagar",
+          financeCashflow: "Flujo de caja",
+          financeSettings: "Configuración financiera",
+          cadastros: "Catálogos",
           queues: "Linhas",
-          administration: "Administración",
           superAdmin: "Gestión de Empresas",
           companies: "Empresas",
           users: "Usuarios",
-          permissionGroups: "Equipo",
+          roles: "Cargos y accesos",
           settings: "Configuración",
         },
         appBar: {
@@ -800,10 +774,19 @@ const messages = {
       },
       users: {
         title: "Usuarios",
+        actions: {
+          edit: "Editar usuario",
+          delete: "Borrar usuario",
+          access: "Definir cargo y permisos",
+        },
+        noRole: "sin cargo",
+        hasExceptions: "+ excepciones",
+        hasExceptionsHelp:
+          "Esta persona tiene permisos liberados o bloqueados más allá de su cargo.",
         table: {
           name: "Nombre",
           email: "Correo Electrónico",
-          profile: "Perfil",
+          role: "Cargo",
           whatsapp: "Conexión estándar",
           status: "Estado",
           online: "En línea",
@@ -823,16 +806,31 @@ const messages = {
             "Toda la información del usuario se perderá. Los chats abiertos de los usuarios se moverán a la cola.",
         },
       },
+      cadastros: {
+        title: "Catálogos",
+        description:
+          "Las listas que la empresa mantiene para que el sistema funcione: lo que vende, lo que responde de inmediato, cómo clasifica las conversaciones y cómo las cierra.",
+        tabs: {
+          products: "Productos",
+          quickAnswers: "Respuestas rápidas",
+          tags: "Etiquetas",
+          autoMessages: "Mensajes automáticos",
+          ticketStatuses: "Estados de finalización",
+        },
+      },
+      tabbedPage: {
+        readOnly:
+          "Tienes acceso de lectura a esta pantalla. Para modificarla, solicita el permiso de edición.",
+      },
       settings: {
         success: "Configuración guardada satisfactoriamente.",
         title: "Configuración",
+        description:
+          "Cómo se comporta el sistema, por dónde habla, cuándo atiende y con qué aspecto aparece. Etiquetas, mensajes automáticos y estados de finalización están en Catálogos; usuarios, cargos y linhas, al lado.",
         tabs: {
           general: "General",
           connections: "Conexiones",
           businessHours: "Horario de Atención",
-          ticketStatuses: "Estados de Finalización",
-          tags: "Etiquetas",
-          autoMessages: "Mensajes Automáticos",
           branding: "Identidad Visual",
         },
         general: {
@@ -992,7 +990,31 @@ const messages = {
           },
         },
       },
+      audioPlayer: {
+        play: "Reproducir",
+        pause: "Pausar",
+        speed: "Velocidad de reproducción",
+        position: "Posición del audio",
+        download: "Descargar el audio",
+      },
       messagesList: {
+        openPdf: "Abrir el PDF",
+        retry: "Intentar de nuevo",
+        discard: "Descartar",
+        sendFailed: "No se envió",
+        quotedOtherTicket: "de otra conversación",
+        quotedOtherTicketTooltip:
+          "Este mensaje pertenece a otra conversación con este contacto. Haz clic para abrirla en el mensaje citado.",
+        quotedGoTo: "Ir al mensaje citado",
+        quotedNotLoaded: "No se encontró el mensaje citado en este historial.",
+        ack: {
+          sending: "Enviando",
+          sent: "Enviado a WhatsApp",
+          delivered: "Entregado al contacto",
+          read: "Leído",
+          played: "Escuchado",
+          failed: "Error al enviar",
+        },
         internalNote: "Nota interna",
         fromApp: "desde el celular",
         edited: "editada",
@@ -1011,6 +1033,18 @@ const messages = {
         },
       },
       messagesInput: {
+        captionPlaceholder: "Escribe un pie de foto (opcional)",
+        filesSelected: "{{count}} archivos seleccionados",
+        tooltips: {
+          emoji: "Emoji",
+          stickers: "Stickers",
+          attach: "Adjuntar archivo",
+          send: "Enviar (Enter)",
+          record: "Grabar audio",
+          cancelAttach: "Descartar los adjuntos",
+          sendAttach: "Enviar los adjuntos",
+          removeAttach: "Quitar este adjunto",
+        },
         placeholderOpen: "Escriba un mensaje o presione '' / '' para usar las respuestas rápidas registradas",
         placeholderClosed:
           "Vuelva a abrir o acepte este chat para enviar un mensaje.",
@@ -1067,6 +1101,7 @@ const messages = {
       },
       messageInput: {
         recording: {
+          label: "Audio",
           insecureContext:
             "El navegador solo permite el micrófono en conexión segura (HTTPS). Al acceder por la IP de la red en HTTP, la grabación no está disponible.",
           unavailable: "No se pudo iniciar el grabador de audio.",

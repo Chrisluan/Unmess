@@ -56,7 +56,6 @@ const QueueSelect = ({ selectedQueueIds, onChange }) => {
 							vertical: "top",
 							horizontal: "left",
 						},
-						getContentAnchorEl: null,
 					}}
 					renderValue={selected => (
 						<div className={classes.chips}>

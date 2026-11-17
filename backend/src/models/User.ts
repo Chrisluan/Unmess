@@ -21,7 +21,7 @@ import Queue from "./Queue";
 import UserQueue from "./UserQueue";
 import Whatsapp from "./Whatsapp";
 import Company from "./Company";
-import PermissionGroup from "./PermissionGroup";
+import Role from "./Role";
 
 @Table
 class User extends Model<User> {
@@ -46,7 +46,15 @@ class User extends Model<User> {
   @Column
   tokenVersion: number;
 
-  @Default("admin")
+  /**
+   * Separa o super-admin da plataforma ("super") de quem é membro de uma
+   * empresa ("member"). Não decide mais permissão nenhuma — isso é do cargo.
+   *
+   * O padrão era "admin", o que fazia todo usuário criado sem profile
+   * explícito nascer com acesso total: o pior lugar possível para um valor
+   * padrão generoso. Agora o padrão não concede nada por si só.
+   */
+  @Default("member")
   @Column
   profile: string;
 
@@ -64,17 +72,47 @@ class User extends Model<User> {
   @BelongsTo(() => Company)
   company: Company;
 
-  @ForeignKey(() => PermissionGroup)
+  @ForeignKey(() => Role)
   @Column
-  permissionGroupId: number;
+  roleId: number;
 
-  @BelongsTo(() => PermissionGroup)
-  permissionGroup: PermissionGroup;
+  @BelongsTo(() => Role)
+  role: Role;
 
-  // Overrides individuais além do grupo de permissão, formato:
-  // { "add": ["chats:delete"], "remove": ["users:manage"] }
+  /**
+   * Exceções individuais, aplicadas por cima do cargo:
+   * { "allow": ["finance:view"], "deny": ["tickets:delete"] }
+   *
+   * São a válvula de escape para o caso de uma pessoa só, para não obrigar a
+   * criar um cargo inteiro por causa de uma permissão. A tela as mostra como
+   * duas listas nomeadas — antes eram um checkbox de quatro estados em que
+   * "indeterminado" queria dizer "bloqueado".
+   */
   @Column(DataType.TEXT)
-  customPermissions: string;
+  accessExceptions: string;
+
+  /**
+   * Exceções de escopo desta pessoa, por cima do cargo:
+   * `{"board":{"allow":[3],"deny":[1]}}`
+   *
+   * Mesma ideia de `accessExceptions`, e pelo mesmo motivo: dois vendedores
+   * com o cargo "Vendedor" costumam trabalhar quadros diferentes, e criar um
+   * cargo por combinação de quadro é a explosão que o sistema de cargos
+   * existe para evitar.
+   */
+  @Column(DataType.TEXT)
+  scopeExceptions: string;
+
+  /**
+   * Escolhas de tela desta pessoa, em JSON: { "favoritos": ["tickets"] }.
+   *
+   * Não é acesso nem configuração da empresa — é só o jeito que ela gosta de
+   * ver o sistema, e por isso ela mesma grava, sem passar por `users:edit`.
+   * Fica num campo só porque nada aqui é consultado pelo banco: entra e sai
+   * inteiro, e preferência nova não pede coluna nova.
+   */
+  @Column(DataType.TEXT)
+  preferences: string;
 
   // Teto de chats abertos simultâneos. 0 = sem limite.
   @Default(0)

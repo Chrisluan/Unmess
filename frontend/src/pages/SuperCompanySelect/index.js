@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useReducer, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 import {
   Avatar,
@@ -9,10 +9,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Container,
-  InputAdornment,
-  TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
@@ -20,16 +16,17 @@ import {
   Business,
   CheckCircle,
   ExitToApp,
-  Search,
-  Warning,
   Add,
+  Tune,
 } from "@mui/icons-material";
-import { toast } from "react-toastify";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import CompanyModal from "../../components/CompanyModal";
+import EmptyState from "../../components/EmptyState";
+import SearchField from "../../components/SearchField";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -47,6 +44,10 @@ const useStyles = makeStyles((theme) => ({
   },
   headerActions: {
     marginTop: theme.spacing(2),
+    display: "flex",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
   },
   superBadge: {
     marginBottom: theme.spacing(1),
@@ -98,17 +99,26 @@ const useStyles = makeStyles((theme) => ({
     fontSize: 15,
     lineHeight: 1.3,
   },
+  statusBase: {
+    backgroundColor: "transparent",
+    border: "1px solid currentColor",
+    fontWeight: 700,
+  },
   statusActive: {
-    backgroundColor: "#e8f5e9",
-    color: "#2e7d32",
+    color: theme.palette.success.main,
   },
   statusSuspended: {
-    backgroundColor: "#fff3e0",
-    color: "#e65100",
+    color: theme.palette.warning.main,
   },
   statusCanceled: {
-    backgroundColor: "#fce4ec",
-    color: "#c62828",
+    color: theme.palette.error.main,
+  },
+
+  // Empresa suspensa ou cancelada continua clicável — às vezes é exatamente
+  // nela que o super precisa entrar para resolver —, mas não pode parecer
+  // igual às ativas numa grade de vinte cartões.
+  cartaoInativo: {
+    opacity: 0.6,
   },
   loading: {
     display: "flex",
@@ -131,7 +141,7 @@ const statusLabel = { active: "Ativa", suspended: "Suspensa", canceled: "Cancela
 const SuperCompanySelect = () => {
   const classes = useStyles();
   const history = useHistory();
-  const { user, handleSelectCompany, handleLogout } = useContext(AuthContext);
+  const { handleSelectCompany, handleLogout } = useContext(AuthContext);
 
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -204,6 +214,15 @@ const SuperCompanySelect = () => {
         </Typography>
         <Box className={classes.headerActions}>
           <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            startIcon={<Tune />}
+            onClick={() => history.push("/companies")}
+          >
+            Administrar empresas
+          </Button>
+          <Button
             variant="outlined"
             color="primary"
             size="small"
@@ -216,20 +235,12 @@ const SuperCompanySelect = () => {
       </Box>
 
       {/* Busca */}
-      <TextField
+      <SearchField
         className={classes.search}
-        variant="outlined"
-        size="small"
-        placeholder="Buscar empresa por nome, CNPJ ou e-mail..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search fontSize="small" color="action" />
-            </InputAdornment>
-          ),
-        }}
+        onClear={() => setSearch("")}
+        placeholder="Buscar empresa por nome, CNPJ ou e-mail"
       />
 
       {/* Lista */}
@@ -238,28 +249,31 @@ const SuperCompanySelect = () => {
           <CircularProgress />
         </Box>
       ) : filtered.length === 0 ? (
-        <Box className={classes.empty}>
-          <Business style={{ fontSize: 48, opacity: 0.3 }} />
-          {companies.length === 0 ? (
-            <>
-              <Typography>
-                Nenhuma empresa cadastrada ainda.
-              </Typography>
+        <EmptyState
+          icon={companies.length === 0 ? Business : SearchOffIcon}
+          title={
+            companies.length === 0
+              ? "Nenhuma empresa cadastrada"
+              : "Nada encontrado"
+          }
+          description={
+            companies.length === 0
+              ? "Cadastre a primeira empresa para começar a operar."
+              : "Nenhuma empresa com esse nome, CNPJ ou e-mail."
+          }
+          action={
+            companies.length === 0 && (
               <Button
                 variant="contained"
                 color="primary"
-                size="small"
                 startIcon={<Add />}
-                style={{ marginTop: 16 }}
                 onClick={() => setCompanyModalOpen(true)}
               >
                 Cadastrar primeira empresa
               </Button>
-            </>
-          ) : (
-            <Typography>Nenhuma empresa encontrada para essa busca</Typography>
-          )}
-        </Box>
+            )
+          }
+        />
       ) : (
         <Box className={classes.grid}>
           {filtered.map((company) => {
@@ -267,7 +281,11 @@ const SuperCompanySelect = () => {
             const inactive = company.status !== "active";
 
             return (
-              <Card key={company.id} className={classes.card} elevation={0}>
+              <Card
+                key={company.id}
+                elevation={0}
+                className={`${classes.card} ${inactive ? classes.cartaoInativo : ""}`}
+              >
                 <CardActionArea
                   onClick={() => !isSelecting && handleSelect(company)}
                   disabled={isSelecting}
@@ -293,14 +311,15 @@ const SuperCompanySelect = () => {
                     <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
                       <Chip
                         label={statusLabel[company.status] || company.status}
+                        title={company.statusReason || undefined}
                         size="small"
-                        className={
+                        className={`${classes.statusBase} ${
                           company.status === "active"
                             ? classes.statusActive
                             : company.status === "suspended"
                             ? classes.statusSuspended
                             : classes.statusCanceled
-                        }
+                        }`}
                       />
                       {company.plan && (
                         <Typography variant="caption" color="textSecondary">

@@ -6,6 +6,9 @@ import List from "@mui/material/List";
 
 import TicketListItem from "../TicketListItem";
 import TicketsListSkeleton from "../TicketsListSkeleton";
+import EmptyState from "../EmptyState";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 import useTickets from "../../hooks/useTickets";
 import useTicketTabRules from "../../hooks/useTicketTabRules";
@@ -342,14 +345,21 @@ const reducer = (state, action) => {
 			>
 				<List style={{ paddingTop: 0 }}>
 					{ticketsList.length === 0 && !loading ? (
-						<div className={classes.noTicketsDiv}>
-							<span className={classes.noTicketsTitle}>
-								{i18n.t("ticketsList.noTicketsTitle")}
-							</span>
-							<p className={classes.noTicketsText}>
-								{i18n.t("ticketsList.noTicketsMessage")}
-							</p>
-						</div>
+						/* O texto muda com o contexto: "nada encontrado" e "nada
+						   nesta aba" pedem reações diferentes de quem lê. */
+						<EmptyState
+							icon={searchParam ? SearchOffIcon : ForumOutlinedIcon}
+							title={
+								searchParam
+									? i18n.t("ticketsList.empty.searchTitle")
+									: i18n.t("ticketsList.empty.title")
+							}
+							description={
+								searchParam
+									? i18n.t("ticketsList.empty.searchMessage")
+									: i18n.t("ticketsList.empty.message")
+							}
+						/>
 					) : (
 						<>
 							{ticketsList.map(ticket => (

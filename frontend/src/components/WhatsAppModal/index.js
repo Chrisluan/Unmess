@@ -4,7 +4,6 @@ import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 
 import makeStyles from '@mui/styles/makeStyles';
-import { green } from "@mui/material/colors";
 
 import {
 	Dialog,
@@ -19,6 +18,8 @@ import {
 } from "@mui/material";
 
 import api from "../../services/api";
+import Tooltip from "@mui/material/Tooltip";
+
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import QueueSelect from "../QueueSelect";
@@ -41,7 +42,7 @@ const useStyles = makeStyles(theme => ({
 	},
 
 	buttonProgress: {
-		color: green[500],
+		color: theme.palette.primary.main,
 		position: "absolute",
 		top: "50%",
 		left: "50%",
@@ -141,37 +142,42 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 										autoFocus
 										name="name"
 										error={touched.name && Boolean(errors.name)}
-										helperText={touched.name && errors.name}
+										helperText={
+											(touched.name && errors.name) ||
+											i18n.t("whatsappModal.form.nameHelp")
+										}
 										variant="outlined"
 										margin="dense"
 										className={classes.textField}
 									/>
-									<FormControlLabel
-										control={
-											<Field
-												as={Switch}
-												color="primary"
-												name="isDefault"
-												checked={values.isDefault}
-											/>
-										}
-										label={i18n.t("whatsappModal.form.default")}
-									/>
+									<Tooltip title={i18n.t("whatsappModal.form.defaultHelp")} arrow>
+										<FormControlLabel
+											control={
+												<Field
+													as={Switch}
+													color="primary"
+													name="isDefault"
+													checked={values.isDefault}
+												/>
+											}
+											label={i18n.t("whatsappModal.form.default")}
+										/>
+									</Tooltip>
 								</div>
 								<div>
 									<Field
 										as={TextField}
-										label={i18n.t("queueModal.form.greetingMessage")}
-										type="greetingMessage"
+										label={i18n.t("whatsappModal.form.greetingMessage")}
 										multiline
-										rows={5}
+										rows={4}
 										fullWidth
 										name="greetingMessage"
 										error={
 											touched.greetingMessage && Boolean(errors.greetingMessage)
 										}
 										helperText={
-											touched.greetingMessage && errors.greetingMessage
+											(touched.greetingMessage && errors.greetingMessage) ||
+											i18n.t("whatsappModal.form.greetingHelp")
 										}
 										variant="outlined"
 										margin="dense"
@@ -181,16 +187,16 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 									<Field
 										as={TextField}
 										label={i18n.t("whatsappModal.form.farewellMessage")}
-										type="farewellMessage"
 										multiline
-										rows={5}
+										rows={4}
 										fullWidth
 										name="farewellMessage"
 										error={
 											touched.farewellMessage && Boolean(errors.farewellMessage)
 										}
 										helperText={
-											touched.farewellMessage && errors.farewellMessage
+											(touched.farewellMessage && errors.farewellMessage) ||
+											i18n.t("whatsappModal.form.farewellHelp")
 										}
 										variant="outlined"
 										margin="dense"

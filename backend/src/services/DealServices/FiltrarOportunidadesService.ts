@@ -8,10 +8,20 @@ import Contact from "../../models/Contact";
 import User from "../../models/User";
 import PipelineStage from "../../models/PipelineStage";
 import Board from "../../models/Board";
+import Order from "../../models/Order";
+import DealAttachment from "../../models/DealAttachment";
+
+import {
+  EscopoResolvido,
+  alcanca,
+  filtroDeEscopo
+} from "../../helpers/permissions/escopos";
 
 export interface FiltrosOportunidade {
   companyId: number;
   boardId?: number | string;
+  /** Os quadros que quem pediu alcança. Ausente é "sem restrição". */
+  escopoDeQuadros?: EscopoResolvido;
   searchParam?: string;
   responsibleUserId?: number | string;
   /** "sem responsável" é diferente de "qualquer responsável". */
@@ -70,6 +80,7 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
   const {
     companyId,
     boardId,
+  escopoDeQuadros,
     searchParam,
     responsibleUserId,
     semResponsavel,
@@ -94,8 +105,33 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
 
   const where: WhereOptions & Record<string, any> = { companyId };
 
-  if (!includeClosed) where.status = { [Op.notIn]: ["won", "lost"] };
-  if (boardId) where.boardId = boardId;
+  /**
+   * O faturado fica no quadro; o perdido é que sai de vista.
+   *
+   * Esconder "won" deixava a coluna Faturado permanentemente vazia: o card
+   * chegava ao seu destino final e desaparecia da tela, como se tivesse sido
+   * apagado. É o mesmo motivo pelo qual o card "moved" já ficava visível --
+   * um quadro que esconde o que aconteceu nele mente sobre o próprio fluxo.
+   *
+   * "lost" continua atrás do filtro: ali o trabalho não terminou, foi embora,
+   * e acumulá-lo no quadro só afasta o que ainda está em jogo.
+   */
+  if (!includeClosed) where.status = { [Op.notIn]: ["lost"] };
+  /**
+   * Quadro pedido e escopo se combinam por interseção, nunca por
+   * substituição: pedir um quadro fora do alcance devolve vazio, e não os
+   * outros quadros do escopo.
+   */
+  if (boardId) {
+    if (escopoDeQuadros && !alcanca(escopoDeQuadros, Number(boardId))) {
+      where.boardId = { [Op.in]: [] };
+    } else {
+      where.boardId = boardId;
+    }
+  } else {
+    const restricao = filtroDeEscopo(escopoDeQuadros, "boardId");
+    if (restricao) Object.assign(where, restricao);
+  }
   if (stageId) where.stageId = stageId;
   if (customerId) where.customerId = customerId;
   if (origin) where.origin = origin;
@@ -168,6 +204,9 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
       { title: como },
       { notes: como },
       ...(Number.isFinite(Number(termo)) ? [{ quoteNumber: Number(termo) }] : []),
+      // O número da ordem de produção é por onde a produção e o balcão
+      // procuram o trabalho; sem ele aqui, digitá-lo na busca não achava nada.
+      ...(Number.isFinite(Number(termo)) ? [{ orderNumber: Number(termo) }] : []),
       ...(Number.isFinite(Number(termo)) ? [{ id: Number(termo) }] : []),
       literal(
         `EXISTS (SELECT 1 FROM Customers c WHERE c.id = Deal.customerId AND (c.name LIKE ${Deal.sequelize?.escape(
@@ -215,7 +254,23 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
       { model: User, as: "responsibleUser", required: false, attributes: ["id", "name"] },
       { model: PipelineStage, as: "stage", required: false, attributes: ["id", "name", "color", "probability", "type", "isWon", "isFinal"] },
       { model: Board, as: "board", required: false, attributes: ["id", "name", "isSalesFunnel"] },
+      // Distingue orçamento de pedido: existe só depois de sair do funil.
+      { model: Order, as: "salesOrder", required: false, attributes: ["id", "number", "quoteNumber", "status"] },
       { model: Tag, as: "tags", required: false, through: { attributes: [] }, attributes: ["id", "name", "color"] },
+      /**
+       * Só a capa, não o material inteiro: o card mostra uma imagem, e trazer
+       * todos os arquivos de todos os pedidos do quadro para usar um de cada
+       * seria dezenas de registros por card. `separate` resolve numa consulta à
+       * parte, em vez de um join que multiplicaria as linhas.
+       */
+      {
+        model: DealAttachment,
+        as: "attachments",
+        required: false,
+        separate: true,
+        where: { isPreview: true },
+        attributes: ["id", "fileName", "mimetype", "name"]
+      },
       { model: DealItem, as: "items", required: false, separate: true, order: [["position", "ASC"]] }
     ],
     order,

@@ -3,6 +3,7 @@ import Ticket from "../../models/Ticket";
 import DealTicket from "../../models/DealTicket";
 import AppError from "../../errors/AppError";
 import ShowDealService from "./ShowDealService";
+import clienteDoTicket from "./ClienteDoTicket";
 
 interface Request {
   dealId: string | number;
@@ -38,6 +39,25 @@ const LinkDealTicketService = async ({
     await DealTicket.findOrCreate({
       where: { dealId: deal.id, ticketId: ticket.id }
     });
+
+    /**
+     * Ligar a conversa também dá nome ao card, quando ele ainda não tem.
+     *
+     * Um negócio sem contato nem cliente aparece sem nome no quadro, e a
+     * conversa que acabou de ser ligada sabe exatamente de quem é. O que já
+     * foi preenchido fica como está: quem escolheu o cliente à mão tem razões
+     * para isso, e um atendimento ligado depois não pode sobrescrever.
+     */
+    if (!deal.contactId && !deal.customerId) {
+      const doTicket = await clienteDoTicket(ticket, companyId);
+
+      if (doTicket.contactId || doTicket.customerId) {
+        await deal.update({
+          contactId: doTicket.contactId,
+          customerId: doTicket.customerId
+        });
+      }
+    }
   } else {
     await DealTicket.destroy({
       where: { dealId: deal.id, ticketId: ticket.id }

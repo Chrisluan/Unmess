@@ -8,6 +8,14 @@ import { useHistory } from "react-router-dom";
 import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
 
 const useStyles = makeStyles((theme) => ({
+  /**
+   * Cabeçalho da conversa.
+   *
+   * Usava `#eee` e uma borda preta translúcida fixos: no modo escuro a faixa
+   * ficava cinza-clara no meio de uma tela quase preta, e era a primeira
+   * coisa que se via ao abrir um atendimento. Agora vem do tema, como o
+   * resto das superfícies.
+   */
   ticketHeader: {
     display: "flex",
     alignItems: "center",
@@ -29,6 +37,7 @@ const useStyles = makeStyles((theme) => ({
 
 const TicketHeader = ({ loading, children }) => {
   const classes = useStyles();
+  const theme = useTheme();
   const history = useHistory();
 
   if (loading) return <TicketHeaderSkeleton />;

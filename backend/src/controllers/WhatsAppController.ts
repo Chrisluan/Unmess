@@ -9,6 +9,8 @@ import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService
 import UpdateWhatsAppService from "../services/WhatsappService/UpdateWhatsAppService";
 import { whatsappProvider } from "../providers/WhatsApp";
 import getCompanyId from "../helpers/GetCompanyId";
+import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
+import { alcanca } from "../helpers/permissions/escopos";
 
 interface WhatsappData {
   name: string;
@@ -22,7 +24,18 @@ interface WhatsappData {
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const whatsapps = await ListWhatsAppsService(getCompanyId(req));
 
-  return res.status(200).json(whatsapps);
+  /**
+   * O escopo é aplicado aqui, e não dentro do serviço.
+   *
+   * `ListWhatsAppsService` é chamado também pelo processo que sobe as sessões
+   * no boot, que não roda em nome de ninguém — filtrar lá dentro faria o
+   * sistema deixar de conectar os números que o último usuário não alcançava.
+   */
+  const escopo = await escopoDaRequisicao(req, "connection");
+
+  return res
+    .status(200)
+    .json(whatsapps.filter(whatsapp => alcanca(escopo, whatsapp.id)));
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {

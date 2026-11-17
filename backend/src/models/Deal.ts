@@ -12,7 +12,8 @@ import {
   ForeignKey,
   BelongsTo,
   BelongsToMany,
-  HasMany
+  HasMany,
+  HasOne
 } from "sequelize-typescript";
 import Company from "./Company";
 import Customer from "./Customer";
@@ -24,6 +25,9 @@ import DealActivity from "./DealActivity";
 import Ticket from "./Ticket";
 import DealTicket from "./DealTicket";
 import DealItem from "./DealItem";
+import DealAttachment from "./DealAttachment";
+import Order from "./Order";
+import PaymentTerm from "./PaymentTerm";
 import Tag from "./Tag";
 import DealTag from "./DealTag";
 
@@ -79,6 +83,21 @@ class Deal extends Model<Deal> {
   @Column
   closedAt: Date;
 
+  /**
+   * Momento em que a venda foi ganha, independente de onde o card está.
+   *
+   * O `status` não dá conta sozinho: cruzar a coluna de ganho fecha a venda,
+   * mas o trabalho continua no quadro seguinte e o card vira "moved". É este
+   * campo, e não o status, que o faturamento soma.
+   *
+   * Marcado **no card que cruzou a coluna de ganho**, e em cada um que cruzar:
+   * a jornada se ramifica, e cada pedaço do trabalho fatura por conta própria.
+   * Só existe uma coluna de ganho num fluxo, então percorrer os quadros não
+   * marca o mesmo dinheiro duas vezes -- ver MarcarGanhoService.
+   */
+  @Column
+  wonAt: Date;
+
   // Momento em que o card saiu do board por ter avançado de quadro.
   @Column
   archivedAt: Date;
@@ -112,8 +131,22 @@ class Deal extends Model<Deal> {
   @Column
   carrier: string;
 
+  /**
+   * O combinado em texto livre — "o resto quando a fachada for instalada".
+   *
+   * Continua existindo ao lado de `paymentTermId` porque nem todo acerto cabe
+   * numa regra. O que a máquina lê para calcular vencimento é o outro campo.
+   */
   @Column
   paymentCondition: string;
+
+  /** Condição cadastrada, com os prazos que geram as parcelas da cobrança. */
+  @ForeignKey(() => PaymentTerm)
+  @Column
+  paymentTermId: number;
+
+  @BelongsTo(() => PaymentTerm)
+  paymentTerm: PaymentTerm;
 
   @Default(1)
   @Column
@@ -138,10 +171,27 @@ class Deal extends Model<Deal> {
    * Número do orçamento dentro da empresa.
    *
    * Vale enquanto o card está no funil de vendas. Ao sair, o trabalho passa a
-   * ser identificado pelo número do pedido, que vive em Orders.
+   * ser identificado pelo número do pedido.
    */
   @Column
   quoteNumber: number;
+
+  /**
+   * Número da ordem de produção dentro da empresa.
+   *
+   * Vale fora do funil de vendas, onde o card deixa de ser proposta e passa a
+   * ser trabalho a fazer: é o número da ordem de serviço, o que a produção
+   * escreve na etiqueta e o que o cliente cita no balcão.
+   *
+   * Fica no card, e não só em Orders, porque a jornada troca de linha a cada
+   * quadro: Orders aponta para um card só, e o número precisa acompanhar o
+   * trabalho de Produção até Expedição. Sem esta coluna, a tela caía no
+   * `Deals.id` -- um contador único do banco inteiro, compartilhado por todas
+   * as empresas e por todo tipo de card. Duas empresas jamais veriam a ordem
+   * nº 1, e a numeração de cada uma pulava conforme o movimento das outras.
+   */
+  @Column
+  orderNumber: number;
 
   // ---- Operacao do dia a dia ---------------------------------------------
 
@@ -256,8 +306,30 @@ class Deal extends Model<Deal> {
   @HasMany(() => DealItem)
   items: DealItem[];
 
+  /**
+   * O material: arte, arquivo de impressão, referência do cliente.
+   *
+   * O que está marcado como `isPreview` é a capa que aparece no card do
+   * Kanban -- é o que permite reconhecer o trabalho sem abrir o pedido.
+   */
+  @HasMany(() => DealAttachment)
+  attachments: DealAttachment[];
+
   @BelongsToMany(() => Ticket, () => DealTicket)
   tickets: Ticket[];
+
+  /**
+   * O pedido gerado por este card, quando ele já saiu do funil de vendas.
+   *
+   * Existir aqui é o que distingue orçamento de pedido na tela: enquanto o card
+   * está no funil ele é um orçamento, identificado por `quoteNumber`; ao sair,
+   * ganha número de pedido próprio, e é esse o número que o cliente ouve.
+   *
+   * O apelido não é "order" porque a coluna `order` já existe neste modelo —
+   * é a posição do card dentro da coluna do Kanban.
+   */
+  @HasOne(() => Order)
+  salesOrder: Order;
 }
 
 export default Deal;

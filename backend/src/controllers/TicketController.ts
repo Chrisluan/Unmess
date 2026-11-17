@@ -15,9 +15,12 @@ import UpdateTicketService from "../services/TicketServices/UpdateTicketService"
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../services/WhatsappService/ShowWhatsAppService";
 import formatBody from "../helpers/Mustache";
+import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import getCompanyId from "../helpers/GetCompanyId";
 import { TAB_RULES } from "../helpers/TicketTabRules";
-import { userHasPermission } from "../helpers/permissions/GetUserPermissions";
+import { usuarioPode } from "../helpers/permissions/resolve";
+import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
+import AppError from "../errors/AppError";
 
 type IndexQuery = {
   searchParam: string;
@@ -96,7 +99,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   // conversas escolhe de quem são. Para os demais o parâmetro é ignorado em
   // silêncio — a lista continua sendo a que eles já teriam.
   if (userIdsStringified) {
-    const podeFiltrarPorAtendente = await userHasPermission(
+    const podeFiltrarPorAtendente = await usuarioPode(
       Number(userId),
       "tickets:viewAll"
     );
@@ -107,6 +110,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   }
 
   const { tickets, count, hasMore } = await ListTicketsService({
+    escopoDeConexoes: await escopoDaRequisicao(req, "connection"),
     searchParam,
     pageNumber,
     status,
@@ -160,6 +164,28 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   return res.status(200).json(contact);
 };
 
+/**
+ * Zera o contador de não lidas da conversa.
+ *
+ * Existe porque a marcação de leitura só acontecia ao carregar o histórico
+ * (`GET /messages/:ticketId`) ou ao responder. Com o contador funcionando de
+ * verdade, a conversa que o atendente já está lendo passaria a acumular
+ * "1, 2, 3..." na frente dele até que saísse e voltasse. Esta rota é o
+ * caminho barato para dizer "estou olhando isto agora".
+ */
+export const markAsRead = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { ticketId } = req.params;
+
+  const ticket = await ShowTicketService(ticketId, getCompanyId(req));
+
+  await SetTicketMessagesAsRead(ticket);
+
+  return res.status(200).json({ ticketId: +ticketId, unreadMessages: 0 });
+};
+
 export const update = async (
   req: Request,
   res: Response
@@ -167,6 +193,27 @@ export const update = async (
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
   const { isTransfer } = req.body;
+
+  /**
+   * Transferir é uma permissão separada de responder, e é aqui que ela vale.
+   *
+   * A rota inteira é guardada por `tickets:edit` — o que basta para quem está
+   * respondendo. Passar a conversa para outra pessoa ou outra fila é outra
+   * decisão: tira o atendimento das mãos de quem está com ele. A permissão
+   * existia no catálogo e aparecia na tela de cargos, mas nada no servidor a
+   * conferia: bastava chamar esta rota direto para transferir sem tê-la.
+   */
+  const estaTransferindo =
+    isTransfer === true ||
+    ticketData.userId !== undefined ||
+    ticketData.queueId !== undefined;
+
+  if (estaTransferindo) {
+    const pode = await usuarioPode(Number(req.user.id), "tickets:transfer");
+    if (!pode) {
+      throw new AppError("ERR_NO_PERMISSION", 403);
+    }
+  }
 
   const { ticket } = await UpdateTicketService({
     ticketData,

@@ -6,8 +6,6 @@ import useSound from "use-sound";
 
 import Popover from "@mui/material/Popover";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import makeStyles from '@mui/styles/makeStyles';
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 
@@ -40,6 +38,19 @@ const useStyles = makeStyles(theme => ({
 	},
 	iconButton: {
 		color: theme.palette.text.primary,
+	},
+
+	cabecalho: {
+		display: "flex",
+		alignItems: "baseline",
+		justifyContent: "space-between",
+		gap: theme.spacing(1),
+		padding: theme.spacing(1, 1.5),
+	},
+
+	vazio: {
+		padding: theme.spacing(4, 2),
+		textAlign: "center",
 	},
 }));
 
@@ -219,11 +230,26 @@ const NotificationsPopOver = () => {
 				classes={{ paper: classes.popoverPaper }}
 				onClose={handleClickAway}
 			>
-				<List dense className={classes.tabContainer}>
+				<div className={classes.cabecalho}>
+					<Typography variant="subtitle2">
+						{i18n.t("notifications.title")}
+					</Typography>
+					{notifications.length > 0 && (
+						<Typography variant="caption" color="textSecondary">
+							{i18n.t("notifications.count", {
+								count: notifications.length,
+							})}
+						</Typography>
+					)}
+				</div>
+				<Divider />
+				<List dense disablePadding className={classes.tabContainer}>
 					{notifications.length === 0 ? (
-						<ListItem>
-							<ListItemText>{i18n.t("notifications.noTickets")}</ListItemText>
-						</ListItem>
+						<div className={classes.vazio}>
+							<Typography variant="body2" color="textSecondary">
+								{i18n.t("notifications.noTickets")}
+							</Typography>
+						</div>
 					) : (
 						notifications.map(ticket => (
 							<NotificationTicket key={ticket.id}>

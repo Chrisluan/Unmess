@@ -4,6 +4,13 @@ import Customer from "../../models/Customer";
 import Contact from "../../models/Contact";
 import User from "../../models/User";
 import PipelineStage from "../../models/PipelineStage";
+import Order from "../../models/Order";
+import DealAttachment from "../../models/DealAttachment";
+import {
+  EscopoResolvido,
+  alcanca,
+  filtroDeEscopo
+} from "../../helpers/permissions/escopos";
 
 interface Request {
   searchParam?: string;
@@ -12,6 +19,11 @@ interface Request {
   // Inclui no quadro os cards já encerrados (faturados e perdidos).
   includeClosed?: boolean;
   boardId?: string;
+  /**
+   * Os quadros que quem pediu alcança. Ausente é "sem restrição" e existe para
+   * as chamadas internas do sistema, que não são feitas em nome de ninguém.
+   */
+  escopoDeQuadros?: EscopoResolvido;
   companyId: number;
 }
 
@@ -34,19 +46,41 @@ const ListDealsService = async ({
   customerId,
   includeClosed = false,
   boardId,
+  escopoDeQuadros,
   companyId
 }: Request): Promise<Deal[]> => {
-  // "won"/"lost" só quando explicitamente pedidos; "moved" (concluído no
-  // quadro) sempre aparece, porque é o registro do que passou por ali.
-  const escondidos = includeClosed ? [] : ["won", "lost"];
+  /**
+   * Só "lost" sai de vista por padrão.
+   *
+   * "moved" (concluído no quadro) e "won" (faturado) continuam aparecendo na
+   * coluna onde pararam: os dois são registro do que aconteceu ali, e escondê-
+   * los deixava a coluna final permanentemente vazia -- o card chegava ao
+   * destino e sumia da tela como se tivesse sido apagado.
+   */
+  const escondidos = includeClosed ? [] : ["lost"];
 
   const whereCondition: any = {
     companyId,
     status: { [Op.notIn]: escondidos }
   };
 
+  /**
+   * Quadro pedido e escopo se combinam por interseção, nunca por substituição.
+   *
+   * Pedir um quadro fora do alcance devolve lista vazia — não um erro, e
+   * muito menos os outros quadros do escopo, que seria o resultado de deixar
+   * a cláusula do escopo sobrescrever o `boardId` pedido. Parâmetro que a
+   * pessoa não pode usar é ignorado em silêncio, do mesmo jeito que o filtro
+   * de responsável já é tratado aqui; o que não pode é virar mais dado.
+   */
   if (boardId) {
+    if (escopoDeQuadros && !alcanca(escopoDeQuadros, Number(boardId))) {
+      return [];
+    }
     whereCondition.boardId = boardId;
+  } else {
+    const restricao = filtroDeEscopo(escopoDeQuadros, "boardId");
+    if (restricao) Object.assign(whereCondition, restricao);
   }
 
   const busca = searchParam.toLowerCase().trim();
@@ -108,9 +142,33 @@ const ListDealsService = async ({
         required: false
       },
       {
+        /**
+         * Só a capa, não o material inteiro.
+         *
+         * O card do Kanban mostra uma imagem; carregar todos os arquivos de
+         * todos os pedidos do quadro para usar um de cada seria trazer dezenas
+         * de registros por card. `separate` faz disso uma consulta só, à parte,
+         * em vez de um join que multiplicaria as linhas do quadro.
+         */
+        model: DealAttachment,
+        as: "attachments",
+        attributes: ["id", "fileName", "mimetype", "name"],
+        where: { isPreview: true },
+        required: false,
+        separate: true
+      },
+      {
+        // Distingue orçamento de pedido na tela: existe só depois que o card
+        // saiu do funil de vendas.
+        model: Order,
+        as: "salesOrder",
+        attributes: ["id", "number", "quoteNumber", "status"],
+        required: false
+      },
+      {
         model: PipelineStage,
         as: "stage",
-        attributes: ["id", "name", "color", "type", "isFinal"],
+        attributes: ["id", "name", "color", "type", "isFinal", "isWon"],
         required: false
       }
     ]
