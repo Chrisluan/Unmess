@@ -28,6 +28,7 @@ import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 import IsWithinBusinessHours from "../helpers/IsWithinBusinessHours";
 import { ROTULO_AUDIO } from "../helpers/RotuloAudio";
 import Setting from "../models/Setting";
+import chatIdDoContato from "../helpers/ChatIdDoContato";
 
 const writeFileAsync = promisify(writeFile);
 
@@ -231,7 +232,7 @@ const handleQueueLogic = async (
         try {
           await whatsappProvider.sendMessage(
             whatsappId,
-            `${contactPayload.number}@c.us`,
+            chatIdDoContato(contactPayload, false),
             body
           );
         } catch (error) {
@@ -275,7 +276,7 @@ const sendQueueGreeting = async (
   try {
     await whatsappProvider.sendMessage(
       whatsappId,
-      `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+      chatIdDoContato(contactPayload, contactPayload.isGroup),
       // O ‎ marca a mensagem como enviada pelo sistema, para o handler
       // não reprocessá-la ao vê-la voltar.
       formatBody(`‎${saudacao}`, ticket)
@@ -368,7 +369,7 @@ export const handleMessage = async (
             try {
               await whatsappProvider.sendMessage(
                 contextPayload.whatsappId,
-                `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+                chatIdDoContato(contactPayload, contactPayload.isGroup),
                 formatBody(`\u200e${messageSetting.value}`, ticket)
               );
             } catch (error) {

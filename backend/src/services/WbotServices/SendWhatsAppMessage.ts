@@ -5,6 +5,7 @@ import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 import { logger } from "../../utils/logger";
 
 import formatBody from "../../helpers/Mustache";
+import chatIdDoContato from "../../helpers/ChatIdDoContato";
 
 interface Request {
   body: string;
@@ -21,7 +22,7 @@ const SendWhatsAppMessage = async ({
     throw new AppError("ERR_TICKET_NO_WHATSAPP");
   }
 
-  const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;
+  const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 
   try {
     const sentMessage = await whatsappProvider.sendMessage(

@@ -2,6 +2,7 @@ import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import { whatsappProvider } from "../../providers/WhatsApp";
+import chatIdDoContato from "../../helpers/ChatIdDoContato";
 
 const DeleteWhatsAppMessage = async (
   messageId: string,
@@ -27,7 +28,7 @@ const DeleteWhatsAppMessage = async (
     throw new AppError("No message found with this ID.");
   }
 
-  const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;
+  const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 
   await whatsappProvider.deleteMessage(
     ticket.whatsappId,
