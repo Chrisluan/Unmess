@@ -9,6 +9,7 @@ import DealItem from "../../models/DealItem";
 import Order from "../../models/Order";
 import Ticket from "../../models/Ticket";
 import AppError from "../../errors/AppError";
+import { listarItensDoPedido } from "../OrderServices/ItensDoPedidoService";
 
 /**
  * Negócio completo, com timeline e conversas vinculadas — alimenta o painel
@@ -39,7 +40,13 @@ const ShowDealService = async (
         // saiu do funil de vendas.
         model: Order,
         as: "salesOrder",
-        attributes: ["id", "number", "quoteNumber", "status"],
+        attributes: ["id", "number", "quoteNumber", "status", "canceledAt"],
+        required: false
+      },
+      {
+        model: Order,
+        as: "pedido",
+        attributes: ["id", "number", "quoteNumber", "status", "dealId", "approvedAt", "canceledAt"],
         required: false
       },
       {
@@ -51,7 +58,7 @@ const ShowDealService = async (
       {
         model: Board,
         as: "board",
-        attributes: ["id", "name", "color", "order"],
+        attributes: ["id", "name", "color", "order", "isSalesFunnel"],
         required: false
       },
       {
@@ -89,6 +96,23 @@ const ShowDealService = async (
   if (!deal) {
     throw new AppError("ERR_NO_DEAL_FOUND", 404);
   }
+
+  /**
+   * Card de produção mostra os itens do pedido, não os próprios: ele não
+   * guarda cópia, e é isso que faz Produção e Expedição verem a mesma coisa
+   * que foi aprovada (antes o card chegava vazio, "Nenhum item registrado").
+   */
+  const pedido = deal.pedido && !deal.pedido.canceledAt ? deal.pedido : null;
+  const ehProducao = Boolean(pedido && pedido.dealId !== deal.id);
+  if (pedido && ehProducao) {
+    deal.setDataValue("items", (await listarItensDoPedido(pedido.id, companyId)) as never);
+  }
+  // Para a tela: "orcamento" trava quando já tem pedido; "producao" edita os
+  // itens do pedido, com permissão própria.
+  deal.setDataValue(
+    "papel" as never,
+    (ehProducao ? "producao" : pedido ? "orcamento_aprovado" : "orcamento") as never
+  );
 
   return deal;
 };

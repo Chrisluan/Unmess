@@ -24,6 +24,7 @@ import AbaItens from "./AbaItens";
 import AbaMaterial from "./AbaMaterial";
 import AbaTarefas from "./AbaTarefas";
 import AbaWhatsApp from "./AbaWhatsApp";
+import BarraDoPedido from "./BarraDoPedido";
 import ConfirmationModal from "../../ConfirmationModal";
 import { identidadeDoNegocio } from "../identidade";
 
@@ -320,6 +321,11 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
                 Orçamento nº {identidade.orcamentoDeOrigem}
               </span>
             )}
+            {identidade.pedidoGerado && (
+              <span className={classes.numeroOrigem}>
+                Pedido nº {identidade.pedidoGerado}
+              </span>
+            )}
 
             <div className={classes.campoFaixa}>
               <div>
@@ -339,6 +345,8 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
               <div className={classes.valorNumero}>{moeda(deal.value)}</div>
             </div>
           </div>
+
+          <BarraDoPedido deal={deal} onAlterado={aoAlterar} />
 
           <div
             className={`${classes.corpo} ${compacto ? classes.corpoCompacto : ""}`}

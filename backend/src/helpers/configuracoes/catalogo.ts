@@ -42,6 +42,9 @@ export const CATALOGO_DE_CONFIGURACOES: Record<string, DefinicaoDeConfiguracao> 
   outOfHoursMessageEnabled: { tipo: "booleano", padrao: "disabled" },
   outOfHoursMessage: { tipo: "texto", padrao: "", tamanhoMaximo: 4000 },
 
+  // Vendas
+  validadePropostaDias: { tipo: "inteiro", padrao: "15", minimo: 0, maximo: 365 },
+
   // Integrações. Só o servidor gera: ver POST /settings/userApiToken/gerar.
   userApiToken: { tipo: "segredo", padrao: "" }
 };

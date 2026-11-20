@@ -21,6 +21,7 @@ import TicketStatusesTab from "../Cadastros/TicketStatusesTab";
 import TagsTab from "../Cadastros/TagsTab";
 import AutoMessagesTab from "../Cadastros/AutoMessagesTab";
 import SaudeTab from "./SaudeTab";
+import DadosDaEmpresa from "./DadosDaEmpresa";
 import Alert from "@mui/material/Alert";
 import Button from "@mui/material/Button";
 import { useHistory } from "react-router-dom";
@@ -35,7 +36,7 @@ const SUBTITULOS = {
 	status: "Motivos que o atendente escolhe ao resolver uma conversa.",
 	etiquetas: "Etiquetas para organizar conversas e contatos.",
 	mensagens: "Mensagens enviadas sozinhas em momentos do atendimento.",
-	marca: "Nome e logo que aparecem para a sua equipe.",
+	marca: "Nome, logo e os dados que saem nos documentos.",
 	saude: "Configurações que deixam outras sem efeito, e onde resolver cada uma.",
 };
 
@@ -204,6 +205,7 @@ const Settings = () => {
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 6}>
 					<BrandingTab />
+					{podeVerAjustes && <DadosDaEmpresa />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 7}>
 					{podeVerAjustes && <SaudeTab problemas={problemas} carregando={carregandoSaude} />}

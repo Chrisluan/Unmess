@@ -994,6 +994,10 @@ const messages = {
             helper:
               "Quando desligado, cada atendente vê apenas as conversas dos setores dos quais faz parte.",
           },
+          validadePropostaDias: {
+            label: "Validade padrão da proposta (dias)",
+            helper: "Orçamento novo já nasce com essa validade, que sai impressa na proposta. Dá para mudar em cada orçamento. 0 deixa sem validade.",
+          },
           autoCloseInactiveHours: {
             label: "Encerrar conversas paradas após (horas)",
             helper: "0 desliga o encerramento automático. Verificado a cada 5 minutos pelo servidor.",
@@ -1310,6 +1314,19 @@ const messages = {
         generic: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
+        ERR_PEDIDO_JA_GERADO: "Este orçamento já tem pedido gerado.",
+        ERR_PEDIDO_FORA_DO_FUNIL: "Só um orçamento do funil de vendas gera pedido.",
+        ERR_PEDIDO_SEM_ITENS: "Inclua ao menos um item antes de gerar o pedido.",
+        ERR_PEDIDO_SEM_CLIENTE: "Cadastre o cliente antes de gerar o pedido: cobrança e nota precisam de nome e documento.",
+        ERR_PEDIDO_NAO_ENCONTRADO: "Pedido não encontrado.",
+        ERR_PEDIDO_CANCELADO: "Este pedido está cancelado.",
+        ERR_PEDIDO_COM_RECEBIMENTO: "O pedido já tem recebimento registrado. Estorne os recebimentos antes de cancelar.",
+        ERR_PEDIDO_ABAIXO_DO_RECEBIDO: "Com essa alteração o pedido ficaria abaixo do que já foi recebido.",
+        ERR_ORCAMENTO_TRAVADO_POR_PEDIDO: "Este orçamento já virou pedido e não muda mais. Cancele o pedido para corrigir.",
+        ERR_COBRANCA_ACIMA_DO_PEDIDO: "O valor das parcelas passa do que falta cobrar do pedido.",
+        ERR_CONTATO_JA_TEM_CLIENTE: "Este contato já tem um cliente cadastrado.",
+        ERR_PAYMENT_TERM_NOT_FOUND: "Condição de pagamento não encontrada.",
+        ERR_INVALID_EMAIL: "E-mail inválido.",
         ERR_CONFIGURACAO_DESCONHECIDA: "Essa configuração não existe.",
         ERR_CONFIGURACAO_VALOR_INVALIDO: "Valor inválido para essa configuração.",
         ERR_CONFIGURACAO_SOMENTE_SERVIDOR: "Esse valor é gerado pelo sistema.",

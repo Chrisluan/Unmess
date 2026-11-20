@@ -246,6 +246,27 @@ export const REGRAS: Regra[] = [
     }
   },
 
+  // ── Documentos ───────────────────────────────────────────────────────────
+  {
+    id: "documentos-sem-dados-da-empresa",
+    titulo: "Documentos sem os dados da empresa",
+    severidade: "aviso",
+    gatilhos: ["empresa"],
+    resolver: { rota: AJUSTES("marca"), rotulo: "Preencher os dados da empresa" },
+    verificar: async dados => {
+      const empresa = await dados.empresa();
+      if (!empresa) return [];
+      const faltando = [
+        !empresa.document ? "CNPJ/CPF" : null,
+        !empresa.address ? "endereço" : null
+      ].filter(Boolean);
+      if (faltando.length === 0) return [];
+      return [
+        `A proposta, a ordem de produção e a cobrança saem sem ${faltando.join(" e ")} da empresa no cabeçalho.`
+      ];
+    }
+  },
+
   // ── Financeiro ───────────────────────────────────────────────────────────
   {
     id: "pdv-sem-conta-caixa",

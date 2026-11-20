@@ -9,6 +9,10 @@ import emitirDeal from "../libs/emitirDeal";
 import AppError from "../errors/AppError";
 import { usuarioPode } from "../helpers/permissions/resolve";
 import { podeVerValores, respostaComValores } from "../helpers/permissions/valores";
+import Deal from "../models/Deal";
+import ShowDealService from "../services/DealServices/ShowDealService";
+import { pedidoAtivoDo } from "../services/OrderServices/GerarPedidoService";
+import { alterarItensDoPedido } from "../services/OrderServices/ItensDoPedidoService";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
@@ -43,6 +47,29 @@ export const sync = async (req: Request, res: Response): Promise<Response> => {
         403
       );
     }
+  }
+
+  /**
+   * Card de produção edita os itens do pedido, não os próprios (ele não tem).
+   * É mexer no que o cliente aprovou: pede `crm:editOrder`, além do que a
+   * rota já exige para editar itens.
+   */
+  const card = await Deal.findOne({ where: { id: dealId, companyId } });
+  if (!card) throw new AppError("ERR_NO_DEAL_FOUND", 404);
+  const pedido = await pedidoAtivoDo(card, companyId);
+  if (pedido && pedido.dealId !== card.id) {
+    if (!(await usuarioPode(Number(req.user.id), "crm:editOrder"))) {
+      throw new AppError(
+        "Você não tem permissão para alterar um pedido já gerado. Peça a quem administra o sistema.",
+        403
+      );
+    }
+    const alterado = await alterarItensDoPedido({ order: pedido, companyId, items });
+    const cardAtualizado = await ShowDealService(card.id, companyId);
+    emitirDeal(companyId, { action: "update", deal: cardAtualizado });
+    return res.json(
+      await respostaComValores(req, { deal: cardAtualizado, items: alterado.items })
+    );
   }
 
   const resultado = await SyncDealItemsService({ dealId, companyId, items });

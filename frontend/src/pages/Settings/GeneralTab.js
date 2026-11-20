@@ -65,6 +65,7 @@ const PADROES_LIGADOS = { signMessages: "enabled", notificationSound: "enabled" 
 const NUMBER_SETTINGS = {
 	autoCloseInactiveHours: "0",
 	reopenTicketWindowHours: "2",
+	validadePropostaDias: "15",
 };
 
 const BOOLEAN_SETTINGS = [
@@ -227,6 +228,14 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 				<Divider />
 				{renderSwitch("signMessages")}
 				{renderSwitch("notificationSound")}
+			</Paper>
+
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					Vendas
+				</Typography>
+				<Divider />
+				{renderNumber("validadePropostaDias")}
 			</Paper>
 
 			<Paper className={classes.section} variant="outlined">

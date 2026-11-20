@@ -1,4 +1,6 @@
 import AppError from "../../errors/AppError";
+import { addDays } from "date-fns";
+import { GetSettingNumber } from "../../helpers/GetSetting";
 import Board from "../../models/Board";
 import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
 import Deal from "../../models/Deal";
@@ -128,9 +130,17 @@ const CreateDealService = async ({
     ? null
     : await ProximoNumeroService(companyId, "order");
 
+  // Proposta nasce com validade: o padrão da empresa, que pode ser mudado
+  // no orçamento. Card fora do funil não é proposta e não vence.
+  const diasDeValidade = noFunil
+    ? await GetSettingNumber("validadePropostaDias", companyId, 15)
+    : 0;
+  const validUntil = diasDeValidade > 0 ? addDays(new Date(), diasDeValidade) : null;
+
   const deal = await Deal.create({
     quoteNumber,
     orderNumber,
+    validUntil,
     title,
     value,
     expectedCloseAt: expectedCloseAt || null,

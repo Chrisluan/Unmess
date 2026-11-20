@@ -3,6 +3,8 @@ import Deal from "../../models/Deal";
 import Customer from "../../models/Customer";
 import Contact from "../../models/Contact";
 import User from "../../models/User";
+import PaymentTerm from "../../models/PaymentTerm";
+import { pedidoAtivoDo } from "../OrderServices/GerarPedidoService";
 import ShowDealService from "./ShowDealService";
 
 interface DealData {
@@ -24,6 +26,8 @@ interface DealData {
   discount?: number;
   discountType?: string;
   origin?: string;
+  paymentTermId?: number | null;
+  validUntil?: Date | null;
 }
 
 const CAMPOS_EDITAVEIS: (keyof DealData)[] = [
@@ -43,7 +47,24 @@ const CAMPOS_EDITAVEIS: (keyof DealData)[] = [
   "installments",
   "discount",
   "discountType",
-  "origin"
+  "origin",
+  "paymentTermId",
+  "validUntil"
+];
+
+/**
+ * O que o pedido congela. Orçamento que já virou pedido não muda nestes
+ * campos: o que vale é o que está no pedido, e mudar aqui faria os dois
+ * documentos dizerem coisas diferentes.
+ */
+const CAMPOS_DO_PEDIDO: (keyof DealData)[] = [
+  "value",
+  "discount",
+  "discountType",
+  "paymentCondition",
+  "installments",
+  "paymentTermId",
+  "customerId"
 ];
 
 /**
@@ -56,7 +77,7 @@ const garantirMesmaEmpresa = async (
   companyId: number
 ): Promise<void> => {
   const conferir = async (
-    modelo: typeof Customer | typeof Contact | typeof User,
+    modelo: typeof Customer | typeof Contact | typeof User | typeof PaymentTerm,
     id: unknown,
     erro: string
   ) => {
@@ -71,6 +92,7 @@ const garantirMesmaEmpresa = async (
   await conferir(Customer, alteracoes.customerId, "ERR_NO_CUSTOMER_FOUND");
   await conferir(Contact, alteracoes.contactId, "ERR_NO_CONTACT_FOUND");
   await conferir(User, alteracoes.responsibleUserId, "ERR_NO_USER_FOUND");
+  await conferir(PaymentTerm, alteracoes.paymentTermId, "ERR_PAYMENT_TERM_NOT_FOUND");
 };
 
 interface Request {
@@ -106,6 +128,29 @@ const UpdateDealService = async ({
   );
 
   await garantirMesmaEmpresa(alteracoes, companyId);
+
+  const pedido = await pedidoAtivoDo(deal, companyId);
+  // Conta só o que muda de fato: a tela da proposta reenvia todos os campos a
+  // cada gravação, e recusar um desconto igual ao atual travaria até a troca
+  // do título.
+  const mudou = (campo: keyof DealData): boolean => {
+    const novo = alteracoes[campo];
+    if (novo === undefined) return false;
+    const atual = deal.get(campo as string) as unknown;
+    if (novo === null || atual === null || atual === undefined) {
+      return (novo ?? null) !== (atual ?? null);
+    }
+    const n1 = Number(novo);
+    const n2 = Number(atual);
+    if (Number.isFinite(n1) && Number.isFinite(n2)) return Math.abs(n1 - n2) > 0.0001;
+    return String(novo) !== String(atual);
+  };
+  if (pedido && CAMPOS_DO_PEDIDO.some(mudou)) {
+    throw new AppError("ERR_ORCAMENTO_TRAVADO_POR_PEDIDO", 409, {
+      orderId: pedido.id,
+      number: pedido.number
+    });
+  }
 
   await deal.update(alteracoes);
 

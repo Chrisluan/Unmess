@@ -7,6 +7,7 @@ import noEscopoDoQuadro from "../middleware/noEscopoDoQuadro";
 import * as DealController from "../controllers/DealController";
 import * as DealActivityController from "../controllers/DealActivityController";
 import * as DealItemController from "../controllers/DealItemController";
+import * as OrderController from "../controllers/OrderController";
 import * as DealAttachmentController from "../controllers/DealAttachmentController";
 import uploadConfig from "../config/upload";
 import { TIPOS_DE_TAREFA } from "../helpers/TiposDeTarefa";
@@ -65,7 +66,18 @@ crmRoutes.get("/tipos-de-tarefa", isAuth, requiresCompany, hasPermission("crm:vi
 );
 crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.index);
 crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:editItems"), noEscopoDoQuadro, DealItemController.sync);
-crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:issueOrder"), noEscopoDoQuadro, DealItemController.ordemDeServico);
+// O botão antigo "Ordem de serviço" passa a escolher o documento certo
+// (proposta, ordem de produção ou o modelo antigo) -- ver OrderController.
+crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:issueOrder"), noEscopoDoQuadro, OrderController.documentoDoCard);
+
+// ── Orçamento → pedido ─────────────────────────────────────────────────────
+crmRoutes.get("/deals/:dealId/proposta",           isAuth, requiresCompany, hasPermission("crm:issueOrder"),  noEscopoDoQuadro, OrderController.proposta);
+crmRoutes.post("/deals/:dealId/pedido",            isAuth, requiresCompany, hasPermission("crm:generateOrder"), noEscopoDoQuadro, OrderController.gerar);
+crmRoutes.get("/orders/:orderId",                  isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.pedidoNoEscopo, OrderController.show);
+crmRoutes.get("/orders/:orderId/ordem-producao",   isAuth, requiresCompany, hasPermission("crm:issueOrder"),  OrderController.pedidoNoEscopo, OrderController.ordemDeProducao);
+crmRoutes.post("/orders/:orderId/cancelar",        isAuth, requiresCompany, hasPermission("crm:cancelOrder"), OrderController.pedidoNoEscopo, OrderController.cancelar);
+crmRoutes.get("/condicoes-de-pagamento",           isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.condicoesDePagamento);
+crmRoutes.get("/comercial/trilha",                 isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.trilha);
 
 // ── Material do pedido ──────────────────────────────────────────────────────
 // A arte, o arquivo de impressão, a referência que o cliente mandou. Ler exige

@@ -43,6 +43,14 @@ class Company extends Model<Company> {
   @Column
   document: string;
 
+  /** Razão social, para o cabeçalho de proposta, O.P. e cobrança. */
+  @Column
+  legalName: string;
+
+  /** Endereço numa linha só, como sai impresso nos documentos. */
+  @Column
+  address: string;
+
   @Column
   email: string;
 

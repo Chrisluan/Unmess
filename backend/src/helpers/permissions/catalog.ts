@@ -232,6 +232,27 @@ export const MODULES: Record<string, ModuloDePermissao> = {
         nivel: "operar",
         requer: ["crm:move"]
       },
+      generateOrder: {
+        label: "Gerar pedido a partir do orçamento",
+        descricao:
+          "Transforma o orçamento aprovado em pedido: congela os itens e as condições, dá número de pedido, marca a venda como ganha e abre o trabalho na produção. Depois disso o orçamento não muda mais.",
+        nivel: "operar",
+        requer: ["crm:close", "crm:viewValues"]
+      },
+      editOrder: {
+        label: "Alterar itens de pedido já gerado",
+        descricao:
+          "Mexe nos itens e medidas de um pedido que já está em produção. É alterar o que o cliente aprovou: o sistema recusa deixar o pedido abaixo do que já foi recebido.",
+        nivel: "gerenciar",
+        requer: ["crm:editItems"]
+      },
+      cancelOrder: {
+        label: "Cancelar pedido",
+        descricao:
+          "Desfaz o pedido: cancela as parcelas em aberto, tira os cards de produção do fluxo e destrava o orçamento. Não é possível com recebimento já registrado.",
+        nivel: "gerenciar",
+        requer: ["crm:view"]
+      },
       discount: {
         label: "Dar desconto",
         descricao:

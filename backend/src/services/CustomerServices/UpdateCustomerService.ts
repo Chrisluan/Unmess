@@ -56,7 +56,20 @@ const UpdateCustomerService = async ({
     }
   }
 
-  await customer.update(customerData);
+  // Um cliente por contato (ver CreateCustomerService).
+  if (customerData.contactId && customerData.contactId !== customer.contactId) {
+    const doContato = await Customer.findOne({
+      where: { contactId: customerData.contactId, companyId },
+      attributes: ["id"]
+    });
+    if (doContato && doContato.id !== customer.id) {
+      throw new AppError("ERR_CONTATO_JA_TEM_CLIENTE", 409, { customerId: doContato.id });
+    }
+  }
+
+  // A empresa do cadastro não muda pela edição.
+  const { companyId: _ignorada, ...dados } = customerData as CustomerData & { companyId?: number };
+  await customer.update(dados);
 
   await customer.reload({
     include: ["contact", "responsibleUser"]

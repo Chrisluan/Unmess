@@ -24,7 +24,8 @@ export type Gatilho =
   | "quadro"
   | "etapa"
   | "conexao"
-  | "financeiro";
+  | "financeiro"
+  | "empresa";
 
 /** Para onde mandar quem quer resolver: rota do frontend e o texto do botão. */
 export interface Atalho {
@@ -98,6 +99,13 @@ export interface ContaFinanceira {
   active: boolean;
 }
 
+export interface DadosDaEmpresa {
+  name: string;
+  legalName: string | null;
+  document: string | null;
+  address: string | null;
+}
+
 export interface FonteDeDados {
   /** Valor da configuração, já com o padrão do catálogo quando não existe. */
   configuracao(chave: string): Promise<string>;
@@ -108,6 +116,7 @@ export interface FonteDeDados {
   etapas(): Promise<Etapa[]>;
   conexoes(): Promise<Conexao[]>;
   contasFinanceiras(): Promise<ContaFinanceira[]>;
+  empresa(): Promise<DadosDaEmpresa | null>;
 }
 
 export interface Regra {

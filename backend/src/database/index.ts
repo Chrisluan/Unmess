@@ -29,6 +29,7 @@ import DealAttachment from "../models/DealAttachment";
 import DealTag from "../models/DealTag";
 import Sticker from "../models/Sticker";
 import Order from "../models/Order";
+import OrderItem from "../models/OrderItem";
 import Product from "../models/Product";
 import PaymentTerm from "../models/PaymentTerm";
 import FinancialAccount from "../models/FinancialAccount";
@@ -82,6 +83,7 @@ const models = [
   DealAttachment,
   DealTag,
   Order,
+  OrderItem,
   Product,
   Sticker,
   PaymentTerm,

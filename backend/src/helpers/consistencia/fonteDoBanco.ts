@@ -9,10 +9,12 @@ import BusinessHour from "../../models/BusinessHour";
 import Board from "../../models/Board";
 import PipelineStage from "../../models/PipelineStage";
 import FinancialAccount from "../../models/FinancialAccount";
+import Company from "../../models/Company";
 import { CATALOGO_DE_CONFIGURACOES } from "../configuracoes/catalogo";
 import {
   Conexao,
   ContaFinanceira,
+  DadosDaEmpresa,
   DiaDeAtendimento,
   Etapa,
   Fila,
@@ -146,6 +148,22 @@ const fonteDoBanco = (
           kind: c.kind,
           active: c.active !== false
         }));
+      }),
+
+    empresa: () =>
+      lembrar("empresa", async () => {
+        const c = await Company.findByPk(companyId, {
+          attributes: ["name", "legalName", "document", "address"],
+          transaction
+        });
+        return c
+          ? ({
+              name: c.name,
+              legalName: c.legalName || null,
+              document: c.document || null,
+              address: c.address || null
+            } as DadosDaEmpresa)
+          : null;
       })
   };
 };

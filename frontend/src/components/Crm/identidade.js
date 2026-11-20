@@ -21,6 +21,32 @@ export const identidadeDoNegocio = (deal, opcoes = {}) => {
   const pedido = deal?.salesOrder;
 
   /**
+   * Orçamento continua orçamento depois de gerar o pedido.
+   *
+   * O pedido é outro documento, com número próprio; o card do funil é o
+   * orçamento que o originou e é assim que aparece, com o pedido indicado ao
+   * lado (`pedidoGerado`). Card de funil com número de produção é anterior a
+   * esta regra e segue como era.
+   */
+  const ativo = (p) => (p && !p.canceledAt ? p : null);
+  const pedidoGerado = ativo(deal?.pedido) || ativo(pedido);
+  const noFunilDeVendas =
+    opcoes.noFunil !== undefined ? opcoes.noFunil : deal?.board?.isSalesFunnel;
+  if (
+    deal?.papel === "orcamento" ||
+    deal?.papel === "orcamento_aprovado" ||
+    (noFunilDeVendas === true && !deal?.orderNumber)
+  ) {
+    return {
+      tipo: "orcamento",
+      rotulo: "Orçamento",
+      numero: deal?.quoteNumber || deal?.id,
+      orcamentoDeOrigem: null,
+      pedidoGerado: pedidoGerado?.number || null,
+    };
+  }
+
+  /**
    * O número da ordem de produção, na contagem da própria empresa.
    *
    * Vem do card, e não do registro em Orders, porque a jornada troca de linha

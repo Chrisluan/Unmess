@@ -77,7 +77,10 @@ const paraCampoHora = (iso) => (iso ? String(iso).slice(11, 16) : "");
 const AbaProposta = ({ deal, onSalvo }) => {
   const classes = useStyles();
   const { can } = usePermissions();
-  const podeEditar = can("crm:edit");
+  // As condições comerciais congelam no pedido: depois dele, a proposta é
+  // registro do que foi aprovado (o backend também recusa).
+  const travado = deal?.papel === "orcamento_aprovado" || deal?.papel === "producao";
+  const podeEditar = can("crm:edit") && !travado;
   const verValores = can("crm:viewValues");
   // Desconto é permissão própria: o servidor recusa o campo de quem não a tem,
   // então a tela também não pode mandá-lo — antes ele ia em todo salvamento, e
@@ -86,6 +89,16 @@ const AbaProposta = ({ deal, onSalvo }) => {
 
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
+  const [condicoes, setCondicoes] = useState([]);
+
+  // Condições cadastradas no financeiro: escolher uma aqui é o que faz a
+  // cobrança do pedido já sair com as parcelas certas.
+  useEffect(() => {
+    api
+      .get("/condicoes-de-pagamento")
+      .then(({ data }) => setCondicoes(data?.condicoes || []))
+      .catch(() => setCondicoes([]));
+  }, []);
 
   useEffect(() => {
     setForm({
@@ -101,6 +114,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
       discountType: deal.discountType || "value",
       origin: deal.origin || "",
       notes: deal.notes || "",
+      validUntil: paraCampoData(deal.validUntil),
+      paymentTermId: deal.paymentTermId || "",
     });
   }, [deal]);
 
@@ -139,6 +154,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
         carrier: form.deliveryMode === "delivery" ? form.carrier : null,
         paymentCondition: form.paymentCondition,
         installments: Number(form.installments) || 1,
+        paymentTermId: form.paymentTermId ? Number(form.paymentTermId) : null,
+        validUntil: form.validUntil ? `${form.validUntil}T23:59:59` : null,
         origin: form.origin,
         notes: form.notes,
       });
@@ -202,6 +219,17 @@ const AbaProposta = ({ deal, onSalvo }) => {
           />
 
           <TextField
+            label="Proposta válida até"
+            type="date"
+            size="small"
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
+            value={form.validUntil || ""}
+            disabled={!podeEditar}
+            onChange={(e) => mudar("validUntil", e.target.value)}
+          />
+
+          <TextField
             label="Origem"
             size="small"
             variant="outlined"
@@ -255,7 +283,26 @@ const AbaProposta = ({ deal, onSalvo }) => {
 
         <div className={classes.totais}>
           <TextField
-            label="Condição de pagamento"
+            select
+            label="Condição cadastrada"
+            size="small"
+            variant="outlined"
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            value={form.paymentTermId || ""}
+            disabled={!podeEditar}
+            onChange={(e) => mudar("paymentTermId", e.target.value)}
+          >
+            <option value="">Nenhuma (à vista)</option>
+            {condicoes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Observação do pagamento"
             size="small"
             variant="outlined"
             placeholder="À vista, 30/60, PIX…"

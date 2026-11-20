@@ -26,7 +26,8 @@ const fonte = (d: Dados): FonteDeDados => ({
   quadros: async () => d.quadros ?? [],
   etapas: async () => d.etapas ?? [],
   conexoes: async () => d.conexoes ?? [],
-  contasFinanceiras: async () => d.contas ?? []
+  contasFinanceiras: async () => d.contas ?? [],
+  empresa: async () => null
 });
 
 const rodar = async (id: string, d: Dados): Promise<string[]> => {

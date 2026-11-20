@@ -18,6 +18,7 @@ import { usuarioPode } from "../helpers/permissions/resolve";
 import { podeVerValores, respostaComValores } from "../helpers/permissions/valores";
 import emitirDeal from "../libs/emitirDeal";
 import PipelineStage from "../models/PipelineStage";
+import Board from "../models/Board";
 import {
   escopoDaRequisicao,
   garantirNoEscopo
@@ -271,9 +272,29 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
    * destino que decide o que a ação faz.
    */
   const destino = await PipelineStage.findOne({
-    where: { id: stageId },
-    attributes: ["id", "isFinal", "type"]
+    where: { id: stageId, companyId: getCompanyId(req) },
+    attributes: ["id", "isFinal", "type", "boardId"]
   });
+
+  /**
+   * Concluir o funil seguindo adiante é gerar o pedido: congela o orçamento e
+   * abre a produção. É a permissão de gerar pedido, não só a de fechar.
+   */
+  if (destino?.isFinal && gerarProximo !== false) {
+    const quadro = await Board.findOne({
+      where: { id: destino.boardId, companyId: getCompanyId(req) },
+      attributes: ["id", "isSalesFunnel"]
+    });
+    if (
+      quadro?.isSalesFunnel &&
+      !(await usuarioPode(Number(req.user.id), "crm:generateOrder"))
+    ) {
+      throw new AppError(
+        "Você pode concluir o orçamento, mas não gerar o pedido. Use \"Só concluir\" ou peça a quem administra o sistema.",
+        403
+      );
+    }
+  }
 
   if (destino?.isFinal || destino?.type === "lost") {
     const podeEncerrar = await usuarioPode(Number(req.user.id), "crm:close");

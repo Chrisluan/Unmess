@@ -2,8 +2,9 @@ import { Op } from "sequelize";
 import DealItem from "../../models/DealItem";
 import Deal from "../../models/Deal";
 import AppError from "../../errors/AppError";
+import { pedidoAtivoDo } from "../OrderServices/GerarPedidoService";
 
-interface ItemEntrada {
+export interface ItemEntrada {
   id?: number;
   description: string;
   quantity?: number | string;
@@ -30,6 +31,33 @@ const numero = (valor: unknown, padrao = 0): number => {
 };
 
 /**
+ * Normaliza a lista que veio da tela. Usada também pelos itens do pedido:
+ * orçamento e pedido têm de aceitar exatamente as mesmas linhas.
+ */
+export const limparItens = (items: ItemEntrada[]) =>
+  items
+    .filter(item => item?.description?.trim())
+    .map((item, indice) => ({
+      id: item.id,
+      description: item.description.trim().slice(0, 255),
+      quantity: numero(item.quantity, 1),
+      unit: (item.unit || "un").trim().slice(0, 12) || "un",
+      unitPrice: numero(item.unitPrice, 0),
+      discount: numero(item.discount, 0),
+      notes: item.notes?.trim() || null,
+      productId: item.productId || null,
+      width: numero(item.width, 0),
+      height: numero(item.height, 0),
+      // Modo desconhecido cai em unidade: melhor cobrar por peça do que
+      // multiplicar por uma medida que ninguém preencheu.
+      pricingMode: ["area", "linear"].includes(String(item.pricingMode))
+        ? String(item.pricingMode)
+        : "unit",
+      minMeasure: numero(item.minMeasure, 0),
+      position: indice
+    }));
+
+/**
  * Grava a lista de itens de um negócio de uma vez só.
  *
  * A tela edita a lista inteira -- adiciona uma linha, muda a quantidade de
@@ -52,29 +80,21 @@ const SyncDealItemsService = async ({
 
   if (!Array.isArray(items)) throw new AppError("ERR_INVALID_ITEMS");
 
-  const limpos = items
-    .filter(item => item?.description?.trim())
-    .map((item, indice) => ({
-      id: item.id,
-      description: item.description.trim().slice(0, 255),
-      quantity: numero(item.quantity, 1),
-      unit: (item.unit || "un").trim().slice(0, 12) || "un",
-      unitPrice: numero(item.unitPrice, 0),
-      discount: numero(item.discount, 0),
-      notes: item.notes?.trim() || null,
-      productId: item.productId || null,
-      width: numero(item.width, 0),
-      height: numero(item.height, 0),
-      // Modo desconhecido cai em unidade: melhor cobrar por peça do que
-      // multiplicar por uma medida que ninguém preencheu.
-      pricingMode: ["area", "linear"].includes(String(item.pricingMode))
-        ? String(item.pricingMode)
-        : "unit",
-      minMeasure: numero(item.minMeasure, 0),
-      position: indice,
-      dealId: deal.id,
-      companyId
-    }));
+  // Orçamento que já virou pedido não muda mais: o que foi aprovado está
+  // congelado no pedido, e mexer aqui faria orçamento e pedido divergirem.
+  const pedido = await pedidoAtivoDo(deal, companyId);
+  if (pedido) {
+    throw new AppError("ERR_ORCAMENTO_TRAVADO_POR_PEDIDO", 409, {
+      orderId: pedido.id,
+      number: pedido.number
+    });
+  }
+
+  const limpos = limparItens(items).map(item => ({
+    ...item,
+    dealId: deal.id,
+    companyId
+  }));
 
   const idsMantidos = limpos.map(i => i.id).filter(Boolean) as number[];
 

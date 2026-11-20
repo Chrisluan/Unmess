@@ -31,6 +31,20 @@ const CreateCustomerService = async (
 ): Promise<Customer> => {
   const { document, companyId } = customerData;
 
+  // Um cliente por contato: o contato do WhatsApp é como a conversa chega
+  // ao cadastro, e dois clientes no mesmo contato deixavam o pedido sem saber
+  // de qual era. O banco também garante (índice único).
+  const contatoId = (customerData as { contactId?: number | null }).contactId;
+  if (contatoId) {
+    const doContato = await Customer.findOne({
+      where: { contactId: contatoId, companyId },
+      attributes: ["id"]
+    });
+    if (doContato) {
+      throw new AppError("ERR_CONTATO_JA_TEM_CLIENTE", 409, { customerId: doContato.id });
+    }
+  }
+
   if (document) {
     const documentExists = await Customer.findOne({
       where: { document, companyId }

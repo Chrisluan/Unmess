@@ -27,6 +27,12 @@ const CAMPOS_DE_VALOR = new Set([
   "subtotal",
   "unitPrice",
   "installmentValue",
+  // trilha comercial (pedido e cobranças)
+  "faturado",
+  "recebido",
+  "restante",
+  "amount",
+  "paidAmount",
   "totalValue",
   "paidValue",
   // totais do funil

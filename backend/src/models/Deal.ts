@@ -328,8 +328,26 @@ class Deal extends Model<Deal> {
    * O apelido não é "order" porque a coluna `order` já existe neste modelo —
    * é a posição do card dentro da coluna do Kanban.
    */
-  @HasOne(() => Order)
+  @HasOne(() => Order, "dealId")
   salesOrder: Order;
+
+  /**
+   * O pedido a que este card pertence.
+   *
+   * No orçamento, marca que ele já virou pedido (e fica travado). Nos cards
+   * de produção, é de onde vêm os itens e o documento: o card não guarda
+   * cópia, e por isso a O.P. da Expedição é a mesma da Produção.
+   */
+  @ForeignKey(() => Order)
+  @Column
+  orderId: number;
+
+  @BelongsTo(() => Order, "orderId")
+  pedido: Order;
+
+  /** Até quando a proposta vale. */
+  @Column
+  validUntil: Date;
 }
 
 export default Deal;

@@ -27,6 +27,7 @@ import usePermissions from "../../hooks/usePermissions";
 import abrirOrdemDeServico from "../../helpers/ordemDeServico";
 import { descreverNegocio } from "../Crm/identidade";
 import { totalDaLinha, itemVazio } from "../Crm/calculoItem";
+import TrilhaComercial from "../TrilhaComercial";
 
 const useStyles = makeStyles(theme => ({
   bloco: {
@@ -243,6 +244,8 @@ const TicketDeals = ({ onCarregado }) => {
 
   return (
     <div className={classes.bloco}>
+      {/* De onde a venda veio e onde ela está, a partir desta conversa. */}
+      {deals.length > 0 && <TrilhaComercial ticketId={ticketId} atualizarEm={deals} />}
       <div className={classes.cabecalho}>
         <Typography component="h3" style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>
           Pedidos e orçamentos

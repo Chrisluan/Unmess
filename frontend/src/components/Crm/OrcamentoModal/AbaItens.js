@@ -308,7 +308,13 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
   const compacto = useMediaQuery(theme.breakpoints.down("md"));
   const { can } = usePermissions();
   // Montar o orçamento é mexer na conta, e exige ver os valores.
-  const podeEditar = can("crm:editItems");
+  // Orçamento que virou pedido está congelado; card de produção edita os
+  // itens do pedido, com permissão própria (ver BarraDoPedido).
+  const papel = deal?.papel || "orcamento";
+  const podeEditar =
+    can("crm:editItems") &&
+    papel !== "orcamento_aprovado" &&
+    (papel !== "producao" || can("crm:editOrder"));
   const verValores = can("crm:viewValues");
   const podeEmitirOS = can("crm:issueOrder");
 
