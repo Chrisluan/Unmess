@@ -4,6 +4,7 @@ import { Avatar, ButtonBase, Tooltip } from "@mui/material";
 import makeStyles from '@mui/styles/makeStyles';
 
 import api from "../../services/api";
+import { totalDaLinha } from "../Crm/calculoItem";
 
 const useStyles = makeStyles(theme => {
 	const c = theme.palette.unmess;
@@ -65,8 +66,10 @@ const moeda = valor =>
 
 const totalDoPedido = deal =>
 	// Itens sem preço (oculto pelo servidor) não somam zero: não há total a mostrar.
+	// Mesma conta do servidor (m², metro linear, mínimo por peça): a de
+	// quantidade × preço mostrava aqui um valor e no orçamento outro.
 	(deal.items || []).some(i => i.unitPrice === null) ? null : (deal.items || []).reduce(
-		(s, i) => s + Math.max(0, Number(i.quantity || 0) * Number(i.unitPrice || 0) - Number(i.discount || 0)),
+		(s, i) => s + totalDaLinha(i),
 		0
 	);
 

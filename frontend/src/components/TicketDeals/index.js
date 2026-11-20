@@ -26,6 +26,7 @@ import toastError from "../../errors/toastError";
 import usePermissions from "../../hooks/usePermissions";
 import abrirOrdemDeServico from "../../helpers/ordemDeServico";
 import { descreverNegocio } from "../Crm/identidade";
+import { totalDaLinha, itemVazio } from "../Crm/calculoItem";
 
 const useStyles = makeStyles(theme => ({
   bloco: {
@@ -91,8 +92,6 @@ const moeda = valor =>
     ? "—"
     : Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const totalDaLinha = item =>
-  Math.max(0, Number(item.quantity || 0) * Number(item.unitPrice || 0) - Number(item.discount || 0));
 
 /**
  * Pedidos ligados a esta conversa.
@@ -156,16 +155,11 @@ const TicketDeals = ({ onCarregado }) => {
       return;
     }
     setAberto(deal.id);
-    setRascunho(
-      (deal.items || []).map(i => ({
-        id: i.id,
-        description: i.description,
-        quantity: i.quantity,
-        unit: i.unit || "un",
-        unitPrice: i.unitPrice,
-        discount: i.discount || 0,
-      }))
-    );
+    // O item inteiro vai no rascunho, não só os campos que este painel edita:
+    // o PUT substitui a lista toda, e um item sem medidas, modo de cobrança e
+    // produto voltava do servidor como "unidade" -- um banner de 3 × 1,5 m²
+    // passava a custar o preço de um metro.
+    setRascunho((deal.items || []).map(i => ({ ...i, unit: i.unit || "un", discount: i.discount || 0 })));
   };
 
   const mudarItem = (indice, campo, valor) => {
@@ -177,7 +171,7 @@ const TicketDeals = ({ onCarregado }) => {
   const adicionarLinha = () =>
     setRascunho(atual => [
       ...atual,
-      { description: "", quantity: 1, unit: "un", unitPrice: 0, discount: 0 },
+      itemVazio(),
     ]);
 
   const removerLinha = indice =>

@@ -58,15 +58,6 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const generateUuid = () => {
-	// gerador simples, suficiente para um token de acesso à API interna
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-		const r = (Math.random() * 16) | 0;
-		const v = c === "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-};
-
 // Chaves numéricas com seus defaults. Servem tanto para inicializar o estado
 // local quanto para saber o que gravar quando o campo vem vazio.
 const NUMBER_SETTINGS = {
@@ -130,8 +121,8 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	const handleGenerateToken = async () => {
 		setConfirmarToken(false);
 		try {
-			const newToken = generateUuid();
-			await api.put("/settings/userApiToken", { value: newToken });
+			// Quem sorteia é o servidor: Math.random não serve para segredo.
+			await api.post("/settings/userApiToken/gerar");
 			toast.success(i18n.t("settings.settings.apiToken.generated"));
 			onSettingSaved();
 		} catch (err) {

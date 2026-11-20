@@ -9,6 +9,7 @@ const settingRoutes = Router();
 // Precisa vir antes de "/settings" com params para não colidir na ordem.
 settingRoutes.get("/settings/attendance",  isAuth, requiresCompany, hasPermission("tickets:view"),  SettingController.attendance);
 settingRoutes.get("/settings",             isAuth, requiresCompany, hasPermission("settings:view"), SettingController.index);
+settingRoutes.post("/settings/userApiToken/gerar", isAuth, requiresCompany, hasPermission("settings:edit"), SettingController.gerarTokenDeApi);
 settingRoutes.put("/settings/:settingKey", isAuth, requiresCompany, hasPermission("settings:edit"), SettingController.update);
 
 export default settingRoutes;

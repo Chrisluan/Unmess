@@ -18,6 +18,13 @@ import CompanyDetail from "../pages/CompanyDetail/";
 import Access from "../pages/Access/";
 import SuperCompanySelect from "../pages/SuperCompanySelect/";
 import TeamChat from "../pages/TeamChat/";
+import Finance from "../pages/Finance";
+import FinancePdv from "../pages/Finance/Pdv";
+import FinanceMetricas from "../pages/Finance/Metricas";
+import FinanceReceber from "../pages/Finance/Receber";
+import FinancePagar from "../pages/Finance/Pagar";
+import FinanceCaixa from "../pages/Finance/Caixa";
+import FinanceConfiguracao from "../pages/Finance/Configuracao";
 import { TeamChatProvider } from "../context/TeamChat";
 import { RadioDock } from "../components/TeamRadio";
 import TeamChat from "../pages/TeamChat/";
@@ -97,6 +104,17 @@ const Routes = () => {
                   <Route exact path="/customers"          component={Customers}        isPrivate permission="clients:view" />
                   <Route exact path="/crm"                component={Crm}              isPrivate permission="crm:view" />
                   <Route exact path="/users"              component={Users}            isPrivate permission="users:view" />
+                  {/* Financeiro, um módulo por rota, com as mesmas permissões
+                      dos itens de menu (layout/modulos.js). Estas rotas se
+                      perderam na revisão de UI de 17/11: o menu apontava para
+                      páginas que não existiam. */}
+                  <Route exact path="/finance"                component={Finance}             isPrivate permission="finance:view" />
+                  <Route exact path="/finance/pdv"            component={FinancePdv}          isPrivate permission="finance:pos" />
+                  <Route exact path="/finance/metricas"       component={FinanceMetricas}     isPrivate permission="finance:cashflow" />
+                  <Route exact path="/finance/receber"        component={FinanceReceber}      isPrivate permission="finance:view" />
+                  <Route exact path="/finance/pagar"          component={FinancePagar}        isPrivate permission="finance:view" />
+                  <Route exact path="/finance/caixa"          component={FinanceCaixa}        isPrivate permission="finance:cashflow" />
+                  <Route exact path="/finance/configuracao"   component={FinanceConfiguracao} isPrivate permission="finance:manage" />
                   {/* Cadastro: produtos, respostas rápidas, etiquetas,
                       mensagens automáticas e status de finalização. Cinco
                       permissões diferentes, e basta uma para entrar — lá
