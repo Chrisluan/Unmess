@@ -3,6 +3,14 @@ import Company from "../../models/Company";
 import User from "../../models/User";
 import Role from "../../models/Role";
 import SeedDefaultBoardsService from "../BoardServices/SeedDefaultBoardsService";
+import TicketStatus from "../../models/TicketStatus";
+
+const MOTIVOS_PADRAO = [
+  { name: "Atendimento concluído", color: "#66bb6a", type: "closed", isDefault: true },
+  { name: "Sem resposta do cliente", color: "#90a4ae", type: "closed", isDefault: false },
+  { name: "Venda realizada", color: "#2576d2", type: "closed", isDefault: false },
+  { name: "Não tivemos interesse do cliente", color: "#ef5350", type: "closed", isDefault: false }
+];
 import sequelize from "../../database";
 import { ALL_PERMISSIONS } from "../../helpers/permissions/catalog";
 import { SLUG_ADMINISTRADOR } from "../../helpers/permissions/roleTemplates";
@@ -94,6 +102,14 @@ const CreateCompanyService = async ({
     // A empresa já nasce com o fluxo montado (Vendas → Produção → Expedição →
     // Financeiro): um CRM sem quadro não deixa nem criar o primeiro card.
     await SeedDefaultBoardsService(company.id, t);
+
+    // E com motivos de encerramento, um deles padrão: ligar "exigir motivo"
+    // ou o fechamento automático numa empresa sem motivos deixava a equipe
+    // sem conseguir encerrar conversa nenhuma.
+    await TicketStatus.bulkCreate(
+      MOTIVOS_PADRAO.map(motivo => ({ ...motivo, companyId: company.id })),
+      { transaction: t }
+    );
 
     return { company, adminUser };
   });

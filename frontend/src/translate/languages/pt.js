@@ -971,6 +971,7 @@ const messages = {
           connections: "Números de WhatsApp",
           businessHours: "Horário de Atendimento",
           branding: "Identidade Visual",
+          health: "Saúde da configuração",
         },
         general: {
           sections: {
@@ -1309,6 +1310,14 @@ const messages = {
         generic: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
+        ERR_CONFIGURACAO_DESCONHECIDA: "Essa configuração não existe.",
+        ERR_CONFIGURACAO_VALOR_INVALIDO: "Valor inválido para essa configuração.",
+        ERR_CONFIGURACAO_SOMENTE_SERVIDOR: "Esse valor é gerado pelo sistema.",
+        ERR_CLOSING_STATUS_INVALID: "Escolha um motivo de encerramento válido.",
+        ERR_TICKET_STATUS_INVALID_TYPE: "Tipo de motivo inválido.",
+        ERR_BUSINESS_HOURS_INVALID: "Horário de atendimento inválido.",
+        ERR_BUSINESS_HOURS_INVALID_TIME: "Use o formato de hora HH:MM.",
+        ERR_NO_CUSTOMER_FOUND: "Cliente não encontrado.",
         ERR_TEAM_CHANNEL_NOT_FOUND: "Canal não encontrado.",
         ERR_TEAM_CHANNEL_NAME_REQUIRED: "Dê um nome ao canal.",
         ERR_TEAM_CHANNEL_NAME_TOO_LONG: "O nome do canal pode ter até 60 caracteres.",

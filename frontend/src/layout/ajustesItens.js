@@ -11,8 +11,9 @@ import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
+import RuleOutlinedIcon from "@mui/icons-material/RuleOutlined";
 
-export const ABAS_CONFIGURACOES = ["geral", "conexoes", "horarios", "status", "etiquetas", "mensagens", "marca"];
+export const ABAS_CONFIGURACOES = ["geral", "conexoes", "horarios", "status", "etiquetas", "mensagens", "marca", "saude"];
 
 export const SECOES_AJUSTES = [
   {
@@ -44,7 +45,8 @@ export const SECOES_AJUSTES = [
     titulo: "Conta",
     itens: [
       { rotulo: "Geral", para: "/Settings?aba=geral", permissao: "settings:view", Icone: TuneOutlinedIcon },
-      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:view", Icone: PaletteOutlinedIcon }
+      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:view", Icone: PaletteOutlinedIcon },
+      { rotulo: "Saúde da configuração", para: "/Settings?aba=saude", permissao: "settings:view", Icone: RuleOutlinedIcon }
     ]
   },
   {

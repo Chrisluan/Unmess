@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Switch, Redirect } from "react-router-dom";
 import Avisos from "../components/Avisos";
+import ConflitoDeConfiguracao from "../components/ConflitoDeConfiguracao";
 
 import LoggedInLayout from "../layout";
 import Dashboard from "../pages/Dashboard/";
@@ -141,6 +142,7 @@ const Routes = () => {
               </WhatsAppsProvider>
             </Switch>
             <Avisos />
+            <ConflitoDeConfiguracao />
           </ThemeProvider>
         </StyledEngineProvider>
       </AuthProvider>

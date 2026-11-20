@@ -9,6 +9,7 @@ import DeletePipelineStageService from "../services/PipelineStageServices/Delete
 import ReorderPipelineStagesService from "../services/PipelineStageServices/ReorderPipelineStagesService";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
+import { comConsistencia } from "../helpers/consistencia/motor";
 
 interface StageData {
   name: string;
@@ -84,11 +85,10 @@ export const update = async (
 
   const { stageId } = req.params;
 
-  const stage = await UpdatePipelineStageService({
-    stageData,
-    stageId,
-    companyId: getCompanyId(req)
-  });
+  const companyId = getCompanyId(req);
+  const stage = await comConsistencia(companyId, "etapa", transaction =>
+    UpdatePipelineStageService({ stageData, stageId, companyId, transaction })
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("pipelineStage", {
@@ -133,7 +133,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { stageId } = req.params;
 
-  await DeletePipelineStageService(stageId, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  await comConsistencia(companyId, "etapa", transaction =>
+    DeletePipelineStageService(stageId, companyId, transaction)
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("pipelineStage", {

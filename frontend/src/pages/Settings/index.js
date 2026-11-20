@@ -20,6 +20,10 @@ import BrandingTab from "./BrandingTab";
 import TicketStatusesTab from "../Cadastros/TicketStatusesTab";
 import TagsTab from "../Cadastros/TagsTab";
 import AutoMessagesTab from "../Cadastros/AutoMessagesTab";
+import SaudeTab from "./SaudeTab";
+import Alert from "@mui/material/Alert";
+import Button from "@mui/material/Button";
+import { useHistory } from "react-router-dom";
 
 import Title from "../../components/Title";
 import { ABAS_CONFIGURACOES } from "../../layout/ajustesItens";
@@ -32,6 +36,7 @@ const SUBTITULOS = {
 	etiquetas: "Etiquetas para organizar conversas e contatos.",
 	mensagens: "Mensagens enviadas sozinhas em momentos do atendimento.",
 	marca: "Nome e logo que aparecem para a sua equipe.",
+	saude: "Configurações que deixam outras sem efeito, e onde resolver cada uma.",
 };
 
 const TITULOS = {
@@ -42,6 +47,7 @@ const TITULOS = {
 	etiquetas: "settings.tabs.tags",
 	mensagens: "settings.tabs.autoMessages",
 	marca: "settings.tabs.branding",
+	saude: "settings.tabs.health",
 };
 
 const useStyles = makeStyles(theme => ({
@@ -66,6 +72,10 @@ const Settings = () => {
 	const podeVerAjustes = can("settings:view");
 
 	const [settings, setSettings] = useState([]);
+	const [carregouAjustes, setCarregouAjustes] = useState(false);
+	const [problemas, setProblemas] = useState([]);
+	const [carregandoSaude, setCarregandoSaude] = useState(true);
+	const history = useHistory();
 	const { search } = useLocation();
 	const abaPedida = new URLSearchParams(search).get("aba");
 	const aba = ABAS_CONFIGURACOES.includes(abaPedida) ? abaPedida : "geral";
@@ -78,6 +88,7 @@ const Settings = () => {
 		try {
 			const { data } = await api.get("/settings");
 			setSettings(data || []);
+			setCarregouAjustes(true);
 		} catch (err) {
 			toastError(err);
 		}
@@ -86,6 +97,26 @@ const Settings = () => {
 	useEffect(() => {
 		fetchSettings();
 	}, [fetchSettings]);
+
+	// Saúde da configuração: recarrega quando os ajustes mudam e a cada troca de
+	// aba, porque a correção costuma ser feita em outra aba (motivos, horários).
+	const fetchSaude = useCallback(async () => {
+		if (!podeVerAjustes) return;
+		try {
+			const { data } = await api.get("/configuracao/saude");
+			setProblemas(data?.problemas || []);
+		} catch (err) {
+			// O painel é auxiliar: falhar aqui não pode atrapalhar a tela.
+		} finally {
+			setCarregandoSaude(false);
+		}
+	}, [podeVerAjustes]);
+
+	useEffect(() => {
+		fetchSaude();
+	}, [fetchSaude, settings, aba]);
+
+	const bloqueios = problemas.filter((p) => p.severidade === "bloqueia");
 
 	useEffect(() => {
 		const socket = openSocket();
@@ -125,6 +156,21 @@ const Settings = () => {
 					{SUBTITULOS[aba]}
 				</Typography>
 			</div>
+			{aba !== "saude" && bloqueios.length > 0 && (
+				<Alert
+					severity="warning"
+					sx={{ mb: 3 }}
+					action={
+						<Button color="inherit" size="small" onClick={() => history.push("/Settings?aba=saude")}>
+							Ver
+						</Button>
+					}
+				>
+					{bloqueios.length === 1
+						? `Uma configuração está deixando outra sem efeito: ${bloqueios[0].titulo.toLowerCase()}.`
+						: `${bloqueios.length} configurações estão deixando outras sem efeito.`}
+				</Alert>
+			)}
 				<Box className={classes.tabPanel} hidden={tab !== 0}>
 					<GeneralTab
 						settings={settings}
@@ -147,14 +193,20 @@ const Settings = () => {
 					{can("tags:view") && <TagsTab />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 5}>
-					<AutoMessagesTab
+					{/* Só monta depois dos ajustes carregados: os campos de texto
+					    nasciam vazios e, ao perder o foco, gravavam vazio por cima
+					    da mensagem salva. */}
+					{carregouAjustes && <AutoMessagesTab
 						settings={settings}
 						getSettingValue={getSettingValue}
 						onSettingSaved={fetchSettings}
-					/>
+					/>}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 6}>
 					<BrandingTab />
+				</Box>
+				<Box className={classes.tabPanel} hidden={tab !== 7}>
+					{podeVerAjustes && <SaudeTab problemas={problemas} carregando={carregandoSaude} />}
 				</Box>
 		</div>
 	);

@@ -28,6 +28,7 @@ import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 import IsWithinBusinessHours from "../helpers/IsWithinBusinessHours";
 import { ROTULO_AUDIO } from "../helpers/RotuloAudio";
 import Setting from "../models/Setting";
+import { GetSettingBoolean } from "../helpers/GetSetting";
 import chatIdDoContato from "../helpers/ChatIdDoContato";
 
 const writeFileAsync = promisify(writeFile);
@@ -353,11 +354,9 @@ export const handleMessage = async (
       contextPayload.unreadMessages === 1 &&
       processedMessage.type !== "vcard"
     ) {
-      const outOfHoursSetting = await Setting.findOne({
-        where: { key: "outOfHoursMessageEnabled", companyId }
-      });
-
-      if (outOfHoursSetting?.value === "enabled") {
+      // Pelo helper, como o resto do sistema: comparar "enabled" direto
+      // tratava um "true" gravado por outra tela como desligado.
+      if (await GetSettingBoolean("outOfHoursMessageEnabled", companyId, false)) {
         const isOpen = await IsWithinBusinessHours(companyId);
 
         if (!isOpen) {

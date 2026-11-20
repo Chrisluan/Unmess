@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import Queue from "../../models/Queue";
@@ -14,7 +14,8 @@ interface QueueData {
 const UpdateQueueService = async (
   queueId: number | string,
   queueData: QueueData,
-  companyId: number
+  companyId: number,
+  transaction?: Transaction
 ): Promise<Queue> => {
   const { color, name } = queueData;
 
@@ -59,11 +60,17 @@ const UpdateQueueService = async (
   if (queueData.isDefault === true) {
     await Queue.update(
       { isDefault: false },
-      { where: { companyId, id: { [Op.not]: queueId } } }
+      { where: { companyId, id: { [Op.not]: queueId } }, transaction }
     );
   }
 
-  await queue.update(queueData);
+  // Só os campos do setor: o corpo da requisição chegava inteiro e dava para
+  // trocar a empresa dona do setor.
+  const { greetingMessage, isDefault } = queueData;
+  await queue.update(
+    { name, color, greetingMessage, isDefault },
+    { transaction }
+  );
 
   return queue;
 };

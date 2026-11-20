@@ -8,6 +8,16 @@ import UpdateSettingService from "../services/SettingServices/UpdateSettingServi
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
 import GetSetting from "../helpers/GetSetting";
 import { normalizarValor } from "../helpers/configuracoes/catalogo";
+import { comConsistencia, saudeDaEmpresa } from "../helpers/consistencia/motor";
+
+/**
+ * O que está inconsistente nas configurações da empresa agora, com o atalho
+ * para resolver cada item.
+ */
+export const saude = async (req: Request, res: Response): Promise<Response> => {
+  const problemas = await saudeDaEmpresa(getCompanyId(req));
+  return res.status(200).json({ problemas });
+};
 
 /**
  * Chaves que o atendente comum precisa ler para a tela de chat funcionar
@@ -74,7 +84,11 @@ export const update = async (
   // Só chaves do catálogo, no formato do catálogo. Ver helpers/configuracoes.
   const value = normalizarValor(key, req.body?.value);
 
-  const setting = await UpdateSettingService({ key, value, companyId });
+  // Recusa a mudança que deixaria outra configuração sem efeito. Ver
+  // helpers/consistencia.
+  const setting = await comConsistencia(companyId, "configuracao", transaction =>
+    UpdateSettingService({ key, value, companyId, transaction })
+  );
 
   avisarTelas(companyId, setting);
 

@@ -58,6 +58,8 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
+const PADROES_LIGADOS = { signMessages: "enabled", notificationSound: "enabled" };
+
 // Chaves numéricas com seus defaults. Servem tanto para inicializar o estado
 // local quanto para saber o que gravar quando o campo vem vazio.
 const NUMBER_SETTINGS = {
@@ -94,7 +96,9 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [settings]);
 
-	const isEnabled = key => getSettingValue(key) === "enabled";
+	// Sem linha gravada vale o padrão do servidor (helpers/configuracoes): som e
+	// assinatura nascem ligados, e a tela os mostrava desligados.
+	const isEnabled = key => (getSettingValue(key) || PADROES_LIGADOS[key] || "disabled") === "enabled";
 
 	const saveSetting = async (key, value) => {
 		try {

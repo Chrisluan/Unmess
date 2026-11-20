@@ -11,6 +11,7 @@ import {
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import Setting from "../../models/Setting";
+import TicketStatus from "../../models/TicketStatus";
 import User from "../../models/User";
 import Queue from "../../models/Queue";
 import formatBody from "../../helpers/Mustache";
@@ -125,6 +126,19 @@ const UpdateTicketService = async ({
     }
   }
 
+  // O motivo tem de ser desta empresa e de encerramento. Antes qualquer id
+  // passava: um motivo de outra empresa do SaaS, um status de "pendente", ou
+  // um id inexistente que estourava como erro 500 na chave estrangeira.
+  if (closingStatusId) {
+    const motivo = await TicketStatus.findOne({
+      where: { id: closingStatusId, companyId: ticket.companyId },
+      attributes: ["id", "type"]
+    });
+    if (!motivo || motivo.type !== "closed") {
+      throw new AppError("ERR_CLOSING_STATUS_INVALID", 400);
+    }
+  }
+
   // Nunca deixa o ticket órfão de setor: se a transferência removeu a fila
   // (ou tirou o atendente sem indicar outra fila) e não sobrou nenhum
   // setor, cai automaticamente no setor marcado como padrão.
@@ -196,11 +210,9 @@ const UpdateTicketService = async ({
 
   if (wasTransferred && ticket.companyId) {
     try {
-      const transferSetting = await Setting.findOne({
-        where: { key: "transferMessageEnabled", companyId: ticket.companyId }
-      });
-
-      if (transferSetting?.value === "enabled") {
+      if (
+        await GetSettingBoolean("transferMessageEnabled", ticket.companyId, false)
+      ) {
         const messageSetting = await Setting.findOne({
           where: { key: "transferMessage", companyId: ticket.companyId }
         });

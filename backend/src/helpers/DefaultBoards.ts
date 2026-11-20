@@ -16,11 +16,16 @@ export interface DefaultStage {
   isInitial?: boolean;
   // Conclui o quadro e empurra o card adiante. Pode haver mais de uma.
   isFinal?: boolean;
+  // Marca a venda como ganha. Sem ela, "ganho" só acontecia no fim de todo o
+  // fluxo (Financeiro › Pago) e a cobrança ficava para depois da entrega.
+  isWon?: boolean;
 }
 
 export interface DefaultBoard {
   name: string;
   color: string;
+  // O funil de vendas é onde nasce o orçamento e de onde sai o pedido.
+  isSalesFunnel?: boolean;
   stages: DefaultStage[];
 }
 
@@ -28,12 +33,13 @@ export const DEFAULT_BOARDS: DefaultBoard[] = [
   {
     name: "Funil de Vendas",
     color: "#2576d2",
+    isSalesFunnel: true,
     stages: [
       { name: "Novo", color: "#90a4ae", type: "open", isInitial: true },
       { name: "Contato feito", color: "#42a5f5", type: "open" },
       { name: "Proposta enviada", color: "#ab47bc", type: "open" },
       { name: "Negociação", color: "#ffa726", type: "open" },
-      { name: "Ganho", color: "#66bb6a", type: "open", isFinal: true },
+      { name: "Ganho", color: "#66bb6a", type: "open", isFinal: true, isWon: true },
       { name: "Perdido", color: "#ef5350", type: "lost" }
     ]
   },
