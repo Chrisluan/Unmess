@@ -3,7 +3,8 @@ import Setting from "../models/Setting";
 /**
  * Leitura tolerante de configuração: devolve o fallback em vez de lançar erro
  * quando a chave ainda não existe para a empresa. Use este helper em fluxos de
- * atendimento — CheckSettings lança 404 e derrubaria o recebimento de mensagem.
+ * atendimento: um 404 por configuração ausente derrubaria o recebimento de
+ * mensagem.
  */
 const GetSetting = async (
   key: string,

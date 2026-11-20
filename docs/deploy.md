@@ -22,7 +22,7 @@ backend .NET ──── comandos HTTP (token) ──►  (container separado, 
 | Backend .NET | `ghcr.io/chrisluan/unmess-backend-dotnet` | Dockerfile pronto (`backend-dotnet/Dockerfile`) |
 | Gateway WhatsApp | `ghcr.io/chrisluan/unmess-whatsapp-gateway` | Dockerfile pronto (`whatsapp-gateway/Dockerfile`) |
 | Deployer | serviço do Windows/systemd, fora do Docker | código pronto, integrações ainda em dry run |
-| Backend Node | `ghcr.io/chrisluan/unmess-backend` | **falta** Dockerfile novo (o atual é do Whaticket) |
+| Backend Node | `ghcr.io/chrisluan/unmess-backend` | **falta** Dockerfile (o do Whaticket foi removido por obsoleto) |
 | Frontend | `ghcr.io/chrisluan/unmess-frontend` | **falta** Dockerfile novo com configuração em runtime |
 | Migrator | `ghcr.io/chrisluan/unmess-migrator` | **falta** |
 | `deploy/compose.yaml` e overrides de prod/preview | — | **falta** (só existe `compose.dev.yaml`) |

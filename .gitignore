@@ -44,11 +44,14 @@ certs/
 # cloudflared, entao pertence a execucao, nao ao projeto.
 /frontend/endereco-publico.json
 
-# Reserva do deploy automatico e backups pontuais: sao desta maquina, nao do projeto.
+# Reservas de deploy e backups pontuais: sao desta maquina, nao do projeto.
+# Backups de .env carregam segredos, e dois ja chegaram a ser commitados.
 /.reserva-deploy/
+/.reserva-manual/
 /backend/.backup-seguranca/
-/backend/.env.antes-da-rotacao
+/backend/.env.antes-*
 /backend/.senha-nova-temporaria.txt
+/frontend/build-backup-*/
 
 !whatsapp-gateway/package-lock.json
 .vs/
