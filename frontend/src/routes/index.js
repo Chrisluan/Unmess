@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Switch, Redirect } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
+import Avisos from "../components/Avisos";
 
 import LoggedInLayout from "../layout";
 import Dashboard from "../pages/Dashboard/";
@@ -17,6 +17,12 @@ import Companies from "../pages/Companies/";
 import CompanyDetail from "../pages/CompanyDetail/";
 import Access from "../pages/Access/";
 import SuperCompanySelect from "../pages/SuperCompanySelect/";
+import TeamChat from "../pages/TeamChat/";
+import { TeamChatProvider } from "../context/TeamChat";
+import { RadioDock } from "../components/TeamRadio";
+import TeamChat from "../pages/TeamChat/";
+import { TeamChatProvider } from "../context/TeamChat";
+import { RadioDock } from "../components/TeamRadio";
 
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -73,9 +79,17 @@ const Routes = () => {
                 <AttendanceSettingsProvider>
                 <BrandingProvider>
                 <OutgoingMessagesProvider>
+                <TeamChatProvider>
+                <TeamChatProvider>
                 <LoggedInLayout>
+                  <RadioDock />
+                  <RadioDock />
                   <Route exact path="/"                   component={Dashboard}        isPrivate permission="dashboard:view" />
                   <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:view" />
+                  {/* Chat de equipe e rádio: de toda pessoa da empresa, sem permissão. */}
+                  <Route exact path="/equipe/:channelId?"  component={TeamChat}         isPrivate />
+                  {/* Chat de equipe e rádio: de toda pessoa da empresa, sem permissão. */}
+                  <Route exact path="/equipe/:channelId?"     component={TeamChat}         isPrivate />
                   {/* Conexões virou aba de Configurações. A rota fica como
                       redirect para não quebrar link/bookmark antigo. */}
                   <Route exact path="/connections"        component={ConnectionsRedirect} isPrivate permission="connections:view" />
@@ -93,7 +107,7 @@ const Routes = () => {
                   <Route exact path="/tags"               component={ParaEtiquetas}    isPrivate />
                   {/* Conexões mora dentro de Configurações e tem permissão
                       própria: quem cuida só dos números também entra. */}
-                  <Route exact path="/Settings"           component={Settings}         isPrivate anyOf={["settings:view", "connections:view"]} />
+                  <Route exact path="/Settings"           component={Settings}         isPrivate anyOf={["settings:view", "connections:view", "tags:view"]} />
                   <Route exact path="/Queues"             component={Queues}           isPrivate permission="queues:view" />
                   <Route exact path="/companies"          component={Companies}        isPrivate superOnly />
                   {/* Ficha da empresa: usuários, cobrança e acesso. Depois
@@ -101,12 +115,14 @@ const Routes = () => {
                   <Route exact path="/companies/:companyId" component={CompanyDetail}  isPrivate superOnly />
                   <Route exact path="/roles"              component={Access}           isPrivate permission="roles:view" />
                 </LoggedInLayout>
+                </TeamChatProvider>
+                </TeamChatProvider>
                 </OutgoingMessagesProvider>
                 </BrandingProvider>
                 </AttendanceSettingsProvider>
               </WhatsAppsProvider>
             </Switch>
-            <ToastContainer autoClose={3000} />
+            <Avisos />
           </ThemeProvider>
         </StyledEngineProvider>
       </AuthProvider>

@@ -45,6 +45,8 @@ const financeiro = comDependencias([
   ...permissoesDoNivel("finance", "gerenciar"),
   ...permissoesDoNivel("clients", "operar"),
   "crm:view",
+  // Cobrar e conferir o que foi vendido exige enxergar os valores do funil.
+  "crm:viewValues",
   "products:view"
 ]);
 

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import getCompanyId from "../helpers/GetCompanyId";
+import { garantirAcessoAoTicket, garantirAcessoAoTicketDaMensagem } from "../helpers/permissions/acessoAoTicket";
 import SetTicketMessagesAsRead from "../helpers/SetTicketMessagesAsRead";
 import { getIO } from "../libs/socket";
 import { companyRoom, ticketRoom } from "../libs/socketRooms";
@@ -39,6 +40,8 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
   const { pageNumber, searchParam } = req.query as IndexQuery;
 
+  await garantirAcessoAoTicket(req, ticketId);
+
   const { count, messages, ticket, hasMore } = await ListMessagesService({
     pageNumber,
     ticketId,
@@ -60,6 +63,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
   const { body, quotedMsg, clientId, caption }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
   const companyId = getCompanyId(req);
+
+  await garantirAcessoAoTicket(req, ticketId);
 
   const ticket = await ShowTicketService(ticketId, companyId);
 
@@ -129,6 +134,8 @@ export const storeInternalNote = async (
   const { ticketId } = req.params;
   const { body } = req.body;
 
+  await garantirAcessoAoTicket(req, ticketId);
+
   const message = await CreateInternalNoteService({
     ticketId,
     body,
@@ -149,6 +156,9 @@ export const forward = async (
   const { messageId } = req.params;
   const { toTicketId, toContactId } = req.body;
 
+  await garantirAcessoAoTicketDaMensagem(req, messageId);
+  if (toTicketId) await garantirAcessoAoTicket(req, toTicketId);
+
   const ticket = await ForwardMessageService({
     messageId,
     toTicketId,
@@ -163,6 +173,8 @@ export const forward = async (
 export const edit = async (req: Request, res: Response): Promise<Response> => {
   const { messageId } = req.params;
   const { body } = req.body as { body: string };
+
+  await garantirAcessoAoTicketDaMensagem(req, messageId);
 
   if (!body || !body.trim()) {
     throw new AppError("ERR_EDIT_EMPTY_BODY");
@@ -190,6 +202,8 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { messageId } = req.params;
+
+  await garantirAcessoAoTicketDaMensagem(req, messageId);
 
   const message = await DeleteWhatsAppMessage(messageId, getCompanyId(req));
 

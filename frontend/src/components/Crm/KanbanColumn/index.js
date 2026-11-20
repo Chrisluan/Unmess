@@ -118,13 +118,17 @@ const KanbanColumn = ({
   onDragOverCard,
   onDrop,
   onCardClick,
+  onExcluirCard,
   onAddDeal,
 }) => {
   const classes = useStyles();
   // A cor da coluna é configurável; sem uma escolhida, o acento do tema.
   const theme = useTheme();
 
-  const total = deals.reduce((acc, deal) => acc + (Number(deal.value) || 0), 0);
+  // Card sem valor (oculto pelo servidor) não soma zero: a coluna fica sem total.
+  const total = deals.some((deal) => deal.value === null)
+    ? null
+    : deals.reduce((acc, deal) => acc + (Number(deal.value) || 0), 0);
   const arrastandoAqui = dropTarget?.stageId === stage.id;
 
   const handleDragOverCard = (event, indice) => {
@@ -215,6 +219,7 @@ const KanbanColumn = ({
                 onDragStart={() => onDragStart(deal, indice)}
                 onDragEnd={onDragEnd}
                 onClick={() => onCardClick(deal.id)}
+                onExcluir={onExcluirCard ? () => onExcluirCard(deal) : undefined}
               />
             </div>
           </React.Fragment>

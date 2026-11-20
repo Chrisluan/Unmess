@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n.js";
 import toastError from "../../errors/toastError";
+import usePermissions from "../../hooks/usePermissions";
 import { WhatsAppsContext } from "../../context/WhatsApp/WhatsAppsContext";
 
 import PaginaComAbas from "../../components/PaginaComAbas";
@@ -61,6 +62,8 @@ const useStyles = makeStyles(theme => ({
 const Settings = () => {
 	const classes = useStyles();
 	const { whatsApps } = useContext(WhatsAppsContext);
+	const { can } = usePermissions();
+	const podeVerAjustes = can("settings:view");
 
 	const [settings, setSettings] = useState([]);
 	const { search } = useLocation();
@@ -69,13 +72,16 @@ const Settings = () => {
 	const tab = ABAS_CONFIGURACOES.indexOf(aba);
 
 	const fetchSettings = useCallback(async () => {
+		// Esta tela também abre para quem só cuida das conexões; pedir as
+		// configurações sem a permissão dava 403 e um aviso a cada visita.
+		if (!podeVerAjustes) return;
 		try {
 			const { data } = await api.get("/settings");
 			setSettings(data || []);
 		} catch (err) {
 			toastError(err);
 		}
-	}, []);
+	}, [podeVerAjustes]);
 
 	useEffect(() => {
 		fetchSettings();
@@ -129,16 +135,16 @@ const Settings = () => {
 				{/* Conexões só monta quando a aba está ativa: a tela abre sockets e
 				    dispara requests de sessão, não faz sentido rodar em background. */}
 				<Box className={classes.tabPanel} hidden={tab !== 1}>
-					{tab === 1 && <Connections embedded />}
+					{tab === 1 && can("connections:view") && <Connections embedded />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 2}>
 					<BusinessHoursTab />
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 3}>
-					<TicketStatusesTab />
+					{can("tickets:view") && <TicketStatusesTab />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 4}>
-					<TagsTab />
+					{can("tags:view") && <TagsTab />}
 				</Box>
 				<Box className={classes.tabPanel} hidden={tab !== 5}>
 					<AutoMessagesTab

@@ -42,6 +42,9 @@ import CashSaleItem from "../models/CashSaleItem";
 import Supplier from "../models/Supplier";
 import Payable from "../models/Payable";
 import CompanyInvoice from "../models/CompanyInvoice";
+import TeamChannel from "../models/TeamChannel";
+import TeamChannelMember from "../models/TeamChannelMember";
+import TeamMessage from "../models/TeamMessage";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -92,7 +95,10 @@ const models = [
   CashSession,
   CashMovement,
   CashSale,
-  CashSaleItem
+  CashSaleItem,
+  TeamChannel,
+  TeamChannelMember,
+  TeamMessage
 ];
 
 sequelize.addModels(models);

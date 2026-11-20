@@ -13,6 +13,7 @@ import {
 	Tooltip,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
+import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
 import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
 
@@ -20,6 +21,7 @@ import { i18n } from "../../translate/i18n.js";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import { tocarClique, tocarParaMim } from "../../helpers/somDeNotificacao";
 
 const useStyles = makeStyles(theme => ({
 	section: {
@@ -162,6 +164,29 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 			<Typography variant="caption" color="textSecondary" className={classes.helper}>
 				{i18n.t(`settings.general.${key}.helper`)}
 			</Typography>
+			{/* Escolher ligar ou não um som sem poder ouvi-lo é decidir no
+			    escuro. O clique varia de tom a cada toque: vale apertar duas
+			    vezes seguidas. */}
+			{key === "notificationSound" && (
+				<div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+					<Button
+						size="small"
+						variant="outlined"
+						startIcon={<VolumeUpOutlinedIcon />}
+						onClick={tocarClique}
+					>
+						Ouvir: mensagem nova
+					</Button>
+					<Button
+						size="small"
+						variant="outlined"
+						startIcon={<VolumeUpOutlinedIcon />}
+						onClick={tocarParaMim}
+					>
+						Ouvir: conversa sua
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 

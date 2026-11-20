@@ -1,6 +1,5 @@
 import * as Yup from "yup";
 import { Request, Response } from "express";
-import { getIO } from "../libs/socket";
 
 import ListDealsService from "../services/DealServices/ListDealsService";
 import ShowDealService from "../services/DealServices/ShowDealService";
@@ -16,6 +15,8 @@ import ShowPipelineSummaryService from "../services/DealServices/ShowPipelineSum
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
 import { usuarioPode } from "../helpers/permissions/resolve";
+import { podeVerValores, respostaComValores } from "../helpers/permissions/valores";
+import emitirDeal from "../libs/emitirDeal";
 import PipelineStage from "../models/PipelineStage";
 import {
   escopoDaRequisicao,
@@ -114,7 +115,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     companyId: getCompanyId(req)
   });
 
-  return res.json(deals);
+  return res.json(await respostaComValores(req, deals));
 };
 
 /**
@@ -132,7 +133,7 @@ export const summary = async (
     companyId: getCompanyId(req)
   });
 
-  return res.json(resumo);
+  return res.json(await respostaComValores(req, resumo));
 };
 
 export const show = async (req: Request, res: Response): Promise<Response> => {
@@ -143,7 +144,7 @@ export const show = async (req: Request, res: Response): Promise<Response> => {
   // as quinze rotas que recebem :dealId — não só para esta.
   const deal = await ShowDealService(dealId, getCompanyId(req));
 
-  return res.status(200).json(deal);
+  return res.status(200).json(await respostaComValores(req, deal));
 };
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
@@ -166,19 +167,25 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     await garantirNoEscopo(req, "board", Number(newDeal.boardId), "Este quadro");
   }
 
+  // Mesma razão do update: valor digitado por quem não o enxerga não vale.
+  if (!(await podeVerValores(req))) {
+    delete newDeal.value;
+    delete newDeal.discount;
+    delete newDeal.discountType;
+  }
+
   const deal = await CreateDealService({
     ...newDeal,
     companyId: getCompanyId(req),
     userId: Number(req.user.id)
   });
 
-  const io = getIO();
-  io.to(`company-${req.user.companyId}`).emit("deal", {
+  emitirDeal(req.user.companyId, {
     action: "create",
     deal
   });
 
-  return res.status(200).json(deal);
+  return res.status(200).json(await respostaComValores(req, deal));
 };
 
 export const update = async (
@@ -208,6 +215,16 @@ export const update = async (
    * com o valor atual custaria uma consulta a mais para tratar o caso de
    * alguém reenviar o mesmo desconto — que não é um caso que valha proteger.
    */
+  // Quem não vê os valores recebe `null` no lugar deles, e uma tela que reenvia
+  // o que recebeu gravaria zero por cima do preço de verdade. O servidor
+  // descarta o dinheiro vindo de quem não pode vê-lo, em vez de confiar que a
+  // tela se lembrou de não mandar.
+  if (!(await podeVerValores(req))) {
+    delete dealData.value;
+    delete dealData.discount;
+    delete dealData.discountType;
+  }
+
   if (dealData.responsibleUserId !== undefined) {
     await garantirPermissao(req, "crm:assign", "definir o responsável");
   }
@@ -222,13 +239,12 @@ export const update = async (
     companyId: getCompanyId(req)
   });
 
-  const io = getIO();
-  io.to(`company-${req.user.companyId}`).emit("deal", {
+  emitirDeal(req.user.companyId, {
     action: "update",
     deal
   });
 
-  return res.status(200).json(deal);
+  return res.status(200).json(await respostaComValores(req, deal));
 };
 
 /**
@@ -286,9 +302,7 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
     userId: Number(req.user.id)
   });
 
-  const io = getIO();
-
-  io.to(`company-${req.user.companyId}`).emit("deal", {
+  emitirDeal(req.user.companyId, {
     action: "update",
     deal
   });
@@ -297,13 +311,15 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
   // eventos precisam sair para quem está com o outro quadro aberto ver o card
   // chegar sem recarregar a página.
   if (advancedTo) {
-    io.to(`company-${req.user.companyId}`).emit("deal", {
+    emitirDeal(req.user.companyId, {
       action: "create",
       deal: advancedTo
     });
   }
 
-  return res.status(200).json({ deal, advancedTo, nextBoardName, avisoCopia });
+  return res.status(200).json(
+    await respostaComValores(req, { deal, advancedTo, nextBoardName, avisoCopia })
+  );
 };
 
 export const linkTicket = async (
@@ -320,13 +336,12 @@ export const linkTicket = async (
     companyId: getCompanyId(req)
   });
 
-  const io = getIO();
-  io.to(`company-${req.user.companyId}`).emit("deal", {
+  emitirDeal(req.user.companyId, {
     action: "update",
     deal
   });
 
-  return res.status(200).json(deal);
+  return res.status(200).json(await respostaComValores(req, deal));
 };
 
 export const remove = async (
@@ -337,8 +352,7 @@ export const remove = async (
 
   await DeleteDealService(dealId, getCompanyId(req));
 
-  const io = getIO();
-  io.to(`company-${req.user.companyId}`).emit("deal", {
+  emitirDeal(req.user.companyId, {
     action: "delete",
     dealId
   });
@@ -360,12 +374,16 @@ export const buscar = async (req: Request, res: Response): Promise<Response> => 
 
   const bool = (valor?: string) => valor === "true" || valor === "1";
 
+  // Filtrar ou ordenar por valor revela o valor mesmo com a coluna mascarada:
+  // "de 5 a 6 mil" devolve cards cujo preço a pessoa acabou de descobrir.
+  const verValores = await podeVerValores(req);
+
   const resultado = await FiltrarOportunidadesService({
     companyId: getCompanyId(req),
     boardId: q.boardId,
     escopoDeQuadros: await escopoDeQuadros(req),
     searchParam: q.searchParam,
-    responsibleUserId: q.responsibleUserId,
+    responsibleUserId: await resolveResponsavel(req, q.responsibleUserId),
     semResponsavel: bool(q.semResponsavel),
     stageId: q.stageId,
     customerId: q.customerId,
@@ -373,20 +391,21 @@ export const buscar = async (req: Request, res: Response): Promise<Response> => 
     priority: q.priority,
     serviceStatus: q.serviceStatus,
     tagIds: lista(q.tagIds),
-    valorMinimo: q.valorMinimo ? Number(q.valorMinimo) : undefined,
-    valorMaximo: q.valorMaximo ? Number(q.valorMaximo) : undefined,
+    valorMinimo: verValores && q.valorMinimo ? Number(q.valorMinimo) : undefined,
+    valorMaximo: verValores && q.valorMaximo ? Number(q.valorMaximo) : undefined,
     criadoDe: q.criadoDe,
     criadoAte: q.criadoAte,
     atrasadas: bool(q.atrasadas),
     followUpHoje: bool(q.followUpHoje),
     semInteracaoDias: q.semInteracaoDias ? Number(q.semInteracaoDias) : undefined,
     includeClosed: bool(q.includeClosed),
-    ordenacao: q.ordenacao,
+    ordenacao:
+      !verValores && /valor|value/i.test(q.ordenacao || "") ? undefined : q.ordenacao,
     pagina: q.pagina ? Number(q.pagina) : undefined,
     porPagina: q.porPagina ? Number(q.porPagina) : undefined
   });
 
-  return res.json(resultado);
+  return res.json(await respostaComValores(req, resultado));
 };
 
 /** Indicadores do topo do funil. */
@@ -402,5 +421,5 @@ export const indicadores = async (
     escopoDeQuadros: await escopoDeQuadros(req)
   });
 
-  return res.json(dados);
+  return res.json(await respostaComValores(req, dados));
 };

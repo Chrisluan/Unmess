@@ -64,18 +64,18 @@ crmRoutes.get("/tipos-de-tarefa", isAuth, requiresCompany, hasPermission("crm:vi
   res.json({ tipos: TIPOS_DE_TAREFA })
 );
 crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.index);
-crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealItemController.sync);
-crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.ordemDeServico);
+crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:editItems"), noEscopoDoQuadro, DealItemController.sync);
+crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:issueOrder"), noEscopoDoQuadro, DealItemController.ordemDeServico);
 
 // ── Material do pedido ──────────────────────────────────────────────────────
 // A arte, o arquivo de impressão, a referência que o cliente mandou. Ler exige
 // só ver o CRM; anexar e apagar mexem no pedido, e pedem crm:edit.
 crmRoutes.get("/deals/:dealId/attachments",                    isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.index);
-crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, upload.array("files"), DealAttachmentController.store);
+crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, upload.array("files"), DealAttachmentController.store);
 crmRoutes.get("/deals/:dealId/midias-da-conversa",             isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.midiasDaConversa);
-crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.importar);
-crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.definirCapa);
-crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.remove);
+crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.importar);
+crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.definirCapa);
+crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.remove);
 
 // Visao inversa: os negocios de uma conversa, usada pelo painel do chat.
 crmRoutes.get("/tickets/:ticketId/deals", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.byTicket);

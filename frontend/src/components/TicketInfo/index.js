@@ -59,10 +59,13 @@ const useStylesNegocio = makeStyles(theme => {
 });
 
 const moeda = valor =>
-	Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+	valor === null || valor === undefined
+		? "—"
+		: Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 const totalDoPedido = deal =>
-	(deal.items || []).reduce(
+	// Itens sem preço (oculto pelo servidor) não somam zero: não há total a mostrar.
+	(deal.items || []).some(i => i.unitPrice === null) ? null : (deal.items || []).reduce(
 		(s, i) => s + Math.max(0, Number(i.quantity || 0) * Number(i.unitPrice || 0) - Number(i.discount || 0)),
 		0
 	);

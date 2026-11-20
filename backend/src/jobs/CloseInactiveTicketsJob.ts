@@ -4,10 +4,16 @@ import { subHours } from "date-fns";
 import Ticket from "../models/Ticket";
 import Company from "../models/Company";
 import Setting from "../models/Setting";
+import TicketStatus from "../models/TicketStatus";
 import UpdateTicketService from "../services/TicketServices/UpdateTicketService";
+import { GetSettingBoolean } from "../helpers/GetSetting";
 import { logger } from "../utils/logger";
 
 const INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
+
+// Empresas já avisadas de que falta o status padrão, para não repetir o aviso
+// a cada ciclo.
+const empresasAvisadas = new Set<number>();
 
 /**
  * Encerra automaticamente chats parados há mais de X horas.
@@ -30,6 +36,37 @@ export const runCloseInactiveTickets = async (): Promise<void> => {
       if (!Number.isFinite(hours) || hours <= 0) continue;
 
       const cutoff = subHours(new Date(), hours);
+      const { companyId } = setting;
+
+      // O encerramento automático passa pela mesma regra do manual: se a
+      // empresa exige status de encerramento, o robô também precisa de um.
+      // Ele usa o status marcado como padrão do tipo "encerrado" -- é a
+      // empresa quem decide o que um chat abandonado significa no relatório.
+      // eslint-disable-next-line no-await-in-loop
+      const statusPadrao = await TicketStatus.findOne({
+        where: { companyId, type: "closed", isDefault: true },
+        attributes: ["id"]
+      });
+
+      // eslint-disable-next-line no-await-in-loop
+      const exigeStatus = await GetSettingBoolean(
+        "requireClosingStatus",
+        companyId,
+        false
+      );
+
+      if (exigeStatus && !statusPadrao) {
+        // Sem isto, cada ticket parado falhava a cada ciclo e o log enchia de
+        // erros iguais. Avisa uma vez e espera a configuração.
+        if (!empresasAvisadas.has(companyId)) {
+          empresasAvisadas.add(companyId);
+          logger.warn(
+            `CloseInactiveTickets: empresa ${companyId} exige status de encerramento mas não tem um status do tipo "encerrado" marcado como padrão; encerramento automático suspenso até que um seja marcado.`
+          );
+        }
+        continue;
+      }
+      empresasAvisadas.delete(companyId);
 
       // eslint-disable-next-line no-await-in-loop
       const staleTickets = await Ticket.findAll({
@@ -47,7 +84,7 @@ export const runCloseInactiveTickets = async (): Promise<void> => {
           // encerramento consistentes com o fechamento manual.
           // eslint-disable-next-line no-await-in-loop
           await UpdateTicketService({
-            ticketData: { status: "closed" },
+            ticketData: { status: "closed", closingStatusId: statusPadrao?.id },
             ticketId: stale.id,
             companyId: setting.companyId
           });

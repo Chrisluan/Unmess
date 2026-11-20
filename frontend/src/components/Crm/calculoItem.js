@@ -20,7 +20,9 @@ export const rotuloDoModo = (modo) =>
   MODOS_DE_COBRANCA.find((m) => m.valor === modo)?.rotulo || "Unidade";
 
 export const moeda = (valor) =>
-  Number(valor || 0).toLocaleString("pt-BR", {
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL"
   });

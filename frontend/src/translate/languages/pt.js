@@ -1008,7 +1008,7 @@ const messages = {
           },
           notificationSound: {
             label: "Som de notificação",
-            helper: "Toca um alerta sonoro quando chega mensagem em uma conversa que não está aberta.",
+            helper: "Toca um clique quando chega mensagem em conversa que não está aberta — o tom muda a cada toque para não cansar. Conversas suas e transferências para você têm um som próprio, mais chamativo.",
           },
         },
         buttons: {
@@ -1309,6 +1309,16 @@ const messages = {
         generic: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
+        ERR_TEAM_CHANNEL_NOT_FOUND: "Canal não encontrado.",
+        ERR_TEAM_CHANNEL_NAME_REQUIRED: "Dê um nome ao canal.",
+        ERR_TEAM_CHANNEL_NAME_TOO_LONG: "O nome do canal pode ter até 60 caracteres.",
+        ERR_TEAM_CHANNEL_DUPLICATED: "Já existe um canal com esse nome.",
+        ERR_TEAM_CHANNEL_LAST: "A empresa precisa de pelo menos um canal.",
+        ERR_TEAM_DIRECT_INVALID: "Não é possível conversar com essa pessoa.",
+        ERR_TEAM_MESSAGE_EMPTY: "Escreva alguma coisa antes de enviar.",
+        ERR_TEAM_MESSAGE_TOO_LONG: "A mensagem pode ter até 4.000 caracteres.",
+        ERR_TEAM_MESSAGE_NOT_FOUND: "Mensagem não encontrada.",
+        ERR_TEAM_MESSAGE_NOT_YOURS: "Só quem escreveu pode alterar esta mensagem.",
         ERR_NO_OTHER_WHATSAPP: "Deve haver pelo menos um WhatsApp padrão.",
         ERR_NO_DEF_WAPP_FOUND:
           "Nenhum WhatsApp padrão encontrado. Verifique a página de conexões.",

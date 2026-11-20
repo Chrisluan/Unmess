@@ -186,9 +186,8 @@ const QuickAnswersModal = ({
               <DialogActions>
                 <Button
                   onClick={handleClose}
-                  color="secondary"
+                  color="inherit"
                   disabled={isSubmitting}
-                  variant="outlined"
                 >
                   {i18n.t("quickAnswersModal.buttons.cancel")}
                 </Button>

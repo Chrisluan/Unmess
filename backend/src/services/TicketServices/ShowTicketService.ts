@@ -17,7 +17,7 @@ const ShowTicketService = async (
         model: Contact,
         as: "contact",
         // isKnown decide se a conversa pede aceite e se pode ter dono.
-        attributes: ["id", "name", "number", "profilePicUrl", "isKnown"],
+        attributes: ["id", "name", "number", "lid", "profilePicUrl", "isKnown"],
         include: ["extraInfo"]
       },
       {

@@ -17,6 +17,7 @@ import TransferTicketModal from "../TransferTicketModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import CloseTicketModal from "../CloseTicketModal";
+import { Can } from "../Can";
 
 const useStyles = makeStyles((theme) => ({
 	actionButtons: {
@@ -84,6 +85,7 @@ const TicketActionButtons = ({ ticket, painelAberto, onTogglePainel, children })
 					ticketWhatsappId={ticket.whatsappId}
 					currentQueueId={ticket.queueId}
 					currentUserId={ticket.userId}
+					contatoConhecido={Boolean(ticket.contact?.isKnown)}
 				/>
 			)}
 
@@ -102,14 +104,16 @@ const TicketActionButtons = ({ ticket, painelAberto, onTogglePainel, children })
 
 			{ticket.status === "open" && (
 				<>
-					<Button
-						variant="outlined"
-						startIcon={<SwapHorizIcon />}
-						className={classes.soLargo}
-						onClick={() => setTransferirAberto(true)}
-					>
-						{i18n.t("ticketOptionsMenu.transfer")}
-					</Button>
+					<Can permission="tickets:transfer">
+						<Button
+							variant="outlined"
+							startIcon={<SwapHorizIcon />}
+							className={classes.soLargo}
+							onClick={() => setTransferirAberto(true)}
+						>
+							{i18n.t("ticketOptionsMenu.transfer")}
+						</Button>
+					</Can>
 					<Tooltip title="Encerrar a conversa">
 						<span>
 							<ButtonWithSpinner

@@ -1,28 +1,55 @@
 import React, { useContext, useEffect, useState } from "react";
 
-import Button from "@mui/material/Button";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContentText from "@mui/material/DialogContentText";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import Chip from "@mui/material/Chip";
+import makeStyles from "@mui/styles/makeStyles";
+import Typography from "@mui/material/Typography";
+import CircularProgress from "@mui/material/CircularProgress";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import ButtonWithSpinner from "../ButtonWithSpinner";
 import { i18n } from "../../translate/i18n";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
+import Janela, { SecaoDaJanela } from "../Janela";
+
+const useStyles = makeStyles((theme) => {
+  const c = theme.palette.unmess;
+  return {
+    opcoes: { display: "flex", flexWrap: "wrap", gap: 8 },
+    opcao: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 7,
+      padding: "7px 12px",
+      borderRadius: 999,
+      border: `1px solid ${c.linhaForte}`,
+      background: c.superficie,
+      color: c.texto,
+      font: "inherit",
+      fontSize: "0.8125rem",
+      fontWeight: 600,
+      cursor: "pointer",
+      "&:hover": { background: c.superficie2 },
+      "&:focus-visible": { outline: "none", boxShadow: c.foco },
+    },
+    marcada: {
+      borderColor: c.primaria,
+      background: c.primariaSuave,
+      color: c.primariaSuaveTexto,
+      "&:hover": { background: c.primariaSuave },
+    },
+    ponto: { width: 9, height: 9, borderRadius: "50%", flexShrink: 0 },
+  };
+});
 
 /**
  * Pergunta o motivo de encerramento antes de finalizar o chat.
  * Obrigatório ou não conforme Configurações › Geral › "Exigir status ao encerrar".
+ *
+ * O select escondia as opções atrás de um clique; com poucos motivos (o
+ * normal), mostrá-los todos de uma vez é um clique a menos e se lê de relance.
  */
 const CloseTicketModal = ({ open, onClose, onConfirm, loading }) => {
+  const classes = useStyles();
   const { isEnabled } = useContext(AttendanceSettingsContext);
   const [statuses, setStatuses] = useState([]);
   const [selected, setSelected] = useState("");
@@ -32,6 +59,7 @@ const CloseTicketModal = ({ open, onClose, onConfirm, loading }) => {
 
   useEffect(() => {
     if (!open) return;
+    setSelected("");
 
     const fetchStatuses = async () => {
       setFetching(true);
@@ -48,75 +76,58 @@ const CloseTicketModal = ({ open, onClose, onConfirm, loading }) => {
     fetchStatuses();
   }, [open]);
 
-  useEffect(() => {
-    if (!open) setSelected("");
-  }, [open]);
-
-  const handleConfirm = () => {
-    onConfirm(selected || null);
-  };
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{i18n.t("closeTicketModal.title")}</DialogTitle>
-      <DialogContent dividers>
-        <DialogContentText>
-          {required
-            ? i18n.t("closeTicketModal.requiredHelper")
-            : i18n.t("closeTicketModal.optionalHelper")}
-        </DialogContentText>
-        <FormControl variant="outlined" margin="dense" fullWidth>
-          <InputLabel id="closing-status-label">
-            {i18n.t("closeTicketModal.status")}
-          </InputLabel>
-          <Select
-            labelId="closing-status-label"
-            label={i18n.t("closeTicketModal.status")}
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            disabled={fetching}
-          >
-            {!required && (
-              <MenuItem value="">
-                <em>{i18n.t("closeTicketModal.none")}</em>
-              </MenuItem>
-            )}
-            {statuses.map((status) => (
-              <MenuItem key={status.id} value={status.id}>
-                <Chip
-                  size="small"
-                  label={status.name}
-                  style={{
-                    backgroundColor: status.color || "#bdc3c7",
-                    color: "#fff",
-                    marginRight: 8,
-                  }}
-                />
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        {statuses.length === 0 && !fetching && (
-          <DialogContentText variant="caption" color="error">
+    <Janela
+      open={open}
+      onClose={onClose}
+      icone={<CheckCircleOutlineIcon />}
+      tom="sucesso"
+      tamanho="xs"
+      titulo={i18n.t("closeTicketModal.title")}
+      subtitulo={
+        required
+          ? i18n.t("closeTicketModal.requiredHelper")
+          : i18n.t("closeTicketModal.optionalHelper")
+      }
+      rotuloCancelar={i18n.t("closeTicketModal.buttons.cancel")}
+      rotuloConfirmar={i18n.t("closeTicketModal.buttons.confirm")}
+      onConfirmar={() => onConfirm(selected || null)}
+      confirmarDesabilitado={required && !selected}
+      carregando={loading}
+    >
+      <SecaoDaJanela rotulo={i18n.t("closeTicketModal.status")}>
+        {fetching ? (
+          <CircularProgress size={22} />
+        ) : statuses.length === 0 ? (
+          <Typography variant="body2" color={required ? "error" : "text.secondary"}>
             {i18n.t("closeTicketModal.noStatuses")}
-          </DialogContentText>
+          </Typography>
+        ) : (
+          <div className={classes.opcoes} role="radiogroup">
+            {statuses.map((status) => {
+              const marcada = selected === status.id;
+              return (
+                <button
+                  key={status.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={marcada}
+                  className={`${classes.opcao} ${marcada ? classes.marcada : ""}`}
+                  // Clicar de novo desmarca, quando o motivo é opcional.
+                  onClick={() => setSelected(marcada && !required ? "" : status.id)}
+                >
+                  <span
+                    className={classes.ponto}
+                    style={{ background: status.color || "#bdc3c7" }}
+                  />
+                  {status.name}
+                </button>
+              );
+            })}
+          </div>
         )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary" variant="outlined">
-          {i18n.t("closeTicketModal.buttons.cancel")}
-        </Button>
-        <ButtonWithSpinner
-          loading={loading}
-          disabled={required && !selected}
-          onClick={handleConfirm}
-          color="primary"
-          variant="contained"
-        >
-          {i18n.t("closeTicketModal.buttons.confirm")}
-        </ButtonWithSpinner>
-      </DialogActions>
-    </Dialog>
+      </SecaoDaJanela>
+    </Janela>
   );
 };
 

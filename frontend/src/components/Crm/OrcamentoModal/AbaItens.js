@@ -307,7 +307,10 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
   // Abaixo de 900px a tabela vira lista de cartões.
   const compacto = useMediaQuery(theme.breakpoints.down("md"));
   const { can } = usePermissions();
-  const podeEditar = can("crm:edit");
+  // Montar o orçamento é mexer na conta, e exige ver os valores.
+  const podeEditar = can("crm:editItems");
+  const verValores = can("crm:viewValues");
+  const podeEmitirOS = can("crm:issueOrder");
 
   /**
    * Desconto é permissão própria: monta-se a proposta pela tabela de preços
@@ -615,7 +618,7 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
           {campoNumero(item._chave, "unitPrice", item.unitPrice)}
           {campoNumero(item._chave, "discount", item.discount)}
 
-          <span className={classes.total}>{moeda(conta.total)}</span>
+          <span className={classes.total}>{moeda(verValores ? conta.total : null)}</span>
 
           <div className={classes.acoesLinha}>
             {podeEditar ? botoesDaLinha(item) : <span />}
@@ -710,7 +713,7 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
         )}
 
         <div className={classes.rodapeCartao}>
-          <span className={classes.totalCartao}>{moeda(conta.total)}</span>
+          <span className={classes.totalCartao}>{moeda(verValores ? conta.total : null)}</span>
           <div>{podeEditar && botoesDaLinha(item)}</div>
         </div>
       </div>
@@ -740,13 +743,15 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
 
         <span className={classes.espacador} />
 
-        <Button
-          size="small"
-          startIcon={<PrintIcon />}
-          onClick={() => abrirOrdemDeServico(deal.id).catch(toastError)}
-        >
-          {compacto ? "OS" : "Ordem de serviço"}
-        </Button>
+        {podeEmitirOS && (
+          <Button
+            size="small"
+            startIcon={<PrintIcon />}
+            onClick={() => abrirOrdemDeServico(deal.id).catch(toastError)}
+          >
+            {compacto ? "OS" : "Ordem de serviço"}
+          </Button>
+        )}
       </div>
 
       {itens.length === 0 ? (
@@ -806,7 +811,7 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span className={classes.somaFinal}>{moeda(soma)}</span>
+          <span className={classes.somaFinal}>{moeda(verValores ? soma : null)}</span>
           {podeEditar && (
             <Button
               variant="contained"

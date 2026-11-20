@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useHistory } from "react-router-dom";
 import openSocket from "../../services/socket-io";
 
@@ -35,40 +35,87 @@ const useAuth = () => {
    */
   const [favoritos, setFavoritos] = useState([]);
 
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
-        setIsAuth(true);
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
+  /**
+   * Os interceptores são registrados uma vez só — e já no primeiro render.
+   *
+   * Dentro de um useEffect eles só existiriam depois dos efeitos dos filhos,
+   * que já disparam requisições ao montar (conexões, configurações): essas
+   * saíam sem o token, voltavam 401, e a sessão era dada como encerrada logo
+   * ao abrir a tela. O registro tem de vir antes de qualquer filho.
+   *
+   *
+   * Antes ficavam soltos no corpo do hook e ganhavam um novo a cada render:
+   * depois de alguns minutos de uso havia dezenas empilhados, e cada resposta
+   * 403 disparava uma renovação de sessão por interceptor. Só a primeira
+   * renovação vale — o cookie de renovação gira a cada uso —, as outras
+   * voltavam 401, a sessão era dada como expirada e a tela era mandada para o
+   * login e de volta às conversas. É o "a tela pisca e volta".
+   */
+  const interceptoresInstalados = useRef(false);
 
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-      if (error?.response?.status === 403 && !originalRequest._retry) {
-        originalRequest._retry = true;
-        const { data } = await api.post("/auth/refresh_token");
-        if (data) {
-          localStorage.setItem("token", JSON.stringify(data.token));
-          api.defaults.headers.Authorization = `Bearer ${data.token}`;
+  if (!interceptoresInstalados.current) {
+    interceptoresInstalados.current = true;
+    let renovando = null;
+
+    const renovarSessao = () => {
+      // Várias requisições podem vencer juntas; todas esperam a mesma renovação.
+      if (!renovando) {
+        renovando = api
+          .post("/auth/refresh_token")
+          .then(({ data }) => {
+            if (data?.token) {
+              localStorage.setItem("token", JSON.stringify(data.token));
+              api.defaults.headers.Authorization = `Bearer ${data.token}`;
+            }
+          })
+          .finally(() => {
+            renovando = null;
+          });
+      }
+      return renovando;
+    };
+
+    api.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          config.headers["Authorization"] = `Bearer ${JSON.parse(token)}`;
+          setIsAuth(true);
         }
-        return api(originalRequest);
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        const mensagem = error?.response?.data?.error || "";
+
+        // Só o token vencido se resolve renovando a sessão. 403 por falta de
+        // permissão também é 403, e renovar não muda a resposta: era uma
+        // renovação inútil a cada aviso de "sem permissão".
+        const tokenVencido =
+          error?.response?.status === 403 && /^Invalid token/i.test(mensagem);
+
+        if (tokenVencido && originalRequest && !originalRequest._retry) {
+          originalRequest._retry = true;
+          await renovarSessao();
+          return api(originalRequest);
+        }
+
+        if (error?.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("superToken");
+          api.defaults.headers.Authorization = undefined;
+          setIsAuth(false);
+        }
+        return Promise.reject(error);
       }
-      if (error?.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("superToken");
-        api.defaults.headers.Authorization = undefined;
-        setIsAuth(false);
-      }
-      return Promise.reject(error);
-    }
-  );
+    );
+
+  }
 
   /**
    * O que esta pessoa pode fazer, perguntado ao servidor.
@@ -90,7 +137,10 @@ const useAuth = () => {
         isSuper: !!data.isSuper,
       };
     } catch {
-      return { permissions: [], role: null, isSuper: false };
+      // null = "não consegui perguntar", e não "sem permissão". Quem já tem
+      // uma lista na mão a mantém: uma falha passageira de rede não pode
+      // esvaziar o acesso e mandar a pessoa embora da tela em que está.
+      return null;
     }
   };
 
@@ -103,7 +153,7 @@ const useAuth = () => {
 
     const acesso = skipPermissions
       ? { permissions: [], role: null, isSuper: false }
-      : await carregarAcesso();
+      : (await carregarAcesso()) ?? { permissions: [], role: null, isSuper: false };
     setUser({ ...userData, ...acesso });
     setIsAuth(true);
     return userData;
@@ -134,7 +184,7 @@ const useAuth = () => {
     socket.on("user", async (data) => {
       if (data.action === "update" && data.user.id === user.id) {
         const acesso = await carregarAcesso();
-        setUser({ ...data.user, ...acesso });
+        setUser((atual) => ({ ...atual, ...data.user, ...(acesso ?? {}) }));
       }
     });
 
@@ -159,7 +209,7 @@ const useAuth = () => {
       if (!mexeuNestaPessoa && !mexeuNoCargoDela && !cargoSumiu) return;
 
       const acesso = await carregarAcesso();
-      setUser((atual) => ({ ...atual, ...acesso }));
+      if (acesso) setUser((atual) => ({ ...atual, ...acesso }));
     });
 
     return () => socket.disconnect();

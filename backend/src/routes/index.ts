@@ -25,6 +25,7 @@ import stickerRoutes from "./stickerRoutes";
 import productRoutes from "./productRoutes";
 import financeRoutes from "./financeRoutes";
 import preferencesRoutes from "./preferencesRoutes";
+import teamChatRoutes from "./teamChatRoutes";
 
 const routes = Router();
 
@@ -51,6 +52,7 @@ routes.use(stickerRoutes);
 routes.use(productRoutes);
 routes.use(financeRoutes);
 routes.use(preferencesRoutes);
+routes.use(teamChatRoutes);
 
 /**
  * Retrato das rotas para a auditoria, tirado aqui e não no boot.

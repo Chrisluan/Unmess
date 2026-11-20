@@ -5,6 +5,7 @@ import Deal from "../models/Deal";
 import getCompanyId from "../helpers/GetCompanyId";
 import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
 import { alcanca } from "../helpers/permissions/escopos";
+import { usuarioPode } from "../helpers/permissions/resolve";
 
 /**
  * O card desta rota está num quadro que quem pediu alcança?
@@ -35,7 +36,7 @@ const noEscopoDoQuadro: RequestHandler = async (
 
   const deal = await Deal.findOne({
     where: { id: dealId, companyId: getCompanyId(req) },
-    attributes: ["id", "boardId"]
+    attributes: ["id", "boardId", "responsibleUserId"]
   });
 
   // Card inexistente é assunto do handler, que tem a mensagem certa para cada
@@ -52,6 +53,26 @@ const noEscopoDoQuadro: RequestHandler = async (
     throw new AppError(
       "Este quadro não está no seu acesso. Peça a quem administra o sistema " +
         "para incluí-lo.",
+      403
+    );
+  }
+
+  /**
+   * E de quem é o card.
+   *
+   * `crm:view` promete "vê as oportunidades sob sua responsabilidade", e a
+   * listagem cumpre — mas abrir o card pelo id não conferia o responsável, e
+   * bastava o número na URL para ler (e mexer em) o negócio de outra pessoa.
+   * Card sem responsável fica aberto: é a fila de quem ainda não foi atribuído.
+   */
+  if (
+    deal.responsibleUserId &&
+    deal.responsibleUserId !== Number(req.user.id) &&
+    !(await usuarioPode(Number(req.user.id), "crm:viewAll"))
+  ) {
+    throw new AppError(
+      "Esta oportunidade é de outra pessoa. Peça a quem administra o sistema " +
+        "acesso a todas as oportunidades, ou ao responsável que a repasse.",
       403
     );
   }

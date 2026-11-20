@@ -139,7 +139,9 @@ const SITUACOES = {
 };
 
 const moeda = (valor) =>
-  Number(valor || 0).toLocaleString("pt-BR", {
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -242,10 +244,12 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
       <div className={classes.topo}>
         <span className={classes.tituloJanela}>{identidade.rotulo}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {/* Passa o card inteiro: a confirmação mostra número e título, e
+              sabe se a exclusão leva junto os cards de outros quadros. */}
           {onExcluir && deal && (
             <IconButton
               size="small"
-              onClick={() => onExcluir(deal.id)}
+              onClick={() => onExcluir(deal)}
               title={`Excluir ${identidade.rotulo.toLowerCase()}`}
               aria-label={`Excluir ${identidade.rotulo.toLowerCase()}`}
             >

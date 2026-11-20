@@ -56,7 +56,9 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const moeda = (valor) =>
-  Number(valor || 0).toLocaleString("pt-BR", {
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -76,6 +78,11 @@ const AbaProposta = ({ deal, onSalvo }) => {
   const classes = useStyles();
   const { can } = usePermissions();
   const podeEditar = can("crm:edit");
+  const verValores = can("crm:viewValues");
+  // Desconto é permissão própria: o servidor recusa o campo de quem não a tem,
+  // então a tela também não pode mandá-lo — antes ele ia em todo salvamento, e
+  // quem não pode descontar não conseguia nem corrigir a data de entrega.
+  const podeDescontar = can("crm:discount") && verValores;
 
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
@@ -119,6 +126,12 @@ const AbaProposta = ({ deal, onSalvo }) => {
           : null;
 
       await api.put(`/deals/${deal.id}`, {
+        ...(podeDescontar
+          ? {
+              discount: Number(form.discount) || 0,
+              discountType: form.discountType,
+            }
+          : {}),
         title: form.title,
         deliveryAt,
         deliveryToArrange: form.deliveryToArrange,
@@ -126,8 +139,6 @@ const AbaProposta = ({ deal, onSalvo }) => {
         carrier: form.deliveryMode === "delivery" ? form.carrier : null,
         paymentCondition: form.paymentCondition,
         installments: Number(form.installments) || 1,
-        discount: Number(form.discount) || 0,
-        discountType: form.discountType,
         origin: form.origin,
         notes: form.notes,
       });
@@ -272,7 +283,7 @@ const AbaProposta = ({ deal, onSalvo }) => {
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
             value={form.discountType || "value"}
-            disabled={!podeEditar}
+            disabled={!podeEditar || !podeDescontar}
             onChange={(e) => mudar("discountType", e.target.value)}
           >
             <option value="value">R$</option>
@@ -284,8 +295,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
             type="number"
             size="small"
             variant="outlined"
-            value={form.discount || 0}
-            disabled={!podeEditar}
+            value={verValores ? form.discount || 0 : ""}
+            disabled={!podeEditar || !podeDescontar}
             onChange={(e) => mudar("discount", e.target.value)}
             inputProps={{ min: 0, step: "0.01" }}
           />
@@ -296,20 +307,20 @@ const AbaProposta = ({ deal, onSalvo }) => {
             <Typography variant="caption" color="textSecondary">
               Valor dos itens
             </Typography>
-            <div className={classes.resultado}>{moeda(bruto)}</div>
+            <div className={classes.resultado}>{moeda(verValores ? bruto : null)}</div>
           </div>
           <div>
             <Typography variant="caption" color="textSecondary">
               Desconto
             </Typography>
-            <div className={classes.resultado}>− {moeda(abatimento)}</div>
+            <div className={classes.resultado}>{verValores ? `− ${moeda(abatimento)}` : "—"}</div>
           </div>
           <div>
             <Typography variant="caption" color="textSecondary">
               Valor total
             </Typography>
             <div className={classes.resultado} style={{ fontWeight: 700 }}>
-              {moeda(liquido)}
+              {moeda(verValores ? liquido : null)}
             </div>
           </div>
         </div>

@@ -87,7 +87,9 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const moeda = valor =>
-  Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const totalDaLinha = item =>
   Math.max(0, Number(item.quantity || 0) * Number(item.unitPrice || 0) - Number(item.discount || 0));
@@ -125,7 +127,9 @@ const TicketDeals = ({ onCarregado }) => {
   const [novoTitulo, setNovoTitulo] = useState("");
   const [criando, setCriando] = useState(false);
 
-  const podeEditar = can("crm:edit");
+  const podeEditar = can("crm:editItems");
+  const verValores = can("crm:viewValues");
+  const podeEmitirOS = can("crm:issueOrder");
   const podeCriar = can("crm:create");
 
   const carregar = useCallback(async () => {
@@ -329,7 +333,7 @@ const TicketDeals = ({ onCarregado }) => {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span className={classes.total}>{moeda(soma)}</span>
+                <span className={classes.total}>{moeda(verValores ? soma : null)}</span>
                 <ExpandMoreIcon
                   fontSize="small"
                   style={{
@@ -395,7 +399,7 @@ const TicketDeals = ({ onCarregado }) => {
 
                 <div className={classes.linhaTotal}>
                   <span>Total</span>
-                  <span>{moeda(soma)}</span>
+                  <span>{moeda(verValores ? soma : null)}</span>
                 </div>
 
                 <div className={classes.acoes}>
@@ -423,13 +427,15 @@ const TicketDeals = ({ onCarregado }) => {
                   >
                     Ver no CRM
                   </Button>
-                  <Button
-                    size="small"
-                    startIcon={<PrintIcon />}
-                    onClick={() => emitirOrdem(deal.id)}
-                  >
-                    Ordem de serviço
-                  </Button>
+                  {podeEmitirOS && (
+                    <Button
+                      size="small"
+                      startIcon={<PrintIcon />}
+                      onClick={() => emitirOrdem(deal.id)}
+                    >
+                      Ordem de serviço
+                    </Button>
+                  )}
                 </div>
 
                 {deal.archivedAt && (

@@ -43,6 +43,8 @@ import PipelineStagesModal from "../../components/PipelineStagesModal";
 import BoardsModal from "../../components/BoardsModal";
 import LostReasonModal from "../../components/Crm/LostReasonModal";
 import AvancarQuadroModal from "../../components/Crm/AvancarQuadroModal";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import { identidadeDoNegocio } from "../../components/Crm/identidade";
 import IndicadoresFunil from "../../components/Crm/IndicadoresFunil";
 import FiltrosFunil from "../../components/Crm/FiltrosFunil";
 import useArrastarQuadro from "../../hooks/useArrastarQuadro";
@@ -173,6 +175,10 @@ const Crm = () => {
   const refQuadro = useArrastarQuadro(Boolean(dragging));
 
   const podeMover = can("crm:move");
+  const podeExcluir = can("crm:delete");
+
+  // O card à espera da confirmação de exclusão.
+  const [pendenteDeExclusao, setPendenteDeExclusao] = useState(null);
 
   const activeBoard = useMemo(
     () => boards.find((board) => board.id === activeBoardId) || null,
@@ -467,16 +473,45 @@ const Crm = () => {
     setDealModalOpen(true);
   };
 
-  const handleDeleteDeal = async (dealId) => {
+  /**
+   * Excluir card.
+   *
+   * A função existia, mas nada a chamava: o botão morava no painel lateral
+   * que deu lugar à janela do orçamento, e sumiu junto. Agora sai do próprio
+   * card (ícone ao passar o mouse) e do cabeçalho da janela, sempre com
+   * confirmação e só para quem tem "Excluir oportunidade".
+   *
+   * O card some na hora; se o servidor recusar, a lista é recarregada e ele
+   * volta.
+   */
+  const handleDeleteDeal = async (deal) => {
+    if (!deal) return;
+    setPendenteDeExclusao(null);
+    setDetailsDealId((aberto) => (aberto === deal.id ? null : aberto));
+    setDeals((lista) => lista.filter((d) => d.id !== deal.id));
     try {
-      await api.delete(`/deals/${dealId}`);
+      await api.delete(`/deals/${deal.id}`);
       toast.success(i18n.t("crm.toasts.dealDeleted"));
-      setDetailsDealId(null);
-      fetchDeals();
     } catch (err) {
       toastError(err);
+    } finally {
+      fetchDeals();
+      fetchSummary();
     }
   };
+
+  const identidadeExcluindo = pendenteDeExclusao
+    ? identidadeDoNegocio(pendenteDeExclusao, {
+        noFunil: Boolean(activeBoard?.isSalesFunnel),
+      })
+    : null;
+
+  // Um card concluído gerou outro adiante, e um card com raiz veio de outro:
+  // nos dois casos o backend apaga a jornada inteira, e isso precisa ser dito.
+  const excluiCadeia = Boolean(
+    pendenteDeExclusao &&
+      (pendenteDeExclusao.rootDealId || pendenteDeExclusao.status === "moved")
+  );
 
   return (
     <MainContainer>
@@ -500,6 +535,7 @@ const Crm = () => {
         dealId={detailsDealId}
         open={Boolean(detailsDealId)}
         onClose={() => setDetailsDealId(null)}
+        onExcluir={podeExcluir ? setPendenteDeExclusao : undefined}
         onSalvo={() => {
           fetchDeals();
           fetchSummary();
@@ -527,6 +563,27 @@ const Crm = () => {
         onClose={() => setPendenteDeAvanco(null)}
         onConfirm={handleConfirmarAvanco}
       />
+
+      <ConfirmationModal
+        open={Boolean(pendenteDeExclusao)}
+        danger
+        title={
+          identidadeExcluindo
+            ? `Excluir ${identidadeExcluindo.rotulo.toLowerCase()} nº ${identidadeExcluindo.numero}?`
+            : "Excluir card?"
+        }
+        confirmLabel="Excluir de vez"
+        onClose={() => setPendenteDeExclusao(null)}
+        onConfirm={() => handleDeleteDeal(pendenteDeExclusao)}
+      >
+        <strong>{pendenteDeExclusao?.title}</strong> sai do quadro junto com os
+        itens, o material anexado e o histórico de atividades.
+        {excluiCadeia &&
+          " Os cards ligados a este trabalho em outros quadros também são apagados."}
+        {pendenteDeExclusao?.wonAt &&
+          " A venda já foi fechada: contas a receber e pedidos já gerados continuam no financeiro."}{" "}
+        Não tem como desfazer.
+      </ConfirmationModal>
 
       <LostReasonModal
         open={Boolean(pendenteDePerda)}
@@ -798,6 +855,7 @@ const Crm = () => {
               onDragOverCard={setDropTarget}
               onDrop={handleDrop}
               onCardClick={setDetailsDealId}
+              onExcluirCard={podeExcluir ? setPendenteDeExclusao : undefined}
               onAddDeal={() => handleNovoDeal(stage.id)}
             />
           ))
