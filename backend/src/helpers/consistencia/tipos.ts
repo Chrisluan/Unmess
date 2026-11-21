@@ -27,7 +27,8 @@ export type Gatilho =
   | "financeiro"
   | "empresa"
   | "produto"
-  | "insumo";
+  | "insumo"
+  | "integracao";
 
 /** Para onde mandar quem quer resolver: rota do frontend e o texto do botão. */
 export interface Atalho {
@@ -117,6 +118,13 @@ export interface ProdutoCalculado {
   insumosInativos: string[];
 }
 
+/** A integração de cobrança da empresa, como as regras precisam vê-la. */
+export interface IntegracaoDeCobranca {
+  active: boolean;
+  configurada: boolean;
+  accountId: number | null;
+}
+
 export interface FonteDeDados {
   /** Valor da configuração, já com o padrão do catálogo quando não existe. */
   configuracao(chave: string): Promise<string>;
@@ -129,6 +137,7 @@ export interface FonteDeDados {
   contasFinanceiras(): Promise<ContaFinanceira[]>;
   empresa(): Promise<DadosDaEmpresa | null>;
   produtosCalculados(): Promise<ProdutoCalculado[]>;
+  integracaoDeCobranca(): Promise<IntegracaoDeCobranca | null>;
 }
 
 export interface Regra {

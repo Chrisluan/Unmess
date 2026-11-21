@@ -13,6 +13,7 @@ import Company from "../../models/Company";
 import Product from "../../models/Product";
 import ProductSupply from "../../models/ProductSupply";
 import Supply from "../../models/Supply";
+import CompanyIntegration from "../../models/CompanyIntegration";
 import { CATALOGO_DE_CONFIGURACOES } from "../configuracoes/catalogo";
 import {
   Conexao,
@@ -22,6 +23,7 @@ import {
   Etapa,
   Fila,
   FonteDeDados,
+  IntegracaoDeCobranca,
   ProdutoCalculado,
   Quadro,
   StatusDeTicket
@@ -194,6 +196,22 @@ const fonteDoBanco = (
             .filter(c => c.supply && c.supply.active === false)
             .map(c => c.supply.name)
         }));
+      }),
+
+    integracaoDeCobranca: () =>
+      lembrar("integracaoDeCobranca", async () => {
+        const i = await CompanyIntegration.findOne({
+          where: { companyId },
+          attributes: ["active", "apiKeyEncrypted", "accountId"],
+          transaction
+        });
+        return i
+          ? ({
+              active: Boolean(i.active),
+              configurada: Boolean(i.apiKeyEncrypted),
+              accountId: i.accountId || null
+            } as IntegracaoDeCobranca)
+          : null;
       })
   };
 };

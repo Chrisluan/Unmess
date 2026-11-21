@@ -55,7 +55,9 @@ const CreateCustomerService = async (
     }
   }
 
-  const customer = await Customer.create({ ...customerData });
+  // Os ids no gateway são preenchidos pela emissão, nunca por quem cadastra.
+  const { gatewayIds: _doSistema, ...dados } = customerData as Request & { gatewayIds?: unknown };
+  const customer = await Customer.create({ ...dados });
 
   await customer.reload({
     include: ["contact", "responsibleUser"]

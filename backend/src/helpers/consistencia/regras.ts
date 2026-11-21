@@ -321,5 +321,26 @@ export const REGRAS: Regra[] = [
           p =>
             `"${p.name}" ainda usa ${p.insumosInativos.join(", ")}, que está desativado: o custo continua contando o preço antigo desse insumo.`
         )
+  },
+
+  // ── Cobrança por integração ─────────────────────────────────────────────
+  {
+    id: "integracao-sem-conta-de-baixa",
+    titulo: "Cobrança automática sem conta para as baixas",
+    severidade: "bloqueia",
+    gatilhos: ["integracao", "financeiro"],
+    resolver: { rota: "/Settings?aba=integracoes", rotulo: "Escolher a conta de baixa" },
+    verificar: async dados => {
+      const integracao = await dados.integracaoDeCobranca();
+      if (!integracao || !integracao.active) return [];
+      const contas = await dados.contasFinanceiras();
+      const conta = contas.find(c => c.id === integracao.accountId);
+      if (conta && conta.active) return [];
+      return [
+        conta
+          ? `A conta "${conta.name}", onde entram os pagamentos de boleto e Pix, está desativada: o pagamento chega e a baixa não tem onde ser lançada.`
+          : "A cobrança por boleto e Pix está ligada sem uma conta financeira para as baixas: o pagamento chega e a baixa não tem onde ser lançada."
+      ];
+    }
   }
 ];

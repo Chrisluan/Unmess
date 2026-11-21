@@ -74,6 +74,60 @@ class Receivable extends Model<Receivable> {
   @Column(DataType.TEXT)
   notes: string;
 
+  // ── Cobrança emitida no gateway ────────────────────────────────────────
+  // Espelho do que o gateway devolveu. A situação de lá (gatewayStatus) é só
+  // informação: o que diz se a parcela está paga continua sendo a soma das
+  // baixas -- a do webhook é uma baixa como outra qualquer.
+
+  @Column(DataType.STRING(20))
+  gatewayProvider: string;
+
+  @Column(DataType.STRING(12))
+  gatewayEnvironment: string;
+
+  @Column(DataType.STRING(64))
+  gatewayChargeId: string;
+
+  /** pending | overdue | paid | canceled | refunded */
+  @Column(DataType.STRING(20))
+  gatewayStatus: string;
+
+  /** boleto | pix | indefinido, como foi emitida. */
+  @Column(DataType.STRING(12))
+  gatewayBillingType: string;
+
+  /** Quanto a cobrança emitida pede. Difere do saldo se houve baixa à mão depois. */
+  @Column(DataType.DECIMAL(15, 2))
+  get gatewayAmount(): number | null {
+    const bruto = this.getDataValue("gatewayAmount");
+    return bruto === null || bruto === undefined ? null : Number(bruto);
+  }
+
+  @Column(DataType.DATEONLY)
+  gatewayDueDate: string;
+
+  @Column(DataType.STRING(500))
+  boletoUrl: string;
+
+  @Column(DataType.STRING(500))
+  invoiceUrl: string;
+
+  @Column(DataType.STRING(120))
+  linhaDigitavel: string;
+
+  @Column(DataType.TEXT)
+  pixCopiaECola: string;
+
+  /** Imagem do QR Code em base64 (PNG), como o gateway entrega. */
+  @Column(DataType.TEXT("medium"))
+  pixQrCode: string;
+
+  @Column
+  emittedAt: Date;
+
+  @Column
+  gatewayCheckedAt: Date;
+
   /**
    * Quanto já foi baixado.
    *

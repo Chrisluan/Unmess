@@ -39,7 +39,15 @@ const SITUACOES: Record<string, CobrancaEmitida["situacao"]> = {
   CANCELED: "canceled"
 };
 
-const TIPOS = { boleto: "BOLETO", pix: "PIX" };
+const TIPOS = { boleto: "BOLETO", pix: "PIX", indefinido: "UNDEFINED" };
+
+export const BASES_DO_ASAAS = BASES;
+
+/** Credencial explícita: a de uma empresa cliente, e não a do SaaS no .env. */
+export interface CredencialAsaas {
+  chave: string;
+  ambiente: "sandbox" | "production";
+}
 
 /** Só dígitos: o Asaas recusa CPF/CNPJ com ponto e traço. */
 const somenteDigitos = (valor?: string | null): string | undefined => {
@@ -51,13 +59,24 @@ const somenteDigitos = (valor?: string | null): string | undefined => {
 class AsaasProvider implements BillingProvider {
   readonly nome = "asaas";
 
+  /**
+   * Sem credencial, usa a do .env: é o faturamento do próprio SaaS. Com
+   * credencial, fala em nome da empresa cliente -- a cobrança das vendas dela.
+   */
+  constructor(private readonly credencial?: CredencialAsaas) {}
+
   private get chave(): string | undefined {
+    if (this.credencial) return this.credencial.chave;
     return process.env.ASAAS_API_KEY;
   }
 
   private get base(): string {
-    const ambiente = process.env.ASAAS_ENV === "production" ? "production" : "sandbox";
-    return BASES[ambiente];
+    const ambiente = this.credencial
+      ? this.credencial.ambiente
+      : process.env.ASAAS_ENV === "production"
+        ? "production"
+        : "sandbox";
+    return BASES[ambiente === "production" ? "production" : "sandbox"];
   }
 
   configurado(): boolean {
@@ -99,7 +118,17 @@ class AsaasProvider implements BillingProvider {
     }
 
     const texto = await resposta.text();
-    const dados = texto ? JSON.parse(texto) : {};
+    let dados: any = {};
+    try {
+      dados = texto ? JSON.parse(texto) : {};
+    } catch {
+      // Página de erro em HTML (manutenção, proxy): o status já diz o bastante.
+      dados = {};
+    }
+
+    if (resposta.status === 401) {
+      throw new AppError("ERR_INTEGRACAO_CHAVE_RECUSADA", 400);
+    }
 
     if (!resposta.ok) {
       const descricao =
@@ -118,9 +147,25 @@ class AsaasProvider implements BillingProvider {
       urlBoleto: cobranca.bankSlipUrl || null,
       linhaDigitavel: cobranca.identificationField || null,
       pixCopiaECola: cobranca.payload || null,
+      pixQrCode: cobranca.encodedImage || null,
       urlFatura: cobranca.invoiceUrl || null,
       valorPago: cobranca.netValue ?? null,
-      pagoEm: cobranca.paymentDate ? new Date(cobranca.paymentDate) : null
+      valor: cobranca.value ?? null,
+      vencimento: cobranca.dueDate || null,
+      forma:
+        cobranca.billingType === "PIX"
+          ? "pix"
+          : cobranca.billingType === "BOLETO"
+            ? "boleto"
+            : cobranca.billingType === "CREDIT_CARD" || cobranca.billingType === "DEBIT_CARD"
+              ? "cartao"
+              : null,
+      pagoEm: cobranca.paymentDate
+        ? new Date(`${cobranca.paymentDate}T12:00:00`)
+        : cobranca.clientPaymentDate
+          ? new Date(`${cobranca.clientPaymentDate}T12:00:00`)
+          : null,
+      estornada: ["REFUNDED", "REFUND_REQUESTED", "REFUND_IN_PROGRESS", "CHARGEBACK_REQUESTED"].includes(cobranca.status)
     };
   }
 
@@ -164,13 +209,14 @@ class AsaasProvider implements BillingProvider {
         billingType: TIPOS[pedido.tipo || "boleto"],
         value: Number(pedido.valor),
         dueDate: pedido.vencimento,
-        description: pedido.descricao
+        description: pedido.descricao,
+        externalReference: pedido.referenciaExterna || undefined
       }
     });
 
     // A linha digitável não vem no POST: é um recurso à parte, e sem ela o
     // cliente não consegue pagar pelo aplicativo do banco.
-    if (cobranca.billingType === "BOLETO") {
+    if (cobranca.billingType === "BOLETO" || cobranca.billingType === "UNDEFINED") {
       try {
         const boleto = await this.chamar<any>(
           `/payments/${cobranca.id}/identificationField`
@@ -182,10 +228,13 @@ class AsaasProvider implements BillingProvider {
       }
     }
 
-    if (cobranca.billingType === "PIX") {
+    // Boleto também pode ter Pix (o "bolepix") quando a conta tem chave Pix
+    // cadastrada; sem chave, a chamada falha e o documento sai só com o boleto.
+    {
       try {
         const pix = await this.chamar<any>(`/payments/${cobranca.id}/pixQrCode`);
         cobranca.payload = pix.payload;
+        cobranca.encodedImage = pix.encodedImage;
       } catch {
         // Idem: o link da fatura continua servindo.
       }
@@ -200,7 +249,29 @@ class AsaasProvider implements BillingProvider {
   }
 
   async cancelar(cobrancaId: string): Promise<void> {
-    await this.chamar(`/payments/${cobrancaId}`, { metodo: "DELETE" });
+    try {
+      await this.chamar(`/payments/${cobrancaId}`, { metodo: "DELETE" });
+    } catch (erro) {
+      // Já removida lá (por alguém no painel do Asaas, ou numa tentativa
+      // anterior que caiu antes de gravar aqui): o objetivo foi atingido.
+      const situacao = await this.consultar(cobrancaId).catch(() => null);
+      if (situacao && situacao.situacao === "canceled") return;
+      throw erro;
+    }
+  }
+
+  /**
+   * Confere se a chave funciona, sem efeito colateral nenhum.
+   * Devolve o nome da conta para a tela mostrar "conectado como ...".
+   */
+  async testar(): Promise<{ conta: string | null }> {
+    const conta = await this.chamar<any>("/myAccount/commercialInfo").catch(async erro => {
+      // Contas antigas sem esse recurso: listar clientes também prova a chave.
+      if (erro instanceof AppError && erro.message === "ERR_INTEGRACAO_CHAVE_RECUSADA") throw erro;
+      await this.chamar("/customers?limit=1");
+      return null;
+    });
+    return { conta: conta?.companyName || conta?.name || null };
   }
 }
 

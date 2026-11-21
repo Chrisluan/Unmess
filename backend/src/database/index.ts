@@ -34,6 +34,7 @@ import Supply from "../models/Supply";
 import Finish from "../models/Finish";
 import ProductSupply from "../models/ProductSupply";
 import ProductFinish from "../models/ProductFinish";
+import CompanyIntegration from "../models/CompanyIntegration";
 import Product from "../models/Product";
 import PaymentTerm from "../models/PaymentTerm";
 import FinancialAccount from "../models/FinancialAccount";
@@ -92,6 +93,7 @@ const models = [
   Finish,
   ProductSupply,
   ProductFinish,
+  CompanyIntegration,
   Product,
   Sticker,
   PaymentTerm,

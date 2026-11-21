@@ -67,8 +67,12 @@ const UpdateCustomerService = async ({
     }
   }
 
-  // A empresa do cadastro não muda pela edição.
-  const { companyId: _ignorada, ...dados } = customerData as CustomerData & { companyId?: number };
+  // A empresa do cadastro não muda pela edição, e os ids no gateway são do
+  // sistema: trocados à mão, o próximo boleto sairia para outro cliente de lá.
+  const { companyId: _ignorada, gatewayIds: _doSistema, ...dados } = customerData as CustomerData & {
+    companyId?: number;
+    gatewayIds?: unknown;
+  };
   await customer.update(dados);
 
   await customer.reload({
