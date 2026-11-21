@@ -140,7 +140,14 @@ Escrever "  Conexao conferida com a senha nova." "Green"
 
 # ---- 8. gravar no .env e subir o backend ----------------------------------
 
-$conteudoEnv = $conteudoEnv -replace '(?m)^\s*DB_PASS\s*=.*$', "DB_PASS=$novaSenha"
+# Sem a linha DB_PASS, o -replace nao faz nada: a senha seria trocada no
+# MySQL e nao ficaria gravada em lugar nenhum -- foi assim que ela ja se
+# perdeu antes. Nesse caso a linha e acrescentada.
+if ($conteudoEnv -match '(?m)^\s*DB_PASS\s*=') {
+    $conteudoEnv = $conteudoEnv -replace '(?m)^\s*DB_PASS\s*=.*$', "DB_PASS=$novaSenha"
+} else {
+    $conteudoEnv = $conteudoEnv.TrimEnd() + "`r`nDB_PASS=$novaSenha`r`n"
+}
 Set-Content -Path $envBackend -Value $conteudoEnv -Encoding utf8 -NoNewline
 Escrever "  backend\.env atualizado." "Green"
 

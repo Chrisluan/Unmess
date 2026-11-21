@@ -16,7 +16,8 @@
  *     a conexão testada antes de qualquer coisa ser gravada.
  *
  * Uso (PowerShell como Administrador):
- *   node scripts/rotacionar-segredos.js
+ *   node scripts/rotacionar-segredos.js           (JWT e senha do banco)
+ *   node scripts/rotacionar-segredos.js --so-jwt  (só as chaves de JWT)
  *
  * Nada é impresso na tela além de "ok": o motivo de rotacionar é justamente
  * que segredo em terminal vira segredo vazado.
@@ -119,9 +120,15 @@ const acharMysql = () => {
 
   // ---- senha do banco ------------------------------------------------------
 
-  const executavel = acharMysql();
+  // --so-jwt: quando só as chaves de sessão precisam ser geradas (por exemplo,
+  // logo depois de recuperar a senha do banco com redefinir-senha-banco.ps1),
+  // não há motivo para trocar a senha do banco outra vez.
+  const soJwt = process.argv.includes("--so-jwt");
+  const executavel = soJwt ? null : acharMysql();
 
-  if (!executavel) {
+  if (soJwt) {
+    log("senha do banco mantida (--so-jwt)", "✓");
+  } else if (!executavel) {
     log("cliente do MySQL não encontrado; a senha do banco NÃO foi trocada.", "!");
     log("troque-a pelo MySQL Workbench e atualize DB_PASS em backend/.env:", " ");
     log(`ALTER USER '${usuarioBanco}'@'localhost' IDENTIFIED BY '<nova senha>';`, " ");
