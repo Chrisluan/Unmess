@@ -12,9 +12,15 @@ import api from "../services/api";
  * trata o `window.open` como popup não solicitado e bloqueia. O HTML chega
  * autenticado e vira um blob, para a aba ter uma URL própria -- o
  * "Imprimir / Salvar PDF" do documento depende disso.
+ *
+ * Sem `noopener` na lista de features: por especificação, `window.open` com
+ * `noopener` devolve `null` mesmo quando a aba abre normalmente. Era isso que
+ * disparava o aviso de popup bloqueado em toda emissão. O vínculo com a aba
+ * nova é cortado depois, com `janela.opener = null`, que tem o mesmo efeito e
+ * ainda deixa escrever nela.
  */
 const abrirOrdemDeServico = async (dealId) => {
-  const janela = window.open("", "_blank", "noopener");
+  const janela = window.open("", "_blank");
 
   if (!janela) {
     throw new Error(
@@ -36,6 +42,13 @@ const abrirOrdemDeServico = async (dealId) => {
     );
 
     janela.location.replace(url);
+
+    try {
+      janela.opener = null;
+    } catch {
+      // Navegador que não deixa mexer no opener depois de navegar. A aba já
+      // está com o documento certo; não vale derrubar a emissão por isso.
+    }
 
     // Só depois de a aba assumir o blob é que ele pode ser liberado; revogar na
     // hora deixaria a janela em branco.

@@ -11,7 +11,7 @@ import toastError from "../../errors/toastError";
 import { Can } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
-const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
+const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransferir, onDevolver }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const isMounted = useRef(true);
@@ -37,8 +37,12 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	};
 
 	const handleOpenTransferModal = e => {
-		setTransferTicketModalOpen(true);
 		handleClose();
+		if (onTransferir) {
+			onTransferir();
+			return;
+		}
+		setTransferTicketModalOpen(true);
 	};
 
 	const handleCloseTransferTicketModal = () => {
@@ -64,19 +68,28 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				open={menuOpen}
 				onClose={handleClose}
 			>
-				<Can permission="tickets:transfer">
-					<MenuItem onClick={handleOpenTransferModal}>
-						{i18n.t("ticketOptionsMenu.transfer")}
-					</MenuItem>
-				</Can>
-				<Can permission="tickets:delete">
+				<MenuItem onClick={handleOpenTransferModal}>
+					{i18n.t("ticketOptionsMenu.transfer")}
+				</MenuItem>
+				{onDevolver && (
 					<MenuItem
-						onClick={handleOpenConfirmationModal}
-						sx={{ color: "error.main" }}
+						onClick={() => {
+							handleClose();
+							onDevolver();
+						}}
 					>
-						{i18n.t("ticketOptionsMenu.delete")}
+						{i18n.t("messagesList.header.buttons.return")}
 					</MenuItem>
-				</Can>
+				)}
+				<Can
+					role={user.profile}
+					perform="ticket-options:deleteTicket"
+					yes={() => (
+						<MenuItem onClick={handleOpenConfirmationModal}>
+							{i18n.t("ticketOptionsMenu.delete")}
+						</MenuItem>
+					)}
+				/>
 			</Menu>
 			<ConfirmationModal
 				title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
@@ -92,6 +105,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 			>
 				{i18n.t("ticketOptionsMenu.confirmationModal.message")}
 			</ConfirmationModal>
+			{!onTransferir && (
 			<TransferTicketModal
 				modalOpen={transferTicketModalOpen}
 				onClose={handleCloseTransferTicketModal}
@@ -100,6 +114,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				currentQueueId={ticket.queueId}
 				currentUserId={ticket.userId}
 			/>
+			)}
 		</>
 	);
 };

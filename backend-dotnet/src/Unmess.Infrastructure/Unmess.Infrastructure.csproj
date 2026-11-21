@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unmess.Application\Unmess.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.15" />
+    <PackageReference Include="MySql.EntityFrameworkCore" Version="10.0.9" />
+    <PackageReference Include="MySqlConnector" Version="3.0.0" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
+  </ItemGroup>
+
+
+</Project>

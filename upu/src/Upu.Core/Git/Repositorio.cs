@@ -25,9 +25,42 @@ public sealed class Repositorio(string raiz)
 {
     public string Raiz { get; } = raiz;
 
+    /// <summary>
+    /// Argumentos que vão na frente de toda chamada ao git.
+    ///
+    /// O `safe.directory` resolve um problema que só aparece quando o UPU vira
+    /// serviço: a pasta `C:\unmess` pertence a uma conta de pessoa, e o serviço
+    /// roda como LocalSystem. O git então se recusa a trabalhar, com "detected
+    /// dubious ownership" — uma proteção contra repositório plantado por outro
+    /// usuário, que aqui só atrapalha, porque a pasta é a mesma de sempre.
+    ///
+    /// A saída óbvia seria `git config --global --add safe.directory`, que é o
+    /// que o próprio git sugere. Só que "global" é por conta: rodada pelo
+    /// usuário logado, ela grava no perfil dele e o serviço continua sem
+    /// enxergar. Passar por `-c` resolve para quem quer que esteja rodando, sem
+    /// depender de configuração nenhuma na máquina.
+    ///
+    /// O git só aceita `safe.directory` de configuração protegida — sistema,
+    /// global e linha de comando. Repositório e variável de ambiente são
+    /// ignorados de propósito, e é por isso que tem de ser `-c`.
+    /// </summary>
+    private string[] ComPrefixo(string[] argumentos)
+    {
+        // Barras normais mesmo no Windows: é o formato que o git compara.
+        var caminho = Raiz.Replace('\\', '/').TrimEnd('/');
+
+        var completo = new string[argumentos.Length + 2];
+        completo[0] = "-c";
+        completo[1] = $"safe.directory={caminho}";
+        argumentos.CopyTo(completo, 2);
+
+        return completo;
+    }
+
     private async Task<string> GitAsync(params string[] argumentos)
     {
-        var r = await ProcessoExterno.RodarAsync("git", argumentos, Raiz, TimeSpan.FromMinutes(10));
+        var r = await ProcessoExterno.RodarAsync(
+            "git", ComPrefixo(argumentos), Raiz, TimeSpan.FromMinutes(10));
 
         if (!r.Sucesso)
         {
@@ -40,7 +73,9 @@ public sealed class Repositorio(string raiz)
 
     private async Task<(bool Sucesso, string Saida)> TentarGitAsync(params string[] argumentos)
     {
-        var r = await ProcessoExterno.RodarAsync("git", argumentos, Raiz, TimeSpan.FromMinutes(10));
+        var r = await ProcessoExterno.RodarAsync(
+            "git", ComPrefixo(argumentos), Raiz, TimeSpan.FromMinutes(10));
+
         return (r.Sucesso, r.Saida.Trim());
     }
 

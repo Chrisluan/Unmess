@@ -9,7 +9,8 @@ import { garantirQueSobraAdministrador } from "../../helpers/permissions/guards"
 const DeleteUserService = async (
   id: string | number,
   companyId: number,
-  atorId?: number
+  atorId?: number,
+  atorEhSuper = false
 ): Promise<void> => {
   const user = await User.findOne({
     where: { id, companyId },
@@ -34,7 +35,7 @@ const DeleteUserService = async (
     );
   }
 
-  if (user.role?.slug === SLUG_ADMINISTRADOR) {
+  if (user.role?.slug === SLUG_ADMINISTRADOR && !atorEhSuper) {
     const administradores = await User.count({
       where: { companyId, roleId: user.roleId }
     });

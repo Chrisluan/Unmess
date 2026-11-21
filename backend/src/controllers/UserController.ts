@@ -112,7 +112,12 @@ export const remove = async (
 ): Promise<Response> => {
   const { userId } = req.params;
 
-  await DeleteUserService(userId, getCompanyId(req), Number(req.user.id));
+  await DeleteUserService(
+    userId,
+    getCompanyId(req),
+    Number(req.user.id),
+    req.user.profile === "super"
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("user", {

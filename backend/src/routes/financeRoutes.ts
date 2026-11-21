@@ -3,6 +3,7 @@ import isAuth from "../middleware/isAuth";
 import requiresCompany from "../middleware/requiresCompany";
 import hasPermission from "../middleware/hasPermission";
 import * as FinanceController from "../controllers/FinanceController";
+import * as PdvController from "../controllers/PdvController";
 
 const financeRoutes = express.Router();
 
@@ -37,6 +38,24 @@ financeRoutes.delete("/finance/suppliers/:id", isAuth, requiresCompany, hasPermi
 
 // ── Caixa ───────────────────────────────────────────────────────────────────
 financeRoutes.get("/finance/fluxo", isAuth, requiresCompany, hasPermission("finance:cashflow"), FinanceController.fluxoDeCaixa);
+
+// ── Métricas ────────────────────────────────────────────────────────────────
+// Mesma permissão do fluxo de caixa, e pelo mesmo motivo: as duas telas são o
+// retrato financeiro do negócio inteiro, não o recorte de um atendimento.
+financeRoutes.get("/finance/metricas", isAuth, requiresCompany, hasPermission("finance:cashflow"), FinanceController.metricas);
+
+// ── PDV / Frente de caixa ───────────────────────────────────────────────────
+// Operar o caixa é papel de quem fica no balcão: `finance:pos` não dá acesso
+// a mais nada do financeiro. Conferir os turnos dos outros é papel de quem
+// supervisiona, e por isso é permissão separada.
+financeRoutes.get("/pdv/caixas",        isAuth, requiresCompany, hasPermission("finance:pos"),      PdvController.caixas);
+financeRoutes.get("/pdv/atual",         isAuth, requiresCompany, hasPermission("finance:pos"),      PdvController.atual);
+financeRoutes.post("/pdv/abrir",        isAuth, requiresCompany, hasPermission("finance:pos"),      PdvController.abrir);
+// Rota fixa antes das paramétricas, senão "historico" cairia em :sessionId.
+financeRoutes.get("/pdv/historico",     isAuth, requiresCompany, hasPermission("finance:posAudit"), PdvController.historico);
+financeRoutes.post("/pdv/:sessionId/movimentos", isAuth, requiresCompany, hasPermission("finance:pos"), PdvController.movimentar);
+financeRoutes.post("/pdv/:sessionId/vendas",     isAuth, requiresCompany, hasPermission("finance:pos"), PdvController.vender);
+financeRoutes.put("/pdv/:sessionId/fechar",      isAuth, requiresCompany, hasPermission("finance:pos"), PdvController.fechar);
 
 // ── Cadastros de apoio ──────────────────────────────────────────────────────
 // A leitura exige só finance:view: os seletores da tela de cobrança dependem

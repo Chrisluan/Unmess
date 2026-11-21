@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import makeStyles from "@mui/styles/makeStyles";
-import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
@@ -29,7 +28,13 @@ import abrirOrdemDeServico from "../../helpers/ordemDeServico";
 import { descreverNegocio } from "../Crm/identidade";
 
 const useStyles = makeStyles(theme => ({
-  bloco: { padding: 12, display: "flex", flexDirection: "column", gap: 10 },
+  bloco: {
+    padding: "18px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    borderBottom: `1px solid ${theme.palette.unmess.linha}`,
+  },
 
   cabecalho: {
     display: "flex",
@@ -40,7 +45,7 @@ const useStyles = makeStyles(theme => ({
 
   pedido: {
     border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 0,
+    borderRadius: 10,
     overflow: "hidden",
   },
 
@@ -77,7 +82,7 @@ const useStyles = makeStyles(theme => ({
     fontWeight: 700,
   },
 
-  vazio: { fontSize: 12, opacity: 0.7, padding: "6px 0" },
+  vazio: { fontSize: 13, color: theme.palette.text.secondary, padding: "2px 0" },
   acoes: { display: "flex", gap: 6, flexWrap: "wrap" },
 }));
 
@@ -232,16 +237,16 @@ const TicketDeals = ({ onCarregado }) => {
 
   if (carregando) {
     return (
-      <Paper square variant="outlined" className={classes.bloco}>
+      <div className={classes.bloco}>
         <CircularProgress size={20} />
-      </Paper>
+      </div>
     );
   }
 
   return (
-    <Paper square variant="outlined" className={classes.bloco}>
+    <div className={classes.bloco}>
       <div className={classes.cabecalho}>
-        <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
+        <Typography component="h3" style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>
           Pedidos e orçamentos
           {deals.length > 0 ? ` (${deals.length})` : ""}
         </Typography>
@@ -439,7 +444,7 @@ const TicketDeals = ({ onCarregado }) => {
           </div>
         );
       })}
-    </Paper>
+    </div>
   );
 };
 

@@ -15,9 +15,8 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		flexWrap: "wrap",
-		gap: theme.spacing(1, 2),
-		padding: theme.spacing(2, 2, 1.5),
-		borderBottom: `1px solid ${theme.palette.divider}`,
+		gap: theme.spacing(1.5),
+		flex: "none",
 	},
 }));
 

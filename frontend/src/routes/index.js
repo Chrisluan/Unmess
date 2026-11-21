@@ -11,9 +11,7 @@ import Users from "../pages/Users";
 import Contacts from "../pages/Contacts/";
 import Customers from "../pages/Customers/";
 import Crm from "../pages/Crm/";
-import QuickAnswers from "../pages/QuickAnswers/";
-import Products from "../pages/Products/";
-import Finance from "../pages/Finance/";
+import Cadastros from "../pages/Cadastros/";
 import Queues from "../pages/Queues/";
 import Companies from "../pages/Companies/";
 import CompanyDetail from "../pages/CompanyDetail/";
@@ -24,6 +22,7 @@ import { AuthProvider } from "../context/Auth/AuthContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
 import { AttendanceSettingsProvider } from "../context/Settings/AttendanceSettingsContext";
 import { BrandingProvider } from "../context/Branding";
+import { OutgoingMessagesProvider } from "../context/OutgoingMessages/OutgoingMessagesContext";
 import { ThemeProvider } from "../context/DarkMode";
 // O codemod importou StyledEngineProvider junto do ThemeProvider local; ele
 // vem do MUI. injectFirst faz o CSS do Emotion ser injetado antes, para as
@@ -31,7 +30,34 @@ import { ThemeProvider } from "../context/DarkMode";
 import { StyledEngineProvider } from "@mui/material/styles";
 import Route from "./Route";
 
-const ConnectionsRedirect = () => <Redirect to="/Settings" />;
+const ConnectionsRedirect = () => <Redirect to="/Settings?aba=conexoes" />;
+
+/**
+ * Os caminhos que mudaram de casa.
+ *
+ * Produtos, Respostas rápidas, Etiquetas, Mensagens automáticas e Status de
+ * finalização viraram abas de Cadastro. Link antigo em e-mail, favorito do
+ * navegador e atalho anotado num papel continuam chegando onde devem — cada
+ * um direto na sua aba, e não numa tela genérica de onde a pessoa teria de
+ * procurar de novo.
+ *
+ * Os redirects não carregam permissão: quem não alcança a aba entra em
+ * Cadastro e cai na primeira que lhe cabe; quem não alcança nenhuma é barrado
+ * pela própria rota de /cadastros.
+ */
+const ParaCadastros = (aba) => {
+  const Redireciona = () => <Redirect to={`/cadastros#${aba}`} />;
+  // Sem displayName o React DevTools mostra três componentes chamados
+  // "Redireciona" e não dá para saber qual é qual.
+  Redireciona.displayName = `ParaCadastros(${aba})`;
+  return Redireciona;
+};
+
+// Montados uma vez, fora do render: usados inline, o `component` do Route
+// mudaria de identidade a cada render e remontaria o redirect sem parar.
+const ParaProdutos = ParaCadastros("produtos");
+const ParaRespostasRapidas = ParaCadastros("respostas-rapidas");
+const ParaEtiquetas = ParaCadastros("etiquetas");
 
 const Routes = () => {
   return (
@@ -46,6 +72,7 @@ const Routes = () => {
               <WhatsAppsProvider>
                 <AttendanceSettingsProvider>
                 <BrandingProvider>
+                <OutgoingMessagesProvider>
                 <LoggedInLayout>
                   <Route exact path="/"                   component={Dashboard}        isPrivate permission="dashboard:view" />
                   <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:view" />
@@ -56,13 +83,17 @@ const Routes = () => {
                   <Route exact path="/customers"          component={Customers}        isPrivate permission="clients:view" />
                   <Route exact path="/crm"                component={Crm}              isPrivate permission="crm:view" />
                   <Route exact path="/users"              component={Users}            isPrivate permission="users:view" />
-                  <Route exact path="/quickAnswers"       component={QuickAnswers}     isPrivate permission="quickAnswers:view" />
-
-                  <Route exact path="/products"             component={Products}         isPrivate permission="products:view" />
-                  <Route exact path="/finance"            component={Finance}          isPrivate permission="finance:view" />
-                  {/* Conexões e Etiquetas moram dentro de Configurações, e
-                      têm permissão própria: quem cuida só delas também entra. */}
-                  <Route exact path="/Settings"           component={Settings}         isPrivate anyOf={["settings:view", "connections:view", "tags:view"]} />
+                  {/* Cadastro: produtos, respostas rápidas, etiquetas,
+                      mensagens automáticas e status de finalização. Cinco
+                      permissões diferentes, e basta uma para entrar — lá
+                      dentro cada aba pergunta pela sua. */}
+                  <Route exact path="/cadastros"          component={Cadastros}        isPrivate anyOf={["products:view", "quickAnswers:view", "tags:view", "settings:view"]} />
+                  <Route exact path="/quickAnswers"       component={ParaRespostasRapidas} isPrivate />
+                  <Route exact path="/products"           component={ParaProdutos}     isPrivate />
+                  <Route exact path="/tags"               component={ParaEtiquetas}    isPrivate />
+                  {/* Conexões mora dentro de Configurações e tem permissão
+                      própria: quem cuida só dos números também entra. */}
+                  <Route exact path="/Settings"           component={Settings}         isPrivate anyOf={["settings:view", "connections:view"]} />
                   <Route exact path="/Queues"             component={Queues}           isPrivate permission="queues:view" />
                   <Route exact path="/companies"          component={Companies}        isPrivate superOnly />
                   {/* Ficha da empresa: usuários, cobrança e acesso. Depois
@@ -70,6 +101,7 @@ const Routes = () => {
                   <Route exact path="/companies/:companyId" component={CompanyDetail}  isPrivate superOnly />
                   <Route exact path="/roles"              component={Access}           isPrivate permission="roles:view" />
                 </LoggedInLayout>
+                </OutgoingMessagesProvider>
                 </BrandingProvider>
                 </AttendanceSettingsProvider>
               </WhatsAppsProvider>

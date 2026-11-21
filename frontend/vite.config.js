@@ -24,7 +24,7 @@ export default defineConfig({
         scope: "/",
         display: "standalone",
         orientation: "portrait-primary",
-        theme_color: "#2576d2",
+        theme_color: "#5B45D6",
         background_color: "#f7f8fa",
         // O 512x512 não é enfeite: sem ele o Chrome não considera o app
         // instalável e o convite "Instalar aplicativo" simplesmente não
@@ -60,12 +60,27 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Os arquivos do UPU ficam de fora do precache, e não por economia.
+        //
+        // Eles são gravados na pasta do build DEPOIS do build, pelo serviço que
+        // avisa os usuários. Se entrassem no precache, o Workbox congelaria a
+        // versão do dia do build: o widget não se atualizaria, e o avisos.json
+        // serviria uma lista velha para sempre -- um aviso de manutenção que
+        // nunca chega, ou um que nunca sai da tela.
+        //
+        // De fora, cada um é buscado na rede, que é o comportamento que um
+        // arquivo vivo pede.
+        globIgnores: ["avisos.json", "avisos-unmess.js", "aviso-sw/**"],
         // O bundle passa de 1,7 MB; o padrão do Workbox (2 MB) deixaria de
         // fora justamente o arquivo principal.
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         // Nada de API nem WebSocket em cache: são dados vivos, e servir
         // resposta velha de conversa seria pior que não abrir.
-        navigateFallbackDenylist: [/^\/api/, /^\/public/, /^\/socket\.io/],
+        // `/upu` entra na lista pelo mesmo motivo dos outros: são as rotas
+        // públicas do atualizador, encaminhadas pelo servidor do frontend.
+        // Devolver o index.html para elas faria o widget tentar ler HTML como
+        // JSON na hora de se inscrever para notificação.
+        navigateFallbackDenylist: [/^\/api/, /^\/public/, /^\/socket\.io/, /^\/upu/],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith("/public/"),

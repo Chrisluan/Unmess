@@ -16,6 +16,11 @@ import ShowPipelineSummaryService from "../services/DealServices/ShowPipelineSum
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
 import { usuarioPode } from "../helpers/permissions/resolve";
+import PipelineStage from "../models/PipelineStage";
+import {
+  escopoDaRequisicao,
+  garantirNoEscopo
+} from "../helpers/permissions/escopoDaRequisicao";
 
 type IndexQuery = {
   searchParam: string;
@@ -35,7 +40,48 @@ interface DealData {
   contactId?: number;
   responsibleUserId?: number;
   lostReason?: string;
+  /**
+   * Conversa que originou o negócio. A tela do atendimento manda só o título
+   * e este id; o cliente do card vem do ticket.
+   */
+  ticketId?: number;
+  boardId?: number;
+  discount?: number;
+  discountType?: string;
 }
+
+/**
+ * Recusa a ação quando falta a permissão, com a frase que diz o que fazer.
+ *
+ * As permissões finas do funil não podem virar rota própria — desconto e
+ * responsável chegam no mesmo `PUT` que o título —, então a conferência é
+ * por campo, dentro do handler. A mensagem nomeia a ação, e não a permissão:
+ * quem leva o 403 é o vendedor, não quem configura o sistema.
+ */
+const garantirPermissao = async (
+  req: Request,
+  permissao: string,
+  oQue: string
+): Promise<void> => {
+  const pode = await usuarioPode(Number(req.user.id), permissao);
+
+  if (!pode) {
+    throw new AppError(
+      `Você não tem permissão para ${oQue}. Peça a quem administra o sistema.`,
+      403
+    );
+  }
+};
+
+/**
+ * As duas restrições do CRM são independentes e se somam.
+ *
+ * "crm:viewAll" decide de quem são os cards — os meus ou os de todo mundo. O
+ * escopo de quadros decide em quais quadros, e vale igual para as duas
+ * respostas: quem vê o funil inteiro vê o funil inteiro dos quadros que
+ * alcança, não de todos.
+ */
+const escopoDeQuadros = (req: Request) => escopoDaRequisicao(req, "board");
 
 /**
  * Sem "crm:viewAll" a pessoa enxerga apenas o próprio funil, e o filtro de
@@ -64,6 +110,7 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
     customerId,
     includeClosed: includeClosed === "true",
     boardId,
+    escopoDeQuadros: await escopoDeQuadros(req),
     companyId: getCompanyId(req)
   });
 
@@ -81,6 +128,7 @@ export const summary = async (
 
   const resumo = await ShowPipelineSummaryService({
     responsibleUserId: await resolveResponsavel(req, responsibleUserId),
+    escopoDeQuadros: await escopoDeQuadros(req),
     companyId: getCompanyId(req)
   });
 
@@ -90,6 +138,9 @@ export const summary = async (
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { dealId } = req.params;
 
+  // A conferência de escopo do card não está aqui: é o middleware
+  // noEscopoDoQuadro, declarado ao lado da permissão na rota, e ele vale para
+  // as quinze rotas que recebem :dealId — não só para esta.
   const deal = await ShowDealService(dealId, getCompanyId(req));
 
   return res.status(200).json(deal);
@@ -107,6 +158,12 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
     await schema.validate(newDeal);
   } catch (err) {
     throw new AppError(err.message);
+  }
+
+  // Criar card num quadro que não se alcança é a via mais direta de contornar
+  // o escopo: o card nasceria lá e sumiria da vista de quem o criou.
+  if (newDeal.boardId) {
+    await garantirNoEscopo(req, "board", Number(newDeal.boardId), "Este quadro");
   }
 
   const deal = await CreateDealService({
@@ -143,6 +200,22 @@ export const update = async (
 
   const { dealId } = req.params;
 
+  /**
+   * Passar o card adiante e queimar margem são decisões de outra ordem que
+   * "corrigir o título", e por isso saíram de `crm:edit`.
+   *
+   * A conferência é sobre o campo ter vindo, não sobre ter mudado: comparar
+   * com o valor atual custaria uma consulta a mais para tratar o caso de
+   * alguém reenviar o mesmo desconto — que não é um caso que valha proteger.
+   */
+  if (dealData.responsibleUserId !== undefined) {
+    await garantirPermissao(req, "crm:assign", "definir o responsável");
+  }
+
+  if (dealData.discount !== undefined || dealData.discountType !== undefined) {
+    await garantirPermissao(req, "crm:discount", "dar desconto");
+  }
+
   const deal = await UpdateDealService({
     dealData,
     dealId,
@@ -167,6 +240,36 @@ export const move = async (req: Request, res: Response): Promise<Response> => {
 
   if (!stageId) {
     throw new AppError("ERR_NO_PIPELINE_STAGE_FOUND", 404);
+  }
+
+  /**
+   * Mover não é encerrar.
+   *
+   * A rota é a mesma — arrastar o card é como se fecha uma venda no Kanban —,
+   * então a separação acontece aqui, olhando a coluna de destino: coluna
+   * final conclui o quadro e pode gerar cobrança; coluna de perda encerra o
+   * card. Qualquer uma das duas exige `crm:close`, e as colunas de trabalho
+   * seguem exigindo só `crm:move`.
+   *
+   * A consulta é pela coluna de destino e não pelo estado do card: é o
+   * destino que decide o que a ação faz.
+   */
+  const destino = await PipelineStage.findOne({
+    where: { id: stageId },
+    attributes: ["id", "isFinal", "type"]
+  });
+
+  if (destino?.isFinal || destino?.type === "lost") {
+    const podeEncerrar = await usuarioPode(Number(req.user.id), "crm:close");
+
+    if (!podeEncerrar) {
+      throw new AppError(
+        destino.type === "lost"
+          ? "Você pode mover o card, mas não dar a oportunidade por perdida."
+          : "Você pode mover o card, mas não fechar a venda.",
+        403
+      );
+    }
   }
 
   const { deal, advancedTo, nextBoardName, avisoCopia } = await MoveDealService({
@@ -260,6 +363,7 @@ export const buscar = async (req: Request, res: Response): Promise<Response> => 
   const resultado = await FiltrarOportunidadesService({
     companyId: getCompanyId(req),
     boardId: q.boardId,
+    escopoDeQuadros: await escopoDeQuadros(req),
     searchParam: q.searchParam,
     responsibleUserId: q.responsibleUserId,
     semResponsavel: bool(q.semResponsavel),
@@ -294,7 +398,8 @@ export const indicadores = async (
 
   const dados = await IndicadoresFunilService({
     companyId: getCompanyId(req),
-    boardId
+    boardId,
+    escopoDeQuadros: await escopoDeQuadros(req)
   });
 
   return res.json(dados);

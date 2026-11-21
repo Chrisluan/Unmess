@@ -20,26 +20,20 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     flex: "0 0 280px",
     maxHeight: "100%",
-    borderRadius: 0,
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? "rgba(255,255,255,0.03)"
-        : "rgba(0,0,0,0.03)",
+    borderRadius: 16,
+    backgroundColor: theme.palette.unmess.hover,
   },
 
   // Realce enquanto um card sobrevoa a coluna, para o destino ficar óbvio.
   colunaAtiva: {
-    backgroundColor:
-      theme.palette.mode === "dark"
-        ? "rgba(91,147,255,0.14)"
-        : "rgba(11,92,255,0.06)",
+    backgroundColor: theme.palette.unmess.primariaSuave,
   },
 
   cabecalho: {
     padding: theme.spacing(1, 1.25),
     borderTop: "3px solid",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
 
   linhaTitulo: {
@@ -165,7 +159,7 @@ const KanbanColumn = ({
     >
       <div
         className={classes.cabecalho}
-        style={{ borderTopColor: stage.color || theme.palette.primary.main }}
+        style={{ borderTopColor: stage.color || "#5B45D6" }}
       >
         <div className={classes.linhaTitulo}>
           {/* Entrada e saída marcadas no próprio cabeçalho: sem isso não dá

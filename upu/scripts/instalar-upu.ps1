@@ -82,6 +82,41 @@ if (-not (Test-Path $executavel)) {
     exit 1
 }
 
+# --------------------------------------------------- o git e o dono da pasta
+
+# O git se recusa a trabalhar numa pasta que pertence a outra conta ("detected
+# dubious ownership"), e é exatamente esse o caso aqui: a pasta da instalação é
+# de uma pessoa, e o serviço roda como LocalSystem.
+#
+# O UPU já passa `-c safe.directory` em toda chamada, então ele funciona sem
+# isto. A exceção no escopo de sistema é para o resto: o atualizador antigo em
+# Node, um script npm rodando por tarefa agendada, qualquer coisa que use git
+# nesta máquina sem ser pela conta do dono.
+#
+# `--system` e não `--global`: global é por conta, e a conta que roda este
+# script não é a que vai rodar o serviço.
+
+$raizDoRepositorio = Split-Path -Parent $raizDoUpu
+$caminhoParaOGit = $raizDoRepositorio.Replace("\", "/")
+
+$git = (Get-Command git -ErrorAction SilentlyContinue).Source
+
+if ($git) {
+    $jaPermitido = & $git config --system --get-all safe.directory 2>$null
+
+    if ($jaPermitido -notcontains $caminhoParaOGit) {
+        & $git config --system --add safe.directory $caminhoParaOGit
+        Write-Host "  git: $caminhoParaOGit liberado para todas as contas da máquina."
+    } else {
+        Write-Host "  git: $caminhoParaOGit já estava liberado."
+    }
+} else {
+    Write-Host "  Aviso: não achei o git no PATH desta sessão." -ForegroundColor Yellow
+    Write-Host "  O UPU passa safe.directory sozinho, então deve funcionar mesmo assim."
+}
+
+# ----------------------------------------------------------------- o serviço
+
 $jaExiste = Get-Service -Name $Nome -ErrorAction SilentlyContinue
 
 if ($jaExiste) {

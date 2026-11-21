@@ -8,6 +8,14 @@ import {
   semDependentes,
   Permission
 } from "./catalog";
+import {
+  EscoposResolvidos,
+  ExcecaoDeEscopo,
+  escoposVazios,
+  lerEscoposDoCargo,
+  lerExcecoesDeEscopo,
+  resolverEscopos
+} from "./escopos";
 
 /**
  * Resolve o que uma pessoa pode fazer.
@@ -37,6 +45,15 @@ export interface ExcecoesDeAcesso {
 export interface AcessoResolvido {
   /** O que vale no fim das contas. É isto que as rotas conferem. */
   permissions: Permission[];
+  /**
+   * Sobre quais coisas essas permissões valem — quadros, contas, conexões.
+   *
+   * Vem junto de propósito, e não de uma segunda consulta: quem já perguntou
+   * "pode ver o CRM?" quase sempre pergunta em seguida "quais quadros?", e
+   * separar as duas leituras dobraria o custo de toda listagem para poupar
+   * dois campos de JSON na mesma linha que já foi buscada.
+   */
+  scopes: EscoposResolvidos;
   role: {
     id: number;
     name: string;
@@ -44,13 +61,17 @@ export interface AcessoResolvido {
     permissions: Permission[];
   } | null;
   exceptions: ExcecoesDeAcesso;
+  /** As exceções de escopo, cruas, para a tela poder editá-las. */
+  scopeExceptions: Record<string, ExcecaoDeEscopo>;
   isSuper: boolean;
 }
 
 const SEM_ACESSO: AcessoResolvido = {
   permissions: [],
+  scopes: escoposVazios(),
   role: null,
   exceptions: { allow: [], deny: [] },
+  scopeExceptions: {},
   isSuper: false
 };
 
@@ -131,17 +152,34 @@ export const resolverAcessoDoUsuario = async (
   if (ehSuper(user.profile)) {
     return {
       permissions: [...ALL_PERMISSIONS],
+      scopes: resolverEscopos({
+        isSuper: true,
+        escoposDoCargo: {},
+        excecoes: {}
+      }),
       role: null,
       exceptions: { allow: [], deny: [] },
+      scopeExceptions: {},
       isSuper: true
     };
   }
 
   const permissoesDoCargo = user.role ? user.role.permissionsList : [];
   const exceptions = lerExcecoes(user.accessExceptions);
+  const scopeExceptions = lerExcecoesDeEscopo(user.scopeExceptions);
 
   return {
     permissions: aplicarExcecoes(permissoesDoCargo, exceptions),
+    scopes: resolverEscopos({
+      isSuper: false,
+      // Sem cargo não há escopo, do mesmo jeito que não há permissão. As duas
+      // metades da resposta vêm da mesma linha, e é por isso que este arquivo
+      // resolve as duas de uma vez.
+      escoposDoCargo: user.role
+        ? user.role.scopesMap
+        : lerEscoposDoCargo(null),
+      excecoes: scopeExceptions
+    }),
     role: user.role
       ? {
           id: user.role.id,
@@ -151,6 +189,7 @@ export const resolverAcessoDoUsuario = async (
         }
       : null,
     exceptions,
+    scopeExceptions,
     isSuper: false
   };
 };
@@ -168,4 +207,17 @@ export const usuarioPode = async (
 ): Promise<boolean> => {
   const permissions = await permissoesDoUsuario(userId);
   return permissions.includes(permissao);
+};
+
+/**
+ * Os escopos de uma pessoa, para quem só precisa deles.
+ *
+ * Mesma leitura de `resolverAcessoDoUsuario` — o atalho existe para a
+ * chamada ficar legível na listagem, não para economizar consulta.
+ */
+export const escoposDoUsuario = async (
+  userId: number
+): Promise<EscoposResolvidos> => {
+  const { scopes } = await resolverAcessoDoUsuario(userId);
+  return scopes;
 };

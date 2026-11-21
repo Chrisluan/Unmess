@@ -4,6 +4,7 @@ import hasPermission from "../../../middleware/hasPermission";
 import isAuth from "../../../middleware/isAuth";
 import { auditarRotas } from "../../../helpers/permissions/routeGuard";
 import { aplicarExcecoes, lerExcecoes } from "../../../helpers/permissions/resolve";
+import { escoposVazios } from "../../../helpers/permissions/escopos";
 import {
   ALL_PERMISSIONS,
   comDependencias,
@@ -28,8 +29,12 @@ import { MODELOS_DE_CARGO } from "../../../helpers/permissions/roleTemplates";
 
 const acesso = (permissions: string[], isSuper = false) => ({
   permissions,
+  // Escopo não participa das regras anti-escalação: elas comparam o que se
+  // pode fazer, e escopo é sobre o quê. Vazio aqui não enfraquece o teste.
+  scopes: escoposVazios(),
   role: null,
   exceptions: { allow: [], deny: [] },
+  scopeExceptions: {},
   isSuper
 });
 

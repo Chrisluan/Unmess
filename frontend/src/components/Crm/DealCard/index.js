@@ -9,8 +9,13 @@ import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 
-import { formatarValor, paraData, estaAtrasado } from "../formatters";
-import { identidadeDoNegocio } from "../identidade";
+import {
+  formatarValor,
+  formatarTelefone,
+  paraData,
+  estaAtrasado,
+} from "../formatters";
+import { clienteDoNegocio, identidadeDoNegocio } from "../identidade";
 import { mediaUrl } from "../../../helpers/mediaUrl";
 
 const useStyles = makeStyles((theme) => ({
@@ -133,9 +138,54 @@ const useStyles = makeStyles((theme) => ({
     wordBreak: "break-word",
   },
 
+  /**
+   * Quem é o cliente, logo abaixo do título.
+   *
+   * Era um texto secundário miúdo, do tamanho de uma legenda. Num quadro com
+   * dezenas de cards, "Camiseta 20un" não diz de quem é o trabalho, e o nome
+   * é a segunda coisa que se procura depois do número — merece o mesmo peso
+   * visual do resto da linha, não menos.
+   */
   cliente: {
-    display: "block",
-    marginTop: 2,
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 3,
+    minWidth: 0,
+  },
+
+  fotoCliente: {
+    width: 18,
+    height: 18,
+    fontSize: "0.6rem",
+    flexShrink: 0,
+  },
+
+  nomeCliente: {
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    lineHeight: 1.25,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    minWidth: 0,
+  },
+
+  // O telefone identifica o card quando o nome não basta: dois "João" no
+  // quadro, ou um contato que ainda não virou cadastro.
+  telefoneCliente: {
+    fontSize: "0.7rem",
+    color: theme.palette.text.secondary,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+  },
+
+  // Card que ninguém consegue identificar. Dito na cara, e não por omissão:
+  // uma linha em branco parece defeito da tela, não falta de cadastro.
+  semCliente: {
+    fontSize: "0.72rem",
+    fontStyle: "italic",
+    color: theme.palette.text.disabled,
   },
 
   rodape: {
@@ -229,7 +279,8 @@ const DealCard = ({
 
   const atrasado = estaAtrasado(deal.expectedCloseAt, deal.status);
   const previsao = paraData(deal.expectedCloseAt);
-  const cliente = deal.customer?.tradeName || deal.customer?.name || deal.contact?.name;
+  const cliente = clienteDoNegocio(deal);
+  const telefone = formatarTelefone(cliente.telefone);
   const followUp = descreverFollowUp(deal.nextFollowUpAt);
   // Atraso tem precedencia sobre prioridade na borda: uma oportunidade
   // atrasada e mais urgente que qualquer prioridade marcada a mao.
@@ -306,15 +357,37 @@ const DealCard = ({
 
       <Typography className={classes.titulo}>{deal.title}</Typography>
 
-      {cliente && (
-        <Typography
-          variant="caption"
-          color="textSecondary"
-          className={classes.cliente}
-        >
-          {cliente}
-        </Typography>
-      )}
+      {/* Sem isto, saber de quem é o card exigia abri-lo. */}
+      <div className={classes.cliente}>
+        {cliente.semCliente ? (
+          <span className={classes.semCliente}>Sem cliente vinculado</span>
+        ) : (
+          <>
+            <Avatar
+              className={classes.fotoCliente}
+              src={cliente.fotoUrl || undefined}
+              alt={cliente.nome || telefone}
+            >
+              {iniciais(cliente.nome || telefone)}
+            </Avatar>
+
+            {cliente.nome ? (
+              <>
+                <span className={classes.nomeCliente} title={cliente.nome}>
+                  {cliente.nome}
+                </span>
+                {/* O telefone entra ao lado do nome; sem nome ele já é a
+                    identificação principal e aparece sozinho. */}
+                {telefone && (
+                  <span className={classes.telefoneCliente}>{telefone}</span>
+                )}
+              </>
+            ) : (
+              <span className={classes.nomeCliente}>{telefone}</span>
+            )}
+          </>
+        )}
+      </div>
 
       {etiquetas.length > 0 && (
         <div className={classes.etiquetas}>

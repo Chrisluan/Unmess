@@ -15,6 +15,9 @@ import EditWhatsAppMessage from "../services/WbotServices/EditWhatsAppMessage";
 import AppError from "../errors/AppError";
 import SendWhatsAppMedia from "../services/WbotServices/SendWhatsAppMedia";
 import SendWhatsAppMessage from "../services/WbotServices/SendWhatsAppMessage";
+import { ProviderMessage } from "../providers/WhatsApp";
+import { envioUnico } from "../helpers/DedupeEnvio";
+import { logger } from "../utils/logger";
 
 type IndexQuery = {
   pageNumber: string;
@@ -26,6 +29,10 @@ type MessageData = {
   fromMe: boolean;
   read: boolean;
   quotedMsg?: Message;
+  /** Identificador gerado pelo navegador, repetido a cada nova tentativa. */
+  clientId?: string;
+  /** Legenda dos anexos. */
+  caption?: string;
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
@@ -50,24 +57,66 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
-  const { body, quotedMsg }: MessageData = req.body;
+  const { body, quotedMsg, clientId, caption }: MessageData = req.body;
   const medias = req.files as Express.Multer.File[];
+  const companyId = getCompanyId(req);
 
-  const ticket = await ShowTicketService(ticketId, getCompanyId(req));
+  const ticket = await ShowTicketService(ticketId, companyId);
 
   SetTicketMessagesAsRead(ticket);
 
-  if (medias) {
-    await Promise.all(
-      medias.map(async (media: Express.Multer.File) => {
-        await SendWhatsAppMedia({ media, ticket });
-      })
-    );
-  } else {
-    await SendWhatsAppMessage({ body, ticket, quotedMsg });
-  }
+  // A chave vem do navegador e se repete a cada tentativa da mesma mensagem.
+  // É o que permite reenviar depois de uma falha de rede sem o contato
+  // receber duas vezes: se a primeira chamada chegou a sair, a segunda
+  // devolve o resultado dela em vez de mandar de novo.
+  const chave = clientId ? `${companyId}:${ticketId}:${clientId}` : undefined;
 
-  return res.send();
+  const enviadas = await envioUnico(chave, async () => {
+    if (medias && medias.length > 0) {
+      const resultados: ProviderMessage[] = [];
+
+      // Em sequência, e não em paralelo: o WhatsApp entrega na ordem em que
+      // recebe, e disparar tudo de uma vez embaralhava os anexos de um mesmo
+      // envio na conversa do cliente.
+      //
+      // A legenda acompanha só o primeiro anexo, como no próprio WhatsApp —
+      // repeti-la em cada arquivo encheria a conversa do mesmo texto.
+      for (let i = 0; i < medias.length; i += 1) {
+        // eslint-disable-next-line no-await-in-loop
+        const enviada = await SendWhatsAppMedia({
+          media: medias[i],
+          ticket,
+          body: i === 0 && caption?.trim() ? caption.trim() : undefined
+        });
+        resultados.push(enviada);
+      }
+
+      return resultados;
+    }
+
+    return [await SendWhatsAppMessage({ body, ticket, quotedMsg })];
+  });
+
+  // O envio deixa rastro nos dois sentidos: o erro sai em SendWhatsApp*, e o
+  // sucesso aqui, com o id que o WhatsApp devolveu. É por esse id que se
+  // acompanha depois a confirmação de entrega nos logs.
+  logger.info(
+    {
+      ticketId: ticket.id,
+      userId: req.user?.id,
+      whatsappId: ticket.whatsappId,
+      messageIds: enviadas.map(m => m.id),
+      anexos: medias?.length || 0
+    },
+    "Mensagem enviada ao WhatsApp"
+  );
+
+  // Devolve o que foi criado: a tela precisa do id para casar a mensagem
+  // otimista que já mostrou com a que vai chegar pelo socket, e do ack para
+  // saber se ainda está saindo ou se o servidor já confirmou.
+  return res.status(200).json({
+    messages: enviadas.map(m => ({ id: m.id, ack: m.ack ?? 0 }))
+  });
 };
 
 /**

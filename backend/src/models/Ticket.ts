@@ -39,6 +39,11 @@ class Ticket extends Model<Ticket> {
   @Column
   lastMessage: string;
 
+  // Se a última mensagem foi nossa. Nulo nos atendimentos anteriores à
+  // coluna: a lista de conversas só marca a origem quando sabe.
+  @Column
+  lastMessageFromMe: boolean;
+
   @Default(false)
   @Column
   isGroup: boolean;

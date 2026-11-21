@@ -1,9 +1,17 @@
 import { QueryTypes } from "sequelize";
 import sequelize from "../../database";
 
+import {
+  EscopoResolvido,
+  alcanca,
+  condicaoSql
+} from "../../helpers/permissions/escopos";
+
 interface Request {
   companyId: number;
   boardId?: number | string;
+  /** Os quadros que quem pediu alcança. Ausente é "sem restrição". */
+  escopoDeQuadros?: EscopoResolvido;
 }
 
 export interface IndicadoresFunil {
@@ -44,9 +52,21 @@ const numero = (valor: unknown): number => {
  */
 const IndicadoresFunilService = async ({
   companyId,
-  boardId
+  boardId,
+  escopoDeQuadros
 }: Request): Promise<IndicadoresFunil> => {
-  const filtroQuadro = boardId ? "AND d.boardId = :boardId" : "";
+  /**
+   * Fora do alcance, o indicador zera em vez de somar o quadro inteiro: o
+   * `1=0` é o equivalente em SQL da lista vazia que a listagem devolve.
+   */
+  const foraDoAlcance =
+    boardId && escopoDeQuadros && !alcanca(escopoDeQuadros, Number(boardId));
+
+  const filtroQuadro = foraDoAlcance
+    ? "AND 1=0"
+    : boardId
+    ? "AND d.boardId = :boardId"
+    : `AND ${condicaoSql(escopoDeQuadros, "d.boardId")}`;
 
   const [linha] = await sequelize.query<Record<string, unknown>>(
     `
@@ -72,7 +92,10 @@ const IndicadoresFunilService = async ({
     WHERE d.companyId = :companyId ${filtroQuadro}
     `,
     {
-      replacements: { companyId, ...(boardId ? { boardId } : {}) },
+      replacements: {
+        companyId,
+        ...(boardId && !foraDoAlcance ? { boardId } : {})
+      },
       type: QueryTypes.SELECT
     }
   );

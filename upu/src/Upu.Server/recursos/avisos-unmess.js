@@ -33,6 +33,14 @@
   var estado = { avisos: [], versao: null, api: null, chaveVapid: null };
   var elemento = null;
   var temporizador = null;
+  var registroDoSw = null;
+
+  // Instalado como aplicativo (sem barra de endereço). Muda duas coisas: a
+  // faixa precisa respeitar a área do relógio e da bateria, e a notificação
+  // tem de sair pelo service worker.
+  var ehAplicativoInstalado =
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+    window.navigator.standalone === true;
 
   // ------------------------------------------------------------- utilidades
 
@@ -75,7 +83,10 @@
       "#avisos-unmess{position:fixed;top:0;left:0;right:0;z-index:2147483000;",
       "font:14px/1.45 'Segoe UI',system-ui,sans-serif;pointer-events:none}",
       "#avisos-unmess .aviso{display:flex;gap:12px;align-items:flex-start;",
-      "padding:10px 16px;color:#fff;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,.18)}",
+      // O padding de cima soma a área segura: instalado como aplicativo não há
+      // barra de endereço, e a faixa nasceria debaixo do relógio do celular.
+      "padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;",
+      "color:#fff;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,.18)}",
       "#avisos-unmess .informacao{background:#2f5fd0}",
       "#avisos-unmess .sucesso{background:#1a7f52}",
       "#avisos-unmess .atencao{background:#9a6300}",
@@ -173,6 +184,24 @@
 
     caixa.appendChild(corpo);
 
+    // O convite de permissão aparece junto do "Entendi", e não apenas nos
+    // avisos que não dão para dispensar. No aplicativo instalado quase todo
+    // aviso é dispensável, e do jeito anterior a permissão simplesmente nunca
+    // chegava a ser pedida.
+    //
+    // O teste é `in window`, e não `Notification &&`: em webview sem a API, a
+    // segunda forma lança ReferenceError e derruba o desenho da faixa inteira.
+    //
+    // O clique é o que torna o pedido possível: navegador nenhum aceita
+    // requestPermission sem um gesto do usuário.
+    if ("Notification" in window && Notification.permission === "default") {
+      var permitir = document.createElement("button");
+      permitir.type = "button";
+      permitir.textContent = ehAplicativoInstalado ? "Avisar no celular" : "Avisar no navegador";
+      permitir.onclick = pedirPermissao;
+      caixa.appendChild(permitir);
+    }
+
     if (aviso.dispensavel) {
       var fechar = document.createElement("button");
       fechar.type = "button";
@@ -184,59 +213,120 @@
         desenhar();
       };
       caixa.appendChild(fechar);
-    } else if ("Notification" in window && Notification.permission === "default") {
-      // O teste é `in window`, e não `Notification &&`: em webview sem a API, a
-      // segunda forma lança ReferenceError e derruba o desenho da faixa
-      // inteira — justamente no aviso que não dá para dispensar.
-      // Aproveita o único gesto que a pessoa vai dar nesta faixa para pedir a
-      // permissão: navegador nenhum aceita o pedido sem clique.
-      var permitir = document.createElement("button");
-      permitir.type = "button";
-      permitir.textContent = "Avisar no navegador";
-      permitir.onclick = pedirPermissao;
-      caixa.appendChild(permitir);
     }
 
     elemento.innerHTML = "";
     elemento.appendChild(caixa);
   }
 
+  // ------------------------------------------------------ o service worker
+
+  /**
+   * Registra (uma vez só) o service worker de avisos e devolve o registro.
+   *
+   * Escopo próprio, `/aviso-sw/`, porque o sistema já registra o service worker
+   * do PWA na raiz e dois registros no mesmo escopo se substituem — o segundo a
+   * chegar desligaria o primeiro, e o primeiro é quem entrega o aplicativo
+   * offline.
+   *
+   * O registro serve a dois propósitos: receber push com o app fechado, e —
+   * mais imediato — ser quem mostra a notificação, veja abaixo.
+   */
+  function garantirRegistroSw() {
+    if (registroDoSw) return registroDoSw;
+
+    if (!("serviceWorker" in navigator)) {
+      registroDoSw = Promise.resolve(null);
+      return registroDoSw;
+    }
+
+    registroDoSw = navigator.serviceWorker
+      .register("/aviso-sw/aviso-sw.js", { scope: "/aviso-sw/" })
+      .catch(function () {
+        // Arquivo ausente (UPU nunca publicou), origem insegura, ou o navegador
+        // recusou. Nada disso impede a faixa de funcionar.
+        return null;
+      });
+
+    return registroDoSw;
+  }
+
   // --------------------------------------------------- notificação na hora
 
   /**
-   * Notificação do navegador com a aba aberta.
+   * Mostra uma notificação, pelo caminho que o navegador aceita.
    *
-   * Não depende de push nem de servidor: assim que o feed traz um aviso que
-   * este navegador ainda não mostrou, ele aparece. É o caminho que funciona em
-   * qualquer instalação, inclusive sem o encaminhamento `/upu`.
+   * O `new Notification()` parece o caminho óbvio e é justamente o que **não**
+   * funciona no aplicativo instalado: no Android, uma página controlada por
+   * service worker recebe "Illegal constructor" ao chamá-lo. O aviso sumia sem
+   * erro visível, porque o construtor lança dentro de um try.
+   *
+   * Por isso a ordem é invertida: primeiro `registration.showNotification()`,
+   * que é o caminho suportado em toda parte; o construtor fica de reserva para
+   * navegador antigo sem service worker.
+   */
+  function mostrarNotificacao(aviso) {
+    var titulo = aviso.titulo || "Unmess";
+
+    var opcoes = {
+      body: aviso.mensagem || "",
+      tag: aviso.id,
+      icon: "/android-chrome-192x192.png",
+      badge: "/favicon-32x32.png",
+      data: { link: aviso.link || "/" },
+      // Aviso que não dá para dispensar na tela também não some sozinho da
+      // bandeja: quem estava longe da mesa precisa encontrá-lo ao voltar.
+      requireInteraction: aviso.severidade === "critico" || aviso.dispensavel === false
+    };
+
+    return garantirRegistroSw()
+      .then(function (registro) {
+        if (registro && registro.showNotification) {
+          return registro.showNotification(titulo, opcoes);
+        }
+
+        // Sem service worker: só resta o construtor, que aqui é legal.
+        new Notification(titulo, opcoes);
+      })
+      .catch(function () {
+        try { new Notification(titulo, opcoes); } catch (e) { /* desistiu */ }
+      });
+  }
+
+  /**
+   * Notificação com a aba aberta.
+   *
+   * Não depende de push nem do encaminhamento `/upu`: assim que o feed traz um
+   * aviso que este navegador ainda não mostrou, ele aparece. É o caminho que
+   * funciona em qualquer instalação.
    */
   function notificarNovos() {
     if (!("Notification" in window) || Notification.permission !== "granted") return;
 
     var jaMostrados = ler(CHAVE_NOTIFICADOS);
+    var mudou = false;
 
     estado.avisos.forEach(function (aviso) {
       if (!aviso.notificarNavegador) return;
       if (jaMostrados.indexOf(aviso.id) >= 0) return;
 
+      // Marca antes de mostrar: se a notificação falhar, insistir a cada
+      // minuto não vai fazer o navegador mudar de ideia.
       jaMostrados.push(aviso.id);
+      mudou = true;
 
-      try {
-        new Notification(aviso.titulo || "Unmess", {
-          body: aviso.mensagem || "",
-          tag: aviso.id,
-          icon: "/android-chrome-192x192.png"
-        });
-      } catch (e) {
-        /* alguns navegadores exigem o service worker; o push cobre esse caso */
-      }
+      mostrarNotificacao(aviso);
     });
 
-    gravar(CHAVE_NOTIFICADOS, jaMostrados);
+    if (mudou) gravar(CHAVE_NOTIFICADOS, jaMostrados);
   }
 
   function pedirPermissao() {
     if (!("Notification" in window)) return;
+
+    // O registro já sai na frente: quando a permissão chegar, o showNotification
+    // precisa de um service worker pronto para não perder o primeiro aviso.
+    garantirRegistroSw();
 
     Notification.requestPermission().then(function (resposta) {
       if (resposta === "granted") {
@@ -271,13 +361,12 @@
   function inscreverPush() {
     if (!estado.api || !estado.chaveVapid) return;
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-    if (Notification.permission !== "granted") return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
 
-    // Escopo próprio: o sistema já registra o service worker do PWA na raiz, e
-    // dois registros no mesmo escopo se substituem.
-    navigator.serviceWorker
-      .register("/aviso-sw/aviso-sw.js", { scope: "/aviso-sw/" })
+    garantirRegistroSw()
       .then(function (registro) {
+        if (!registro) throw new Error("sem service worker");
+
         return registro.pushManager.getSubscription().then(function (existente) {
           if (existente) return existente;
 
@@ -307,19 +396,44 @@
 
   // ------------------------------------------------------------------ ciclo
 
-  function buscar() {
-    // `cache: no-store` porque o arquivo muda no minuto exato em que importa, e
-    // um cache de 5 minutos aqui é o aviso de manutenção chegando tarde.
-    fetch(FEED + "?t=" + Date.now(), { cache: "no-store" })
+  /**
+   * Lê o feed, com o arquivo estático na frente e o UPU como reserva.
+   *
+   * O arquivo é o caminho normal: está na mesma pasta que o sistema já serve, e
+   * funciona mesmo com o UPU parado. A reserva existe para a única janela em
+   * que o arquivo não está lá — durante o `vite build`, que apaga a pasta
+   * inteira — e é exatamente quando o aviso de manutenção mais importa.
+   *
+   * `cache: no-store` porque o arquivo muda no minuto exato em que importa, e
+   * um cache de cinco minutos aqui é o aviso chegando tarde.
+   */
+  function lerFeed() {
+    return fetch(FEED + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (resposta) {
-        return resposta.ok ? resposta.json() : null;
+        if (!resposta.ok) throw new Error("feed " + resposta.status);
+        return resposta.json();
       })
+      .catch(function () {
+        var api = estado.api || "/upu";
+
+        return fetch(api + "/avisos?t=" + Date.now(), { cache: "no-store" })
+          .then(function (resposta) {
+            if (!resposta.ok) throw new Error("upu " + resposta.status);
+            return resposta.json();
+          });
+      });
+  }
+
+  function buscar() {
+    lerFeed()
       .then(function (feed) {
         if (!feed) return;
 
         estado.avisos = feed.avisos || [];
         estado.versao = feed.versaoNoAr || null;
-        estado.api = feed.apiPublica || null;
+        // Mantém o caminho anterior se o feed vier sem ele: perder o endereço
+        // do UPU tiraria a reserva de leitura justo depois de usá-la.
+        estado.api = feed.apiPublica || estado.api || "/upu";
         estado.chaveVapid = feed.chaveVapid || null;
 
         window.unmessVersao = estado.versao;

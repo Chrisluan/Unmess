@@ -5,14 +5,13 @@ import openSocket from "../../services/socket-io";
 import useSound from "use-sound";
 
 import Popover from "@mui/material/Popover";
-import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
-import makeStyles from '@mui/styles/makeStyles';
-import Badge from "@mui/material/Badge";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNoneOutlined";
-import Tooltip from "@mui/material/Tooltip";
-import Divider from "@mui/material/Divider";
 import Typography from "@mui/material/Typography";
+import Divider from "@mui/material/Divider";
+import makeStyles from '@mui/styles/makeStyles';
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+
+import { ItemTrilho } from "../../layout/MainListItems";
 
 import TicketListItem from "../TicketListItem";
 import { i18n } from "../../translate/i18n";
@@ -209,23 +208,15 @@ const NotificationsPopOver = () => {
 
 	return (
         <>
-            <Tooltip title={i18n.t("notifications.tooltip")} arrow>
-				<IconButton
+            <div ref={anchorEl}>
+				<ItemTrilho
+					rotulo="Avisos"
+					Icone={NotificationsNoneIcon}
+					contador={notifications.length}
 					onClick={handleClick}
-					ref={anchorEl}
-					aria-label={i18n.t("notifications.tooltip")}
-					className={classes.iconButton}
-					size="large"
-				>
-					{/* Vermelho: mensagem não lida é a única coisa da barra do
-					    topo que piora sozinha com o tempo. Em "secondary" o
-					    contador virava um bloco cinza-escuro, indistinguível
-					    de decoração. */}
-					<Badge badgeContent={notifications.length} color="error">
-						<NotificationsNoneIcon />
-					</Badge>
-				</IconButton>
-			</Tooltip>
+					dica={notifications.length ? `${notifications.length} conversas com mensagens novas` : "Nenhuma mensagem nova"}
+				/>
+			</div>
             <Popover
 				disableScrollLock
 				open={isOpen}
@@ -235,8 +226,8 @@ const NotificationsPopOver = () => {
 					horizontal: "right",
 				}}
 				transformOrigin={{
-					vertical: "top",
-					horizontal: "right",
+					vertical: "bottom",
+					horizontal: "left",
 				}}
 				classes={{ paper: classes.popoverPaper }}
 				onClose={handleClickAway}

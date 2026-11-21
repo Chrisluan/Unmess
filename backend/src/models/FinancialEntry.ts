@@ -65,6 +65,18 @@ class FinancialEntry extends Model<FinancialEntry> {
   @Column
   description: string;
 
+  /**
+   * Dinheiro que mudou de lugar, e não que entrou ou saiu da empresa.
+   *
+   * Sangria e suprimento do caixa são os casos de hoje. O lançamento existe
+   * para o saldo da conta bater com a gaveta; a marca existe para as receitas
+   * e as despesas não contarem duas vezes o mesmo dinheiro — sem ela, um mês
+   * de sangrias diárias aparece nas métricas como um mês de prejuízo.
+   */
+  @Default(false)
+  @Column
+  isTransfer: boolean;
+
   @CreatedAt
   createdAt: Date;
 

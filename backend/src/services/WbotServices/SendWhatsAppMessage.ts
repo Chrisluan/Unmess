@@ -35,7 +35,7 @@ const SendWhatsAppMessage = async ({
       }
     );
 
-    await ticket.update({ lastMessage: body });
+    await ticket.update({ lastMessage: body, lastMessageFromMe: true });
     return sentMessage;
   } catch (err) {
     logger.error(
@@ -49,6 +49,13 @@ const SendWhatsAppMessage = async ({
       },
       "Error sending WhatsApp message"
     );
+
+    // Sessão caída, número inválido: esses erros já dizem o que houve, e
+    // trocá-los por um "erro ao enviar" genérico apagava justamente a
+    // informação que o atendente precisa para saber se adianta tentar de
+    // novo ou se é a conexão que precisa ser religada.
+    if (err instanceof AppError) throw err;
+
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

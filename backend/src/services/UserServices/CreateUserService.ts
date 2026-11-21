@@ -5,6 +5,7 @@ import { SerializeUser, SerializedUser } from "../../helpers/SerializeUser";
 import User from "../../models/User";
 import Role from "../../models/Role";
 import { AcessoResolvido } from "../../helpers/permissions/resolve";
+import { escoposVazios } from "../../helpers/permissions/escopos";
 import { garantirQuePodeConceder } from "../../helpers/permissions/guards";
 import ShowRoleService from "../AccessServices/ShowRoleService";
 
@@ -33,8 +34,10 @@ interface Request {
  */
 const SEM_PODER: AcessoResolvido = {
   permissions: [],
+  scopes: escoposVazios(),
   role: null,
   exceptions: { allow: [], deny: [] },
+  scopeExceptions: {},
   isSuper: false
 };
 

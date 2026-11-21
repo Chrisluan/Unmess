@@ -49,3 +49,35 @@ export const estaAtrasado = (expectedCloseAt, status) => {
   if (!data) return false;
   return isBefore(startOfDay(data), startOfDay(new Date()));
 };
+
+/**
+ * Telefone do WhatsApp em formato de gente.
+ *
+ * O número chega como "5511987654321", com o código do país colado no DDD e
+ * no assinante. Assim ele não é legível de relance nem confere com o que o
+ * cliente dita ao telefone, que é justamente o uso: bater o card com quem
+ * está ligando.
+ */
+export const formatarTelefone = (numero) => {
+  const digitos = String(numero || "").replace(/\D/g, "");
+  if (!digitos) return "";
+
+  // 55 + DDD + assinante. O corte só vale a partir de 12 dígitos: abaixo
+  // disso o "55" pode ser o próprio DDD de Caxias do Sul.
+  const nacional =
+    digitos.startsWith("55") && digitos.length >= 12
+      ? digitos.slice(2)
+      : digitos;
+
+  if (nacional.length === 11) {
+    return `(${nacional.slice(0, 2)}) ${nacional.slice(2, 7)}-${nacional.slice(7)}`;
+  }
+
+  if (nacional.length === 10) {
+    return `(${nacional.slice(0, 2)}) ${nacional.slice(2, 6)}-${nacional.slice(6)}`;
+  }
+
+  // Fora do padrão brasileiro (internacional, grupo, ramal): mostrar como
+  // veio é melhor que quebrar em pedaços errados.
+  return String(numero);
+};

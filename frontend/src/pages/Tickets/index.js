@@ -1,111 +1,82 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import Grid from "@mui/material/Grid";
-import Paper from "@mui/material/Paper";
-import makeStyles from '@mui/styles/makeStyles';
+import makeStyles from "@mui/styles/makeStyles";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 
 import TicketsManager from "../../components/TicketsManager/";
 import Ticket from "../../components/Ticket/";
 
 import { i18n } from "../../translate/i18n";
-import Hidden from "@mui/material/Hidden";
-import EmptyState from "../../components/EmptyState";
-import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 
-const useStyles = makeStyles((theme) => ({
-  chatContainer: {
-    flex: 1,
-    // // backgroundColor: "#eee",
-    // padding: theme.spacing(4),
-    height: `calc(100% - 48px)`,
-    overflowY: "hidden",
-    backgroundColor: theme.palette.background.default,
-  },
-
-  chatPapper: {
-    // backgroundColor: "red",
-    display: "flex",
-    height: "100%",
-    backgroundColor: theme.palette.background.paper,
-  },
-
-  contactsWrapper: {
-    display: "flex",
-    height: "100%",
-    flexDirection: "column",
-    overflowY: "hidden",
-  },
-  contactsWrapperSmall: {
-    display: "flex",
-    height: "100%",
-    flexDirection: "column",
-    overflowY: "hidden",
-    [theme.breakpoints.down('md')]: {
-      display: "none",
+const useStyles = makeStyles((theme) => {
+  const c = theme.palette.unmess;
+  return {
+    root: {
+      flex: 1,
+      minHeight: 0,
+      height: "100%",
+      display: "grid",
+      gridTemplateColumns: "380px minmax(0, 1fr)",
+      overflow: "hidden",
+      [theme.breakpoints.down("lg")]: {
+        gridTemplateColumns: "340px minmax(0, 1fr)",
+      },
+      [theme.breakpoints.down("md")]: {
+        gridTemplateColumns: "minmax(0, 1fr)",
+      },
     },
-  },
-  messagessWrapper: {
-    display: "flex",
-    height: "100%",
-    flexDirection: "column",
-  },
-  welcomeMsg: {
-    backgroundColor: theme.palette.background.paper,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100%",
-    textAlign: "center",
-    borderRadius: 0,
-  },
-  ticketsManager: {},
-  ticketsManagerClosed: {
-    [theme.breakpoints.down('md')]: {
-      display: "none",
+    lista: {
+      minHeight: 0,
+      borderRight: `1px solid ${c.linha}`,
+      display: "flex",
+      flexDirection: "column",
     },
-  },
-}));
+    listaComConversa: {
+      [theme.breakpoints.down("md")]: { display: "none" },
+    },
+    conversa: {
+      minWidth: 0,
+      minHeight: 0,
+      display: "flex",
+      flexDirection: "column",
+      backgroundColor: c.fundoConversa,
+    },
+    conversaVazia: {
+      [theme.breakpoints.down("md")]: { display: "none" },
+    },
+    vazio: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      color: c.textoApagado,
+      textAlign: "center",
+      padding: 24,
+      "& svg": { fontSize: 48, color: c.linhaForte },
+    },
+  };
+});
 
 const Chat = () => {
   const classes = useStyles();
   const { ticketId } = useParams();
 
   return (
-    <div className={classes.chatContainer}>
-      <div className={classes.chatPapper}>
-        <Grid container spacing={0}>
-          {/* <Grid item xs={4} className={classes.contactsWrapper}> */}
-          <Grid
-            item
-            xs={12}
-            md={4}
-            className={
-              ticketId ? classes.contactsWrapperSmall : classes.contactsWrapper
-            }
-          >
-            <TicketsManager />
-          </Grid>
-          <Grid item xs={12} md={8} className={classes.messagessWrapper}>
-            {/* <Grid item xs={8} className={classes.messagessWrapper}> */}
-            {ticketId ? (
-              <>
-                <Ticket />
-              </>
-            ) : (
-              <Hidden only={["sm", "xs"]}>
-                <Paper className={classes.welcomeMsg}>
-                  {/* Metade da tela em branco com uma frase solta no meio não
-                      dizia o que fazer nem o que esperar. */}
-                  <EmptyState
-                    icon={ForumOutlinedIcon}
-                    title={i18n.t("chat.noTicketTitle")}
-                    description={i18n.t("chat.noTicketMessage")}
-                  />
-                </Paper>
-              </Hidden>
-            )}
-          </Grid>
-        </Grid>
+    <div className={classes.root}>
+      <div className={`${classes.lista} ${ticketId ? classes.listaComConversa : ""}`}>
+        <TicketsManager />
+      </div>
+      <div className={`${classes.conversa} ${ticketId ? "" : classes.conversaVazia}`}>
+        {ticketId ? (
+          <Ticket />
+        ) : (
+          <div className={classes.vazio}>
+            <ChatBubbleOutlineIcon />
+            <span>{i18n.t("chat.noTicketMessage")}</span>
+          </div>
+        )}
       </div>
     </div>
   );

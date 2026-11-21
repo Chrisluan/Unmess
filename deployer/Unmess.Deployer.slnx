@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Unmess.Deployer/Unmess.Deployer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Unmess.Deployer.Tests/Unmess.Deployer.Tests.csproj" />
+  </Folder>
+</Solution>

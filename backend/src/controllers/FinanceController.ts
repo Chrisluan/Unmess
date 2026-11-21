@@ -8,6 +8,11 @@ import ListarPendentesDeCobrancaService from "../services/FinanceServices/Listar
 import RegistrarRecebimentoService from "../services/FinanceServices/RegistrarRecebimentoService";
 import EstornarLancamentoService from "../services/FinanceServices/EstornarLancamentoService";
 import CancelarCobrancaService from "../services/FinanceServices/CancelarCobrancaService";
+import MetricasService from "../services/FinanceServices/MetricasService";
+import {
+  escopoDaRequisicao,
+  garantirNoEscopo
+} from "../helpers/permissions/escopoDaRequisicao";
 import FluxoDeCaixaService from "../services/FinanceServices/FluxoDeCaixaService";
 import * as Cadastros from "../services/FinanceServices/CadastrosFinanceiros";
 import * as Pagar from "../services/FinanceServices/ContasAPagar";
@@ -96,6 +101,11 @@ export const receber = async (
   const { receivableId } = req.params;
   const { accountId, amount, occurredAt, method, description } = req.body;
 
+  // Dar baixa numa conta fora do alcance move dinheiro num caixa que a pessoa
+  // nem deveria enxergar — e o lançamento some da tela dela logo em seguida,
+  // o que torna o erro difícil de rastrear depois.
+  await garantirNoEscopo(req, "account", Number(accountId), "Esta conta");
+
   const entry = await RegistrarRecebimentoService({
     receivableId,
     companyId: getCompanyId(req),
@@ -182,6 +192,8 @@ export const pagarConta = async (
   const { payableId } = req.params;
   const { accountId, amount, occurredAt, method, description } = req.body;
 
+  await garantirNoEscopo(req, "account", Number(accountId), "Esta conta");
+
   const entry = await Pagar.pagar({
     payableId,
     companyId: getCompanyId(req),
@@ -239,12 +251,37 @@ export const fluxoDeCaixa = async (
   const ultimo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
 
   const fluxo = await FluxoDeCaixaService({
+    escopoDeContas: await escopoDaRequisicao(req, "account"),
     companyId: getCompanyId(req),
     de: de || primeiro.toISOString().slice(0, 10),
     ate: ate || ultimo.toISOString().slice(0, 10)
   });
 
   return res.json(fluxo);
+};
+
+// ── Métricas ────────────────────────────────────────────────────────────────
+
+export const metricas = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const { de, ate } = req.query as Record<string, string>;
+
+  // Sem período informado, o mês corrente — o mesmo padrão do fluxo de caixa,
+  // para as duas telas responderem sobre a mesma janela quando ninguém escolhe.
+  const hoje = new Date();
+  const primeiro = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+  const ultimo = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+
+  const dados = await MetricasService({
+    escopoDeContas: await escopoDaRequisicao(req, "account"),
+    companyId: getCompanyId(req),
+    de: de || primeiro.toISOString().slice(0, 10),
+    ate: ate || ultimo.toISOString().slice(0, 10)
+  });
+
+  return res.json(dados);
 };
 
 // ── Cadastros de apoio ──────────────────────────────────────────────────────
@@ -259,7 +296,7 @@ export const listarCadastros = async (
   // fariam os seletores aparecerem vazios um de cada vez.
   const [paymentTerms, accounts, categories, suppliers] = await Promise.all([
     Cadastros.listarCondicoes(companyId),
-    Cadastros.listarContas(companyId),
+    Cadastros.listarContas(companyId, await escopoDaRequisicao(req, "account")),
     Cadastros.listarCategorias(companyId),
     Pagar.listarFornecedores(companyId)
   ]);

@@ -1,6 +1,7 @@
 import AppError from "../../errors/AppError";
 import { Permission } from "./catalog";
 import { AcessoResolvido } from "./resolve";
+import { EscoposResolvidos, alcanca } from "./escopos";
 
 /**
  * As regras que impedem alguém de aumentar o próprio poder.
@@ -40,6 +41,49 @@ export const garantirQuePodeConceder = (
       403
     );
   }
+};
+
+/**
+ * Regra 1b — ninguém dá alcance que não tem.
+ *
+ * A mesma regra de cima, na outra dimensão. Sem ela, "ninguém dá o que não
+ * tem" protegeria só metade da resposta: quem administra o CRM restrito a
+ * dois quadros poderia criar um cargo irrestrito, atribuí-lo a si mesmo pela
+ * mão de um colega, e passar a enxergar os quadros que lhe foram negados.
+ *
+ * Irrestrito só se concede sendo irrestrito. É a leitura estrita, e é a certa:
+ * "todos os quadros" inclui os que a pessoa não alcança hoje e os que serão
+ * criados amanhã, e conceder isso é conceder mais do que se tem.
+ */
+export const garantirQuePodeConcederEscopos = (
+  ator: AcessoResolvido,
+  escoposConcedidos: EscoposResolvidos
+): void => {
+  if (ator.isSuper) return;
+
+  Object.entries(escoposConcedidos).forEach(([dimensao, concedido]) => {
+    const doAtor = ator.scopes[dimensao];
+
+    if (doAtor?.irrestrito && doAtor.negados.length === 0) return;
+
+    if (concedido.irrestrito) {
+      throw new AppError(
+        "Você não pode conceder acesso irrestrito a algo que o seu próprio " +
+          "acesso restringe.",
+        403
+      );
+    }
+
+    const foraDoSeuAlcance = concedido.ids.filter(id => !alcanca(doAtor, id));
+
+    if (foraDoSeuAlcance.length > 0) {
+      throw new AppError(
+        "Você não pode conceder acesso a itens que não alcança " +
+          `(${dimensao}: ${foraDoSeuAlcance.join(", ")}).`,
+        403
+      );
+    }
+  });
 };
 
 /**

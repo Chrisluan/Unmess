@@ -35,6 +35,10 @@ import FinancialAccount from "../models/FinancialAccount";
 import FinancialCategory from "../models/FinancialCategory";
 import Receivable from "../models/Receivable";
 import FinancialEntry from "../models/FinancialEntry";
+import CashSession from "../models/CashSession";
+import CashMovement from "../models/CashMovement";
+import CashSale from "../models/CashSale";
+import CashSaleItem from "../models/CashSaleItem";
 import Supplier from "../models/Supplier";
 import Payable from "../models/Payable";
 import CompanyInvoice from "../models/CompanyInvoice";
@@ -84,7 +88,11 @@ const models = [
   Supplier,
   Payable,
   CompanyInvoice,
-  FinancialEntry
+  FinancialEntry,
+  CashSession,
+  CashMovement,
+  CashSale,
+  CashSaleItem
 ];
 
 sequelize.addModels(models);

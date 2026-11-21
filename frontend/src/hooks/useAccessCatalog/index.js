@@ -16,6 +16,7 @@ const useAccessCatalog = () => {
   const [modulos, setModulos] = useState({});
   const [niveis, setNiveis] = useState([]);
   const [modelos, setModelos] = useState([]);
+  const [escopos, setEscopos] = useState({});
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
 
@@ -29,6 +30,7 @@ const useAccessCatalog = () => {
         setModulos(data.modules || {});
         setNiveis(data.levels || []);
         setModelos(data.templates || []);
+        setEscopos(data.scopes || {});
       } catch (err) {
         if (ativo) setErro(err);
       } finally {
@@ -83,9 +85,30 @@ const useAccessCatalog = () => {
     [modulos]
   );
 
+  /**
+   * As dimensões de escopo, na ordem dos módulos a que pertencem.
+   *
+   * Vêm do mesmo endpoint que as permissões porque são a outra metade da
+   * mesma resposta: "pode ver o CRM" e "em quais quadros" se decidem juntas,
+   * na mesma tela.
+   */
+  const listaDeEscopos = useMemo(
+    () =>
+      Object.entries(escopos)
+        .map(([chave, escopo]) => ({
+          chave,
+          ...escopo,
+          ordem: modulos[escopo.modulo]?.ordem ?? 99,
+        }))
+        .sort((a, b) => a.ordem - b.ordem),
+    [escopos, modulos]
+  );
+
   return {
     modulos,
     listaDeModulos,
+    escopos,
+    listaDeEscopos,
     niveis,
     modelos,
     indice,

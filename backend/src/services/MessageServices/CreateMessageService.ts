@@ -30,17 +30,35 @@ interface Request {
 const CreateMessageService = async ({
   messageData
 }: Request): Promise<Message> => {
-  await Message.upsert(messageData);
+  // O eco da própria mensagem costuma chegar depois da confirmação de
+  // entrega ou leitura. Gravando o ack que veio no eco, a mensagem já lida
+  // voltava para "enviada" na tela. Os estados só avançam.
+  const existente = await Message.findByPk(messageData.id, {
+    attributes: ["id", "ack"]
+  });
+
+  const dados =
+    existente && (messageData.ack ?? 0) < (existente.ack ?? 0)
+      ? { ...messageData, ack: existente.ack }
+      : messageData;
+
+  await Message.upsert(dados);
 
   const message = await Message.findByPk(messageData.id, {
     include: [
       "contact",
       {
+        // Este ticket vai inteiro para a lista de conversas pelo socket, e lá
+        // substitui a linha que já estava na tela. Faltando "user" e "tags",
+        // toda mensagem nova apagava da linha o responsável e as etiquetas
+        // até a próxima recarga.
         model: Ticket,
         as: "ticket",
         include: [
           "contact",
           "queue",
+          "user",
+          "tags",
           {
             model: Whatsapp,
             as: "whatsapp",

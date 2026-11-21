@@ -52,9 +52,8 @@ const useStyles = makeStyles(theme => ({
 	 * margem, os quatro se leem numa varrida só.
 	 */
 	metricCard: {
-		padding: theme.spacing(2),
-		textAlign: "left",
-		border: `1px solid ${theme.palette.divider}`,
+		padding: theme.spacing(2.25, 2.5),
+		borderRadius: 16,
 		height: "100%",
 	},
 	chartWrapper: {
@@ -71,15 +70,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-/**
- * Paleta dos gráficos: degradê do azul do sistema, fechando no neutro.
- *
- * A anterior eram seis matizes sem relação entre si -- azul, verde, rosa,
- * laranja, roxo --, e cada fatia parecia significar uma categoria diferente de
- * coisa. Variando um matiz só, a diferença entre as fatias lê como o que ela
- * é: quantidade.
- */
-const COLORS = ["#0b5cff", "#3d7bff", "#5b93ff", "#8fb4ff", "#c2d5ff", "#9aa3af"];
+const COLORS = ["#5B45D6", "#12804A", "#C2610C", "#1F8A80", "#B03A6F", "#646B76"];
 
 const formatSeconds = seconds => {
 	if (seconds === null || seconds === undefined) return "—";
@@ -150,7 +141,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgFirstResponse")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgFirstResponseSeconds)}
 					</Typography>
 				</Paper>
@@ -160,7 +151,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgHandling")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgHandlingSeconds)}
 					</Typography>
 				</Paper>
@@ -170,7 +161,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.totalPeriod")}
 					</Typography>
-					<Typography variant="h5">{metrics.totals.totalPeriod}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.totals.totalPeriod}</Typography>
 				</Paper>
 			</Grid>
 			<Grid item xs={12} sm={6} md={3}>
@@ -178,7 +169,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.closed")}
 					</Typography>
-					<Typography variant="h5">{metrics.totals.closed}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.totals.closed}</Typography>
 				</Paper>
 			</Grid>
 
@@ -188,7 +179,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.resolutionRate")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{metrics.resolutionRate == null
 							? "—"
 							: `${metrics.resolutionRate.toFixed(1)}%`}
@@ -200,7 +191,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.avgResolution")}
 					</Typography>
-					<Typography variant="h5">
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>
 						{formatSeconds(metrics.avgResolutionSeconds)}
 					</Typography>
 				</Paper>
@@ -225,7 +216,7 @@ const DashboardMetrics = () => {
 					<Typography variant="body2" color="textSecondary">
 						{i18n.t("dashboard.metrics.newContacts")}
 					</Typography>
-					<Typography variant="h5">{metrics.newContacts}</Typography>
+					<Typography sx={{ fontWeight: 700, fontSize: "1.625rem", letterSpacing: "-0.02em" }}>{metrics.newContacts}</Typography>
 				</Paper>
 			</Grid>
 
@@ -240,7 +231,7 @@ const DashboardMetrics = () => {
 							<XAxis dataKey="label" interval={1} tick={{ fontSize: 11 }} />
 							<YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
 							<Tooltip />
-							<Bar dataKey="total" fill={theme.palette.primary.main} radius={0} />
+							<Bar dataKey="total" fill="#5B45D6" radius={[6, 6, 0, 0]} />
 						</BarChart>
 					</ResponsiveContainer>
 				</Paper>
@@ -285,7 +276,7 @@ const DashboardMetrics = () => {
 								<Line
 									type="monotone"
 									dataKey="total"
-									stroke="#0b5cff"
+									stroke="#5B45D6"
 									strokeWidth={2}
 									dot={{ r: 3 }}
 								/>

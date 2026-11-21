@@ -1,62 +1,103 @@
-import React from "react";
-import { toast } from "react-toastify";
+import React, { useEffect, useState } from "react";
 
-import { Avatar, CardHeader, Chip, Tooltip } from "@mui/material";
-import makeStyles from "@mui/styles/makeStyles";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
-import ConfirmationNumberIcon from "@mui/icons-material/ConfirmationNumber";
+import { Avatar, ButtonBase, Tooltip } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 
-import { i18n } from "../../translate/i18n";
-import StatusChip from "../StatusChip";
+import api from "../../services/api";
 
-const useStyles = makeStyles((theme) => ({
-	subheader: {
-		display: "flex",
-		alignItems: "center",
-		gap: 6,
-		flexWrap: "wrap",
-	},
-
-	/**
-	 * Tudo que é etiqueta no cabeçalho usa a mesma forma.
-	 *
-	 * A conexão vinha pintada de verde WhatsApp cheio: era o elemento mais
-	 * forte da tela inteira do atendimento, disputando com o nome do cliente
-	 * e com o botão de encerrar -- para informar o dado que menos muda ao
-	 * longo de uma conversa. Contorno neutro com o ícone verde diz a mesma
-	 * coisa sem gritar.
-	 */
-	etiqueta: {
-		height: 20,
-		fontSize: "0.72rem",
-		"& .MuiChip-icon": {
-			marginLeft: 4,
+const useStyles = makeStyles(theme => {
+	const c = theme.palette.unmess;
+	return {
+		root: {
+			flex: 1,
+			minWidth: 0,
+			display: "flex",
+			alignItems: "center",
+			gap: 12,
+			justifyContent: "flex-start",
+			textAlign: "left",
+			borderRadius: 12,
+			padding: "4px 8px 4px 4px",
+			"&:hover": { backgroundColor: c.hover },
 		},
-	},
+		avatar: { width: 44, height: 44, flex: "none" },
+		textos: { minWidth: 0, display: "flex", flexDirection: "column" },
+		nome: {
+			fontWeight: 600,
+			fontSize: "1rem",
+			color: c.texto,
+			whiteSpace: "nowrap",
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+		},
+		sub: {
+			fontSize: "0.8125rem",
+			color: c.textoApagado,
+			whiteSpace: "nowrap",
+			overflow: "hidden",
+			textOverflow: "ellipsis",
+		},
+	};
+});
 
-	iconeWhats: {
-		fontSize: 14,
-		color: "#25D366",
-	},
+const useStylesNegocio = makeStyles(theme => {
+	const c = theme.palette.unmess;
+	return {
+		chip: {
+			height: 32,
+			padding: "0 12px",
+			borderRadius: 999,
+			backgroundColor: c.primariaSuave,
+			color: c.primariaSuaveTexto,
+			fontWeight: 600,
+			fontSize: "0.8125rem",
+			whiteSpace: "nowrap",
+			flex: "none",
+			[theme.breakpoints.down("lg")]: { display: "none" },
+		},
+	};
+});
 
-	protocolChip: {
-		cursor: "copy",
-	},
+const moeda = valor =>
+	Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-	// A faixa da fila repete a cor definida no cadastro dela, a mesma que
-	// marca a lateral da linha na lista: dois lugares, uma convenção.
-	corFila: {
-		display: "inline-block",
-		width: 8,
-		height: 8,
-		marginRight: 2,
-		flexShrink: 0,
-	},
+const totalDoPedido = deal =>
+	(deal.items || []).reduce(
+		(s, i) => s + Math.max(0, Number(i.quantity || 0) * Number(i.unitPrice || 0) - Number(i.discount || 0)),
+		0
+	);
 
-	responsavel: {
-		color: theme.palette.text.secondary,
-	},
-}));
+export const ChipNegocio = ({ ticketId, onClick }) => {
+	const classes = useStylesNegocio();
+	const [negocio, setNegocio] = useState(null);
+
+	useEffect(() => {
+		let ativo = true;
+		setNegocio(null);
+		if (!ticketId) return undefined;
+		api
+			.get(`/tickets/${ticketId}/deals`)
+			.then(({ data }) => {
+				if (!ativo) return;
+				const deal = (data.deals || []).find(d => !d.archivedAt);
+				setNegocio(deal || null);
+			})
+			.catch(() => ativo && setNegocio(null));
+		return () => {
+			ativo = false;
+		};
+	}, [ticketId]);
+
+	if (!negocio) return null;
+
+	return (
+		<Tooltip title="Pedido ligado a esta conversa">
+			<ButtonBase className={classes.chip} onClick={onClick}>
+				{negocio.stage?.name || "Pedido"} · {moeda(totalDoPedido(negocio))}
+			</ButtonBase>
+		</Tooltip>
+	);
+};
 
 /**
  * Identificação da conversa aberta.
@@ -74,86 +115,23 @@ const useStyles = makeStyles((theme) => ({
 const TicketInfo = ({ contact, ticket, onClick }) => {
 	const classes = useStyles();
 
-	const connectionName = ticket?.whatsapp?.name;
-	const queue = ticket?.queue;
-
-	const handleCopyProtocol = async (e) => {
-		// Não pode abrir o drawer do contato junto.
-		e.stopPropagation();
-		try {
-			await navigator.clipboard.writeText(ticket.protocol);
-			toast.success(i18n.t("ticketInfo.protocolCopied"));
-		} catch {
-			// Sem permissão de clipboard (http, por exemplo): o número está
-			// visível na tela, o atendente copia manualmente.
-		}
-	};
-
-	const subheader = (
-		<span className={classes.subheader}>
-			{ticket.status && <StatusChip status={ticket.status} />}
-
-			{queue?.name && (
-				<Tooltip title={i18n.t("ticketInfo.queueTooltip")} arrow>
-					<Chip
-						size="small"
-						variant="outlined"
-						className={classes.etiqueta}
-						icon={
-							<span
-								className={classes.corFila}
-								style={{ backgroundColor: queue.color || "#7C7C7C" }}
-							/>
-						}
-						label={queue.name}
-					/>
-				</Tooltip>
-			)}
-
-			{connectionName && (
-				<Tooltip title={i18n.t("ticketsList.connectionTitle")} arrow>
-					<Chip
-						size="small"
-						variant="outlined"
-						icon={<WhatsAppIcon className={classes.iconeWhats} />}
-						label={connectionName}
-						className={classes.etiqueta}
-					/>
-				</Tooltip>
-			)}
-
-			{ticket.protocol && (
-				<Tooltip title={i18n.t("ticketInfo.protocolTooltip")} arrow>
-					<Chip
-						size="small"
-						variant="outlined"
-						icon={<ConfirmationNumberIcon style={{ fontSize: 14 }} />}
-						label={ticket.protocol}
-						className={`${classes.etiqueta} ${classes.protocolChip}`}
-						onClick={handleCopyProtocol}
-					/>
-				</Tooltip>
-			)}
-
-			<span className={classes.responsavel}>
-				{ticket.user
-					? `${i18n.t("messagesList.header.assignedTo")} ${ticket.user.name}`
-					: i18n.t("ticketInfo.unassigned")}
-			</span>
-		</span>
-	);
+	const partes = [
+		ticket.queue?.name,
+		ticket.user ? `com ${ticket.user.name}` : null,
+		ticket.whatsapp?.name ? `pelo ${ticket.whatsapp.name}` : null,
+	].filter(Boolean);
 
 	return (
-		<Tooltip title={i18n.t("ticketInfo.openContact")} arrow enterDelay={600}>
-			<CardHeader
-				onClick={onClick}
-				style={{ cursor: "pointer" }}
-				titleTypographyProps={{ noWrap: true, variant: "subtitle1" }}
-				subheaderTypographyProps={{ noWrap: true, component: "div" }}
-				avatar={<Avatar src={contact.profilePicUrl} alt="" />}
-				title={contact.name}
-				subheader={subheader}
-			/>
+		<Tooltip title="Ver detalhes do cliente">
+			<ButtonBase className={classes.root} onClick={onClick}>
+				<Avatar src={contact.profilePicUrl} alt={contact.name} className={classes.avatar}>
+					{contact.name?.[0]?.toUpperCase()}
+				</Avatar>
+				<span className={classes.textos}>
+					<span className={classes.nome}>{contact.name}</span>
+					<span className={classes.sub}>{partes.join(" · ") || contact.number}</span>
+				</span>
+			</ButtonBase>
 		</Tooltip>
 	);
 };

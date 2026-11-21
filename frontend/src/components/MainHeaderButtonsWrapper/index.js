@@ -9,6 +9,14 @@ const useStyles = makeStyles(theme => ({
 		alignItems: "center",
 		flexWrap: "wrap",
 		gap: theme.spacing(1),
+		"& .MuiTextField-root": {
+			minWidth: 240,
+		},
+		[theme.breakpoints.down("sm")]: {
+			marginLeft: 0,
+			width: "100%",
+			"& .MuiTextField-root": { flex: 1, minWidth: 0 },
+		},
 	},
 }));
 

@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Unmess.Api/Unmess.Api.csproj" />
+    <Project Path="src/Unmess.Application/Unmess.Application.csproj" />
+    <Project Path="src/Unmess.Domain/Unmess.Domain.csproj" />
+    <Project Path="src/Unmess.Infrastructure/Unmess.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Unmess.Api.Tests/Unmess.Api.Tests.csproj" />
+  </Folder>
+</Solution>

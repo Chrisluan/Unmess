@@ -1,0 +1,52 @@
+name: unmess-dev
+
+services:
+  mysql:
+    image: mysql:8.4
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-unmess}
+      MYSQL_USER: ${DB_USER:-unmess}
+      MYSQL_PASSWORD: ${DB_PASS:?DB_PASS is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:?DB_ROOT_PASS is required}
+      TZ: ${TZ:-America/Fortaleza}
+    ports:
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  redis-data:

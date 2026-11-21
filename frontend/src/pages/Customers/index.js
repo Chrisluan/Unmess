@@ -29,6 +29,7 @@ import ConfirmationModal from "../../components/ConfirmationModal/";
 
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
+import AbasContatos from "../../components/AbasContatos";
 import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import MainContainer from "../../components/MainContainer";
@@ -232,6 +233,7 @@ const Customers = () => {
       >
         {i18n.t("customers.confirmationModal.deleteMessage")}
       </ConfirmationModal>
+      <AbasContatos />
       <MainHeader>
         <Title>{i18n.t("customers.title")}</Title>
         <MainHeaderButtonsWrapper>

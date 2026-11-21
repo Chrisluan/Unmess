@@ -10,14 +10,24 @@
     e a instalação de usuário (~\.dotnet). A terceira existe porque o SDK pode
     ser instalado sem Administrador, e nesta máquina foi.
 
+    Se o serviço já estiver instalado e rodando, ele segura os próprios DLLs e
+    a publicação não tem como sobrescrevê-los. O script para antes e explica;
+    com -PararServico (que precisa de Administrador) ele para, publica e sobe
+    de novo sozinho.
+
 .EXEMPLO
     .\scripts\compilar.ps1
+    .\scripts\compilar.ps1 -PararServico
     .\scripts\compilar.ps1 -Destino D:\upu
 #>
 [CmdletBinding()]
 param(
-    [string]$Destino
+    [string]$Destino,
+    [string]$NomeDoServico = "unmess-upu",
+    [switch]$PararServico
 )
+
+$precisaSubirDeNovo = $false
 
 $ErrorActionPreference = "Stop"
 
@@ -40,6 +50,44 @@ function Buscar-Dotnet {
     }
 
     return $null
+}
+
+# ------------------------------------------------------- o serviço em pé
+
+# Um serviço rodando segura os próprios DLLs, e a publicação falha no meio com
+# dez linhas de MSB3026 por arquivo. A mensagem do MSBuild é verdadeira e
+# ilegível; esta aqui diz o que fazer.
+
+$emPe = Get-Service -Name $NomeDoServico -ErrorAction SilentlyContinue
+
+if ($emPe -and $emPe.Status -ne "Stopped") {
+    if ($PararServico) {
+        try {
+            Write-Host "  parando o serviço $NomeDoServico…"
+            Stop-Service -Name $NomeDoServico -Force -ErrorAction Stop
+            $emPe.WaitForStatus("Stopped", (New-TimeSpan -Seconds 30))
+            $precisaSubirDeNovo = $true
+        } catch {
+            Write-Host ""
+            Write-Host "  Não consegui parar o serviço: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "  Parar serviço precisa de Administrador."
+            Write-Host ""
+            exit 1
+        }
+    } else {
+        Write-Host ""
+        Write-Host "  O serviço $NomeDoServico está rodando e segura os arquivos." -ForegroundColor Yellow
+        Write-Host "  Num PowerShell como Administrador:"
+        Write-Host ""
+        Write-Host "      Stop-Service $NomeDoServico" -ForegroundColor Cyan
+        Write-Host "      .\scripts\compilar.ps1" -ForegroundColor Cyan
+        Write-Host "      Start-Service $NomeDoServico" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "  Ou, de uma vez só (também como Administrador):"
+        Write-Host "      .\scripts\compilar.ps1 -PararServico" -ForegroundColor Cyan
+        Write-Host ""
+        exit 1
+    }
 }
 
 $dotnet = Buscar-Dotnet
@@ -95,6 +143,12 @@ if ($LASTEXITCODE -ne 0) {
 # apagar a configuração, as releases nem as inscrições de push.
 $dados = Join-Path $raizDoUpu "dados"
 if (-not (Test-Path $dados)) { New-Item -ItemType Directory -Path $dados | Out-Null }
+
+if ($precisaSubirDeNovo) {
+    Write-Host "  subindo o serviço $NomeDoServico de novo…"
+    Start-Service -Name $NomeDoServico
+    (Get-Service -Name $NomeDoServico).WaitForStatus("Running", (New-TimeSpan -Seconds 30))
+}
 
 Write-Host ""
 Write-Host "  Pronto." -ForegroundColor Green

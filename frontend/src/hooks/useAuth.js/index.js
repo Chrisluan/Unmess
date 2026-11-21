@@ -25,6 +25,16 @@ const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
 
+  /**
+   * Os módulos que esta pessoa fixou no topo do menu.
+   *
+   * Vive fora do objeto `user` de propósito: `user` é remontado do zero em
+   * meia dúzia de caminhos (login, refresh, entrar numa empresa, sair dela),
+   * e cada um deles teria de lembrar de recarregar as preferências junto —
+   * até o dia em que um esquecesse e os favoritos sumissem só naquele fluxo.
+   */
+  const [favoritos, setFavoritos] = useState([]);
+
   api.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem("token");
@@ -155,6 +165,62 @@ const useAuth = () => {
     return () => socket.disconnect();
   }, [user]);
 
+  /**
+   * Preferências acompanham a pessoa, não a sessão: são buscadas quando se
+   * sabe quem está logado, e limpas quando não há mais ninguém.
+   *
+   * Falha silenciosa, sem toast: não conseguir ler os favoritos é o menu sem
+   * a seção Favoritos, e não um erro que valha interromper quem acabou de
+   * entrar no sistema.
+   */
+  useEffect(() => {
+    if (!user?.id) {
+      setFavoritos([]);
+      return undefined;
+    }
+
+    let ativo = true;
+    (async () => {
+      try {
+        const { data } = await api.get("/preferences");
+        if (ativo) {
+          setFavoritos(Array.isArray(data?.favoritos) ? data.favoritos : []);
+        }
+      } catch {
+        if (ativo) setFavoritos([]);
+      }
+    })();
+
+    return () => {
+      ativo = false;
+    };
+  }, [user?.id]);
+
+  /**
+   * Favoritar e desfavoritar.
+   *
+   * A barra reordena antes da resposta do servidor: é a estrela de um menu,
+   * o custo de estar errado por 200ms é nenhum, e esperar o ida-e-volta faria
+   * o clique parecer que não pegou. Se a gravação falhar, a lista volta ao
+   * que era e o erro aparece — o contrário, deixar a tela mostrando um estado
+   * que o banco não tem, é o que não pode acontecer.
+   */
+  const alternarFavorito = async (chave) => {
+    const anterior = favoritos;
+    const proximo = anterior.includes(chave)
+      ? anterior.filter((f) => f !== chave)
+      : [...anterior, chave];
+
+    setFavoritos(proximo);
+
+    try {
+      await api.put("/preferences", { favoritos: proximo });
+    } catch (err) {
+      setFavoritos(anterior);
+      toastError(err);
+    }
+  };
+
   const handleLogin = async (userData) => {
     setLoading(true);
     try {
@@ -244,6 +310,8 @@ const useAuth = () => {
     isAuth,
     user,
     loading,
+    favoritos,
+    alternarFavorito,
     handleLogin,
     handleLogout,
     handleSelectCompany,

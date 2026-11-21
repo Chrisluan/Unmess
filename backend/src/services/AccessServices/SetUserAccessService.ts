@@ -12,9 +12,16 @@ import { sanitizar } from "../../helpers/permissions/catalog";
 import {
   garantirQueNaoEhSiMesmo,
   garantirQuePodeConceder,
+  garantirQuePodeConcederEscopos,
   garantirQuePodeMexerEm,
   garantirQueSobraAdministrador
 } from "../../helpers/permissions/guards";
+import {
+  ExcecaoDeEscopo,
+  gravarExcecoesDeEscopo,
+  lerExcecoesDeEscopo,
+  resolverEscopos
+} from "../../helpers/permissions/escopos";
 import { SLUG_ADMINISTRADOR } from "../../helpers/permissions/roleTemplates";
 import ShowRoleService from "./ShowRoleService";
 
@@ -23,6 +30,8 @@ interface Request {
   /** Cargo novo. `null` deixa a pessoa sem cargo — e, portanto, sem acesso. */
   roleId?: number | null;
   exceptions?: { allow?: unknown; deny?: unknown };
+  /** `{"board":{"allow":[3],"deny":[1]}}` — exceções de alcance. */
+  scopeExceptions?: unknown;
   companyId: number;
   atorId: number;
   ator: AcessoResolvido;
@@ -43,6 +52,7 @@ const SetUserAccessService = async ({
   userId,
   roleId,
   exceptions,
+  scopeExceptions,
   companyId,
   atorId,
   ator
@@ -94,11 +104,29 @@ const SetUserAccessService = async ({
    */
   garantirQuePodeConceder(ator, permissoesResultantes);
 
+  // ── Alcance ───────────────────────────────────────────────────────────────
+  const excecoesDeEscopo: Record<string, ExcecaoDeEscopo> =
+    scopeExceptions === undefined
+      ? acessoAtualDoAlvo.scopeExceptions
+      : lerExcecoesDeEscopo(JSON.stringify(scopeExceptions ?? {}));
+
+  // Pelo mesmo motivo de cima: o que se confere é o alcance que a pessoa
+  // passará a ter, cargo e exceções já somados.
+  const escoposResultantes = resolverEscopos({
+    isSuper: false,
+    escoposDoCargo: cargoNovo ? cargoNovo.scopesMap : {},
+    excecoes: excecoesDeEscopo
+  });
+
+  garantirQuePodeConcederEscopos(ator, escoposResultantes);
+
   // ── A empresa não pode ficar sem administrador ────────────────────────────
   const eraAdministrador = alvo.role?.slug === SLUG_ADMINISTRADOR;
   const continuaAdministrador = cargoNovo?.slug === SLUG_ADMINISTRADOR;
 
-  if (eraAdministrador && !continuaAdministrador) {
+  // O super-admin da plataforma pode deixar a empresa sem administrador:
+  // ele é quem a conserta.
+  if (eraAdministrador && !continuaAdministrador && !ator.isSuper) {
     const administradores = await User.count({
       where: { companyId, roleId: alvo.roleId }
     });
@@ -107,7 +135,8 @@ const SetUserAccessService = async ({
 
   await alvo.update({
     roleId: cargoNovo ? cargoNovo.id : null,
-    accessExceptions: gravarExcecoes(excecoes)
+    accessExceptions: gravarExcecoes(excecoes),
+    scopeExceptions: gravarExcecoesDeEscopo(excecoesDeEscopo)
   });
 
   return resolverAcessoDoUsuario(alvo.id);

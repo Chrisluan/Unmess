@@ -15,6 +15,8 @@ import {
 import makeStyles from "@mui/styles/makeStyles";
 
 import RoleEditor from "../RoleEditor";
+import EscopoEditor from "../EscopoEditor";
+import useOpcoesDeEscopo from "../../../hooks/useOpcoesDeEscopo";
 import api from "../../../services/api";
 import toastError from "../../../errors/toastError";
 import usePermissions from "../../../hooks/usePermissions";
@@ -51,7 +53,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const vazio = { name: "", description: "", permissions: [] };
+const vazio = { name: "", description: "", permissions: [], scopes: {} };
 
 /**
  * Criar ou editar um cargo.
@@ -67,6 +69,8 @@ const RoleModal = ({ open, onClose, roleId, catalogo, onSaved }) => {
   const { permissions: minhasPermissoes, isSuper } = usePermissions();
 
   const [form, setForm] = useState(vazio);
+  const { opcoes, disponiveis, carregando: carregandoOpcoes } =
+    useOpcoesDeEscopo(catalogo.listaDeEscopos, { ativo: open });
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [modeloAplicado, setModeloAplicado] = useState(null);
@@ -103,6 +107,7 @@ const RoleModal = ({ open, onClose, roleId, catalogo, onSaved }) => {
           name: data.name ?? "",
           description: data.description ?? "",
           permissions: data.permissions ?? [],
+          scopes: data.scopes ?? {},
         });
       } catch (err) {
         toastError(err);
@@ -138,6 +143,7 @@ const RoleModal = ({ open, onClose, roleId, catalogo, onSaved }) => {
         name: form.name.trim(),
         description: form.description.trim(),
         permissions: form.permissions,
+        scopes: form.scopes,
       };
 
       if (editando) {
@@ -228,6 +234,34 @@ const RoleModal = ({ open, onClose, roleId, catalogo, onSaved }) => {
                 setForm((atual) => ({ ...atual, permissions }))
               }
             />
+
+            {/*
+              O alcance vem depois das permissões, e na mesma tela, porque as
+              duas se decidem juntas: "pode ver o funil" fica pela metade sem
+              "em quais quadros". Separá-las em duas telas produziria o cargo
+              que pode tudo e não alcança nada — que é como esta tela abre
+              quando ninguém marca nada aqui.
+            */}
+            <Box mt={3}>
+              <Typography variant="subtitle1" gutterBottom>
+                Alcance
+              </Typography>
+              <Typography
+                variant="body2"
+                color="textSecondary"
+                gutterBottom
+              >
+                Sobre quais coisas as permissões acima valem.
+              </Typography>
+              <EscopoEditor
+                modo="cargo"
+                dimensoes={disponiveis}
+                opcoes={opcoes}
+                carregando={carregandoOpcoes}
+                valor={form.scopes}
+                onChange={(scopes) => setForm((atual) => ({ ...atual, scopes }))}
+              />
+            </Box>
           </>
         )}
       </DialogContent>

@@ -50,6 +50,9 @@ certs/
 /backend/.env.antes-da-rotacao
 /backend/.senha-nova-temporaria.txt
 
+!whatsapp-gateway/package-lock.json
+.vs/
+
 # UPU (Unmess Production Updater): compilacao, executavel publicado e os dados
 # desta instalacao -- que incluem a chave privada de notificacao e o hash da
 # senha do painel.

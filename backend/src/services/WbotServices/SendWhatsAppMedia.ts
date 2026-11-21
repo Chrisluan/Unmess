@@ -6,6 +6,7 @@ import Ticket from "../../models/Ticket";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 
 import formatBody from "../../helpers/Mustache";
+import { ROTULO_AUDIO } from "../../helpers/RotuloAudio";
 import { logger } from "../../utils/logger";
 
 interface Request {
@@ -59,7 +60,13 @@ const SendWhatsAppMedia = async ({
       mediaOptions
     );
 
-    await ticket.update({ lastMessage: body || media.filename });
+    await ticket.update({
+      // Áudio não entra pelo nome do arquivo: ele é um carimbo de tempo, e a
+      // prévia da conversa mostraria "1756938287793.ogg" até a próxima
+      // mensagem.
+      lastMessage: ehAudio ? ROTULO_AUDIO : body || media.filename,
+      lastMessageFromMe: true
+    });
 
     // Apaga o arquivo efetivamente enviado: quando houve conversão, o
     // original já foi removido e media.path não existe mais.
@@ -77,6 +84,11 @@ const SendWhatsAppMedia = async ({
       tamanho: media?.size,
       err
     });
+
+    // Ver SendWhatsAppMessage: o motivo original vale mais que um erro
+    // genérico de envio.
+    if (err instanceof AppError) throw err;
+
     throw new AppError("ERR_SENDING_WAPP_MSG");
   }
 };

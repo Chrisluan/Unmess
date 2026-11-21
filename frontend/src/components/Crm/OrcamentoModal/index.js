@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 
 import makeStyles from "@mui/styles/makeStyles";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import Dialog from "@mui/material/Dialog";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
@@ -22,6 +24,7 @@ import AbaItens from "./AbaItens";
 import AbaMaterial from "./AbaMaterial";
 import AbaTarefas from "./AbaTarefas";
 import AbaWhatsApp from "./AbaWhatsApp";
+import ConfirmationModal from "../../ConfirmationModal";
 import { identidadeDoNegocio } from "../identidade";
 
 const useStyles = makeStyles((theme) => ({
@@ -118,6 +121,13 @@ const useStyles = makeStyles((theme) => ({
   },
 
   corpo: { padding: "0 16px 16px", minHeight: 320 },
+
+  // No celular a janela é a tela: margem lateral aqui só rouba largura de
+  // campos que já estão apertados.
+  corpoCompacto: { padding: "0 10px 12px", minHeight: 0 },
+
+  faixaCompacta: { margin: 10, padding: "8px 10px", gap: 10 },
+
   carregando: { display: "flex", justifyContent: "center", padding: 48 },
 }));
 
@@ -147,10 +157,40 @@ const moeda = (valor) =>
  */
 const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
   const classes = useStyles();
+  const theme = useTheme();
+  // Tela cheia no celular: em janela flutuante sobrava pouco mais de um terço
+  // da altura para o conteúdo da aba, e a lista de itens vivia rolando.
+  const compacto = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [aba, setAba] = useState(0);
   const [deal, setDeal] = useState(null);
   const [carregando, setCarregando] = useState(true);
+
+  /**
+   * Itens editados e ainda não gravados.
+   *
+   * A aba é desmontada ao trocar de aba -- é o que evita cinco abas buscando
+   * dados ao mesmo tempo --, e com ela ia embora o que estava sendo digitado.
+   * Um orçamento de dez linhas sumia com um toque em "Proposta" para conferir
+   * o prazo. Agora a aba avisa que tem pendência e a saída passa a ser uma
+   * pergunta.
+   */
+  const [itensPendentes, setItensPendentes] = useState(false);
+  const [saidaPendente, setSaidaPendente] = useState(null);
+
+  const marcarPendencia = useCallback((pendente) => {
+    setItensPendentes(pendente);
+  }, []);
+
+  // Toda saída da aba de itens passa por aqui: trocar de aba, fechar no X,
+  // clicar fora da janela.
+  const aoSair = useCallback(
+    (acao) => {
+      if (itensPendentes) setSaidaPendente(() => acao);
+      else acao();
+    },
+    [itensPendentes]
+  );
 
   const carregar = useCallback(async () => {
     if (!dealId) return;
@@ -168,6 +208,8 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
   useEffect(() => {
     if (open) {
       setAba(0);
+      setItensPendentes(false);
+      setSaidaPendente(null);
       carregar();
     }
   }, [open, carregar]);
@@ -189,7 +231,14 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
   ).length;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth scroll="paper">
+    <Dialog
+      open={open}
+      onClose={() => aoSair(onClose)}
+      maxWidth="md"
+      fullWidth
+      scroll="paper"
+      fullScreen={compacto}
+    >
       <div className={classes.topo}>
         <span className={classes.tituloJanela}>{identidade.rotulo}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -203,18 +252,25 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
               <DeleteIcon fontSize="small" />
             </IconButton>
           )}
-          <IconButton size="small" onClick={onClose} aria-label="Fechar">
+          <IconButton
+            size="small"
+            onClick={() => aoSair(onClose)}
+            aria-label="Fechar"
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </div>
       </div>
 
+      {/* As cinco abas não cabem lado a lado no celular. Rolar com o dedo já
+          funcionava; as setas é que só aparecem no toque com este prop. */}
       <Tabs
         value={aba}
-        onChange={(_e, novo) => setAba(novo)}
+        onChange={(_e, novo) => aoSair(() => setAba(novo))}
         className={classes.abas}
         variant="scrollable"
         scrollButtons="auto"
+        allowScrollButtonsMobile
       >
         <Tab className={classes.aba} icon={<DescriptionIcon fontSize="small" />} iconPosition="start" label="Proposta" />
         <Tab className={classes.aba} icon={<ListAltIcon fontSize="small" />} iconPosition="start" label="Itens" />
@@ -240,7 +296,9 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
         </div>
       ) : (
         <>
-          <div className={classes.faixa}>
+          <div
+            className={`${classes.faixa} ${compacto ? classes.faixaCompacta : ""}`}
+          >
             <span
               className={`${classes.situacao} ${classes[situacao.classe]}`}
             >
@@ -278,15 +336,40 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
             </div>
           </div>
 
-          <div className={classes.corpo}>
+          <div
+            className={`${classes.corpo} ${compacto ? classes.corpoCompacto : ""}`}
+          >
             {aba === 0 && <AbaProposta deal={deal} onSalvo={aoAlterar} />}
-            {aba === 1 && <AbaItens deal={deal} onSalvo={aoAlterar} />}
+            {aba === 1 && (
+              <AbaItens
+                deal={deal}
+                onSalvo={aoAlterar}
+                onPendencia={marcarPendencia}
+              />
+            )}
             {aba === 2 && <AbaMaterial deal={deal} onSalvo={aoAlterar} />}
             {aba === 3 && <AbaTarefas deal={deal} onSalvo={aoAlterar} />}
             {aba === 4 && <AbaWhatsApp deal={deal} />}
           </div>
         </>
       )}
+
+      <ConfirmationModal
+        open={Boolean(saidaPendente)}
+        title="Itens não salvos"
+        confirmLabel="Sair sem salvar"
+        danger
+        onClose={() => setSaidaPendente(null)}
+        onConfirm={() => {
+          const acao = saidaPendente;
+          setItensPendentes(false);
+          setSaidaPendente(null);
+          if (acao) acao();
+        }}
+      >
+        As alterações nos itens ainda não foram gravadas. Se sair agora, elas
+        se perdem.
+      </ConfirmationModal>
     </Dialog>
   );
 };

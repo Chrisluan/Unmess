@@ -73,10 +73,25 @@ const moeda = (valor) =>
  * ou metro linear — e qual o mínimo. O orçamento lê isso ao escolher o produto,
  * então errar aqui contamina todo pedido feito daqui para a frente.
  */
-const Products = () => {
+/**
+ * Produtos.
+ *
+ * Renderizada como aba dentro de Cadastro (embedded). O modo página inteira
+ * segue existindo para não quebrar link nem favorito antigo de /products.
+ */
+const Products = ({ embedded = false }) => {
   const classes = useStyles();
   const { can } = usePermissions();
   const podeGerenciar = can("products:manage");
+
+  /**
+   * Custo e margem só para quem pode vê-los.
+   *
+   * O servidor já devolve os dois como `null` sem a permissão — esconder as
+   * colunas aqui evita a fileira de traços que faria parecer que o catálogo
+   * está sem custo cadastrado, quando na verdade é o acesso que não alcança.
+   */
+  const podeVerCusto = can("products:viewCost");
 
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -136,8 +151,12 @@ const Products = () => {
     return Number((((p.price - p.cost) / p.price) * 100).toFixed(1));
   };
 
+  // Dentro da aba o MainContainer sobra: ele mede 100% da altura e esconde o
+  // transbordo, o que num painel de aba corta a tabela pela metade.
+  const Envelope = embedded ? React.Fragment : MainContainer;
+
   return (
-    <MainContainer>
+    <Envelope>
       <ConfirmationModal
         title={`Desativar ${paraDesativar?.name || ""}?`}
         open={Boolean(paraDesativar)}
@@ -158,7 +177,7 @@ const Products = () => {
       />
 
       <MainHeader>
-        <Title>Produtos</Title>
+        {!embedded && <Title>Produtos</Title>}
         <MainHeaderButtonsWrapper>
           <SearchField
             className={classes.busca}
@@ -233,8 +252,8 @@ const Products = () => {
                 <TableCell>Categoria</TableCell>
                 <TableCell>Cobrança</TableCell>
                 <TableCell align="right">Preço</TableCell>
-                <TableCell align="right">Custo</TableCell>
-                <TableCell align="right">Margem</TableCell>
+                {podeVerCusto && <TableCell align="right">Custo</TableCell>}
+                {podeVerCusto && <TableCell align="right">Margem</TableCell>}
                 <TableCell align="right">Mínimo</TableCell>
                 <TableCell align="center">Ações</TableCell>
               </TableRow>
@@ -277,23 +296,29 @@ const Products = () => {
                       {moeda(p.price)}
                     </TableCell>
 
-                    <TableCell align="right" className={classes.numero}>
-                      {p.cost ? moeda(p.cost) : "—"}
-                    </TableCell>
+                    {podeVerCusto && (
+                      <TableCell align="right" className={classes.numero}>
+                        {p.cost ? moeda(p.cost) : "—"}
+                      </TableCell>
+                    )}
 
-                    <TableCell align="right" className={classes.numero}>
-                      {margem === null || !p.cost ? (
-                        "—"
-                      ) : (
-                        <span
-                          className={
-                            margem < 20 ? classes.margemBaixa : classes.margemBoa
-                          }
-                        >
-                          {margem}%
-                        </span>
-                      )}
-                    </TableCell>
+                    {podeVerCusto && (
+                      <TableCell align="right" className={classes.numero}>
+                        {margem === null || !p.cost ? (
+                          "—"
+                        ) : (
+                          <span
+                            className={
+                              margem < 20
+                                ? classes.margemBaixa
+                                : classes.margemBoa
+                            }
+                          >
+                            {margem}%
+                          </span>
+                        )}
+                      </TableCell>
+                    )}
 
                     <TableCell align="right" className={classes.numero}>
                       {p.pricingMode === "unit" || !p.minMeasure
@@ -328,7 +353,7 @@ const Products = () => {
           </Table>
         )}
       </Paper>
-    </MainContainer>
+    </Envelope>
   );
 };
 

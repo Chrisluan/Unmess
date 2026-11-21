@@ -24,6 +24,7 @@ import crmRoutes from "./crmRoutes";
 import stickerRoutes from "./stickerRoutes";
 import productRoutes from "./productRoutes";
 import financeRoutes from "./financeRoutes";
+import preferencesRoutes from "./preferencesRoutes";
 
 const routes = Router();
 
@@ -49,6 +50,7 @@ routes.use(crmRoutes);
 routes.use(stickerRoutes);
 routes.use(productRoutes);
 routes.use(financeRoutes);
+routes.use(preferencesRoutes);
 
 /**
  * Retrato das rotas para a auditoria, tirado aqui e não no boot.

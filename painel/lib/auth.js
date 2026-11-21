@@ -48,8 +48,8 @@ const lerConfig = () => {
  * trocar a senha exige acesso ao console da máquina.
  */
 const definirSenha = senha => {
-  if (typeof senha !== "string" || senha.length < 8) {
-    throw new Error("A senha precisa ter pelo menos 8 caracteres.");
+  if (typeof senha !== "string" || senha.length < 3) {
+    throw new Error("A senha precisa ter pelo menos 3 caracteres.");
   }
 
   const salt = crypto.randomBytes(16).toString("hex");

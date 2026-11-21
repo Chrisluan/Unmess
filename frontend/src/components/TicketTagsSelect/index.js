@@ -16,24 +16,7 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
 	root: {
-		display: "flex",
-		alignItems: "center",
-		flexWrap: "wrap",
-		gap: theme.spacing(0.5),
-		padding: theme.spacing(0.5, 1.5),
-		borderBottom: `1px solid ${theme.palette.divider}`,
-		backgroundColor: theme.palette.background.paper,
-	},
-
-	// O campo aberto ocupa a faixa inteira; fechado, sobra só o que existe.
-	editor: {
-		flex: 1,
-		minWidth: 240,
-	},
-
-	adicionar: {
-		color: theme.palette.text.secondary,
-		fontWeight: 500,
+		padding: 0,
 	},
 }));
 
@@ -109,9 +92,13 @@ const TicketTagsSelect = ({ ticket, disabled }) => {
 		setTimeout(() => campoRef.current?.focus(), 0);
 	};
 
-	// Sem etiquetas cadastradas e sem nenhuma aplicada, a faixa não tem o que
-	// mostrar nem o que oferecer.
-	if (available.length === 0 && selected.length === 0) return null;
+	if (available.length === 0 && selected.length === 0) {
+		return (
+			<span style={{ fontSize: "0.8125rem", opacity: 0.75 }}>
+				Nenhuma etiqueta cadastrada. Crie em Ajustes › Etiquetas.
+			</span>
+		);
+	}
 
 	if (editando && !disabled) {
 		return (

@@ -3,6 +3,7 @@ import multer from "multer";
 import isAuth from "../middleware/isAuth";
 import requiresCompany from "../middleware/requiresCompany";
 import hasPermission from "../middleware/hasPermission";
+import noEscopoDoQuadro from "../middleware/noEscopoDoQuadro";
 import * as DealController from "../controllers/DealController";
 import * as DealActivityController from "../controllers/DealActivityController";
 import * as DealItemController from "../controllers/DealItemController";
@@ -42,12 +43,12 @@ crmRoutes.get("/deals",                isAuth, requiresCompany, hasPermission("c
 crmRoutes.get("/deals/buscar",     isAuth, requiresCompany, hasPermission("crm:view"), DealController.buscar);
 crmRoutes.get("/deals/indicadores", isAuth, requiresCompany, hasPermission("crm:view"), DealController.indicadores);
 crmRoutes.get("/deals/summary",        isAuth, requiresCompany, hasPermission("crm:view"),   DealController.summary);
-crmRoutes.get("/deals/:dealId",        isAuth, requiresCompany, hasPermission("crm:view"),   DealController.show);
+crmRoutes.get("/deals/:dealId",        isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro,   DealController.show);
 crmRoutes.post("/deals",               isAuth, requiresCompany, hasPermission("crm:create"), DealController.store);
-crmRoutes.put("/deals/:dealId/move",   isAuth, requiresCompany, hasPermission("crm:move"),   DealController.move);
-crmRoutes.put("/deals/:dealId/ticket", isAuth, requiresCompany, hasPermission("crm:edit"),   DealController.linkTicket);
-crmRoutes.put("/deals/:dealId",        isAuth, requiresCompany, hasPermission("crm:edit"),   DealController.update);
-crmRoutes.delete("/deals/:dealId",     isAuth, requiresCompany, hasPermission("crm:delete"), DealController.remove);
+crmRoutes.put("/deals/:dealId/move",   isAuth, requiresCompany, hasPermission("crm:move"), noEscopoDoQuadro,   DealController.move);
+crmRoutes.put("/deals/:dealId/ticket", isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro,   DealController.linkTicket);
+crmRoutes.put("/deals/:dealId",        isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro,   DealController.update);
+crmRoutes.delete("/deals/:dealId",     isAuth, requiresCompany, hasPermission("crm:delete"), noEscopoDoQuadro, DealController.remove);
 
 // ── Timeline do negócio ─────────────────────────────────────────────────────
 
@@ -62,24 +63,24 @@ crmRoutes.get("/motivos-de-perda", isAuth, requiresCompany, hasPermission("crm:v
 crmRoutes.get("/tipos-de-tarefa", isAuth, requiresCompany, hasPermission("crm:view"), (_req, res) =>
   res.json({ tipos: TIPOS_DE_TAREFA })
 );
-crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.index);
-crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), DealItemController.sync);
-crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.ordemDeServico);
+crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.index);
+crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealItemController.sync);
+crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.ordemDeServico);
 
 // ── Material do pedido ──────────────────────────────────────────────────────
 // A arte, o arquivo de impressão, a referência que o cliente mandou. Ler exige
 // só ver o CRM; anexar e apagar mexem no pedido, e pedem crm:edit.
-crmRoutes.get("/deals/:dealId/attachments",                    isAuth, requiresCompany, hasPermission("crm:view"), DealAttachmentController.index);
-crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:edit"), upload.array("files"), DealAttachmentController.store);
-crmRoutes.get("/deals/:dealId/midias-da-conversa",             isAuth, requiresCompany, hasPermission("crm:view"), DealAttachmentController.midiasDaConversa);
-crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:edit"), DealAttachmentController.importar);
-crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:edit"), DealAttachmentController.definirCapa);
-crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:edit"), DealAttachmentController.remove);
+crmRoutes.get("/deals/:dealId/attachments",                    isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.index);
+crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, upload.array("files"), DealAttachmentController.store);
+crmRoutes.get("/deals/:dealId/midias-da-conversa",             isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.midiasDaConversa);
+crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.importar);
+crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.definirCapa);
+crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.remove);
 
 // Visao inversa: os negocios de uma conversa, usada pelo painel do chat.
 crmRoutes.get("/tickets/:ticketId/deals", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.byTicket);
 
-crmRoutes.post("/deals/:dealId/activities",       isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.store);
+crmRoutes.post("/deals/:dealId/activities",       isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealActivityController.store);
 crmRoutes.put("/deal-activities/:activityId",     isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.update);
 crmRoutes.delete("/deal-activities/:activityId",  isAuth, requiresCompany, hasPermission("crm:edit"), DealActivityController.remove);
 

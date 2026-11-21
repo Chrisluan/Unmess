@@ -11,9 +11,17 @@ import Board from "../../models/Board";
 import Order from "../../models/Order";
 import DealAttachment from "../../models/DealAttachment";
 
+import {
+  EscopoResolvido,
+  alcanca,
+  filtroDeEscopo
+} from "../../helpers/permissions/escopos";
+
 export interface FiltrosOportunidade {
   companyId: number;
   boardId?: number | string;
+  /** Os quadros que quem pediu alcança. Ausente é "sem restrição". */
+  escopoDeQuadros?: EscopoResolvido;
   searchParam?: string;
   responsibleUserId?: number | string;
   /** "sem responsável" é diferente de "qualquer responsável". */
@@ -72,6 +80,7 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
   const {
     companyId,
     boardId,
+  escopoDeQuadros,
     searchParam,
     responsibleUserId,
     semResponsavel,
@@ -108,7 +117,21 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
    * e acumulá-lo no quadro só afasta o que ainda está em jogo.
    */
   if (!includeClosed) where.status = { [Op.notIn]: ["lost"] };
-  if (boardId) where.boardId = boardId;
+  /**
+   * Quadro pedido e escopo se combinam por interseção, nunca por
+   * substituição: pedir um quadro fora do alcance devolve vazio, e não os
+   * outros quadros do escopo.
+   */
+  if (boardId) {
+    if (escopoDeQuadros && !alcanca(escopoDeQuadros, Number(boardId))) {
+      where.boardId = { [Op.in]: [] };
+    } else {
+      where.boardId = boardId;
+    }
+  } else {
+    const restricao = filtroDeEscopo(escopoDeQuadros, "boardId");
+    if (restricao) Object.assign(where, restricao);
+  }
   if (stageId) where.stageId = stageId;
   if (customerId) where.customerId = customerId;
   if (origin) where.origin = origin;
@@ -181,6 +204,9 @@ const FiltrarOportunidadesService = async (filtros: FiltrosOportunidade) => {
       { title: como },
       { notes: como },
       ...(Number.isFinite(Number(termo)) ? [{ quoteNumber: Number(termo) }] : []),
+      // O número da ordem de produção é por onde a produção e o balcão
+      // procuram o trabalho; sem ele aqui, digitá-lo na busca não achava nada.
+      ...(Number.isFinite(Number(termo)) ? [{ orderNumber: Number(termo) }] : []),
       ...(Number.isFinite(Number(termo)) ? [{ id: Number(termo) }] : []),
       literal(
         `EXISTS (SELECT 1 FROM Customers c WHERE c.id = Deal.customerId AND (c.name LIKE ${Deal.sequelize?.escape(

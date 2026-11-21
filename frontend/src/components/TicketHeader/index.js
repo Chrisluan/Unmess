@@ -1,11 +1,11 @@
 import React from "react";
 
-import { Card, IconButton, Tooltip, useMediaQuery } from "@mui/material";
-import makeStyles from "@mui/styles/makeStyles";
-import { useTheme } from "@mui/material/styles";
-import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
+import { IconButton } from "@mui/material";
+import makeStyles from '@mui/styles/makeStyles';
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useHistory } from "react-router-dom";
+
+import TicketHeaderSkeleton from "../TicketHeaderSkeleton";
 
 const useStyles = makeStyles((theme) => ({
   /**
@@ -19,54 +19,35 @@ const useStyles = makeStyles((theme) => ({
   ticketHeader: {
     display: "flex",
     alignItems: "center",
-    backgroundColor: theme.palette.background.paper,
+    gap: theme.spacing(1),
+    minHeight: 72,
+    padding: theme.spacing(1, 2, 1, 2.5),
     flex: "none",
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.unmess.superficie,
+    borderBottom: `1px solid ${theme.palette.unmess.linha}`,
     [theme.breakpoints.down("md")]: {
-      flexWrap: "wrap",
+      padding: theme.spacing(1, 1.5, 1, 1),
     },
   },
-
   voltar: {
-    marginLeft: theme.spacing(0.5),
+    display: "none",
+    [theme.breakpoints.down("md")]: { display: "inline-flex" },
   },
 }));
 
 const TicketHeader = ({ loading, children }) => {
   const classes = useStyles();
-  const theme = useTheme();
   const history = useHistory();
-  // No desktop a lista de conversas está ao lado, sempre visível: a seta de
-  // voltar não leva a lugar nenhum que já não esteja na tela, e ocupava o
-  // primeiro lugar do cabeçalho -- onde deveria estar o nome do cliente.
-  const telaEstreita = useMediaQuery(theme.breakpoints.down("md"));
 
-  const handleBack = () => {
-    history.push("/tickets");
-  };
+  if (loading) return <TicketHeaderSkeleton />;
 
   return (
-    <>
-      {loading ? (
-        <TicketHeaderSkeleton />
-      ) : (
-        <Card square className={classes.ticketHeader}>
-          {telaEstreita && (
-            <Tooltip title="Voltar para a lista de conversas" arrow>
-              <IconButton
-                className={classes.voltar}
-                onClick={handleBack}
-                aria-label="Voltar para a lista de conversas"
-                size="small"
-              >
-                <ArrowBackIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          {children}
-        </Card>
-      )}
-    </>
+    <header className={classes.ticketHeader}>
+      <IconButton className={classes.voltar} onClick={() => history.push("/tickets")} aria-label="Voltar para a lista">
+        <ArrowBackIcon />
+      </IconButton>
+      {children}
+    </header>
   );
 };
 

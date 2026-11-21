@@ -171,10 +171,27 @@ class Deal extends Model<Deal> {
    * Número do orçamento dentro da empresa.
    *
    * Vale enquanto o card está no funil de vendas. Ao sair, o trabalho passa a
-   * ser identificado pelo número do pedido, que vive em Orders.
+   * ser identificado pelo número do pedido.
    */
   @Column
   quoteNumber: number;
+
+  /**
+   * Número da ordem de produção dentro da empresa.
+   *
+   * Vale fora do funil de vendas, onde o card deixa de ser proposta e passa a
+   * ser trabalho a fazer: é o número da ordem de serviço, o que a produção
+   * escreve na etiqueta e o que o cliente cita no balcão.
+   *
+   * Fica no card, e não só em Orders, porque a jornada troca de linha a cada
+   * quadro: Orders aponta para um card só, e o número precisa acompanhar o
+   * trabalho de Produção até Expedição. Sem esta coluna, a tela caía no
+   * `Deals.id` -- um contador único do banco inteiro, compartilhado por todas
+   * as empresas e por todo tipo de card. Duas empresas jamais veriam a ordem
+   * nº 1, e a numeração de cada uma pulava conforme o movimento das outras.
+   */
+  @Column
+  orderNumber: number;
 
   // ---- Operacao do dia a dia ---------------------------------------------
 
