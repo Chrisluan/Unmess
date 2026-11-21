@@ -342,7 +342,11 @@ class Deal extends Model<Deal> {
   @Column
   orderId: number;
 
-  @BelongsTo(() => Order, "orderId")
+  // constraints: false porque o pedido também aponta para o card (Order.dealId):
+  // com os dois lados declarados, o Sequelize vê um ciclo Deals ⇄ Orders e não
+  // consegue ordenar as tabelas (truncate/sync falham). A chave estrangeira de
+  // verdade continua no banco, criada pela migration.
+  @BelongsTo(() => Order, { foreignKey: "orderId", constraints: false })
   pedido: Order;
 
   /** Até quando a proposta vale. */
