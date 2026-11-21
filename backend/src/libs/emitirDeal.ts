@@ -1,6 +1,6 @@
 import { getIO } from "./socket";
 import { salaComValores, salaSemValores } from "./socketRooms";
-import { ocultarValores } from "../helpers/permissions/valores";
+import { ocultarCustos, ocultarValores } from "../helpers/permissions/valores";
 
 /**
  * Emite um evento do funil respeitando `crm:viewValues`.
@@ -18,9 +18,12 @@ const emitirDeal = (
   // Sem empresa (super-admin ainda sem escolher uma) não há sala para avisar.
   if (companyId === null || companyId === undefined) return;
 
+  // Custo nunca viaja pelo socket: as salas separam quem vê valores, não
+  // quem vê custo. A tela busca os itens pela API, que mascara por pessoa.
+  const semCusto = ocultarCustos(payload);
   const io = getIO();
-  io.to(salaComValores(companyId)).emit(evento, payload);
-  io.to(salaSemValores(companyId)).emit(evento, ocultarValores(payload));
+  io.to(salaComValores(companyId)).emit(evento, semCusto);
+  io.to(salaSemValores(companyId)).emit(evento, ocultarValores(semCusto));
 };
 
 export default emitirDeal;

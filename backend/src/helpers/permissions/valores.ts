@@ -45,23 +45,39 @@ const CAMPOS_DE_VALOR = new Set([
   "ticketMedio"
 ]);
 
+/**
+ * Custo e margem: um degrau acima dos valores. Quem vende vê o preço, mas não
+ * quanto a empresa paga -- é o número que revela a formação do preço. Mesmo
+ * mecanismo, outra permissão (`products:viewCost`) e outra lista.
+ */
+const CAMPOS_DE_CUSTO = new Set(["cost", "minCost", "unitCost", "custo", "margem", "margin", "wastePercent"]);
+
 /** Pessoa pode ver os números de dinheiro do funil? */
 export const podeVerValores = (req: Request): Promise<boolean> =>
   usuarioPode(Number(req.user.id), "crm:viewValues");
 
-const mascarar = (valor: unknown): unknown => {
-  if (Array.isArray(valor)) return valor.map(mascarar);
+export const podeVerCustos = (req: Request): Promise<boolean> =>
+  usuarioPode(Number(req.user.id), "products:viewCost");
 
-  if (valor && typeof valor === "object") {
-    const saida: Record<string, unknown> = {};
-    Object.entries(valor as Record<string, unknown>).forEach(([chave, v]) => {
-      saida[chave] = CAMPOS_DE_VALOR.has(chave) ? null : mascarar(v);
-    });
-    return saida;
-  }
+const mascaradorDe = (campos: Set<string>) => {
+  const mascarar = (valor: unknown): unknown => {
+    if (Array.isArray(valor)) return valor.map(mascarar);
 
-  return valor;
+    if (valor && typeof valor === "object") {
+      const saida: Record<string, unknown> = {};
+      Object.entries(valor as Record<string, unknown>).forEach(([chave, v]) => {
+        saida[chave] = campos.has(chave) ? null : mascarar(v);
+      });
+      return saida;
+    }
+
+    return valor;
+  };
+  return mascarar;
 };
+
+const mascarar = mascaradorDe(CAMPOS_DE_VALOR);
+const mascararCustos = mascaradorDe(CAMPOS_DE_CUSTO);
 
 /**
  * Devolve uma cópia sem os campos de dinheiro.
@@ -73,10 +89,17 @@ const mascarar = (valor: unknown): unknown => {
 export const ocultarValores = <T>(payload: T): T =>
   mascarar(JSON.parse(JSON.stringify(payload))) as T;
 
+/** Cópia sem custo e margem (ver CAMPOS_DE_CUSTO). */
+export const ocultarCustos = <T>(payload: T): T =>
+  mascararCustos(JSON.parse(JSON.stringify(payload))) as T;
+
 /**
  * Atalho para o fim de um handler: mascara só se a pessoa não puder ver.
  */
-export const respostaComValores = async <T>(
-  req: Request,
-  payload: T
-): Promise<T> => ((await podeVerValores(req)) ? payload : ocultarValores(payload));
+export const respostaComValores = async <T>(req: Request, payload: T): Promise<T> => {
+  const [valores, custos] = await Promise.all([podeVerValores(req), podeVerCustos(req)]);
+  let saida = payload;
+  if (!custos) saida = ocultarCustos(saida);
+  if (!valores) saida = ocultarValores(saida);
+  return saida;
+};

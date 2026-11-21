@@ -15,7 +15,7 @@ import {
 import Company from "./Company";
 import Order from "./Order";
 import Product from "./Product";
-import { calcularItem } from "../helpers/CalcularItem";
+import { AcabamentoDoItem, calcularItem } from "../helpers/CalcularItem";
 
 const numero = (bruto: unknown): number =>
   bruto === null || bruto === undefined ? 0 : Number(bruto);
@@ -93,6 +93,36 @@ class OrderItem extends Model<OrderItem> {
   @Column
   position: number;
 
+  /**
+   * Custo de uma unidade de medida do material, copiado do produto ao orçar.
+   * Nulo = desconhecido (item digitado à mão ou anterior ao custo por item);
+   * zero seria um custo, e daria margem de 100%.
+   */
+  @Column(DataType.DECIMAL(15, 4))
+  get unitCost(): number | null {
+    const bruto = this.getDataValue("unitCost");
+    return bruto === null || bruto === undefined ? null : Number(bruto);
+  }
+
+  /** Acabamentos escolhidos, com preço e custo do dia (ver CalcularItem). */
+  @Column(DataType.JSON)
+  get finishes(): AcabamentoDoItem[] {
+    const bruto = this.getDataValue("finishes") as unknown;
+    if (!bruto) return [];
+    if (typeof bruto === "string") {
+      try {
+        return JSON.parse(bruto);
+      } catch {
+        return [];
+      }
+    }
+    return bruto as AcabamentoDoItem[];
+  }
+
+  set finishes(valor: AcabamentoDoItem[]) {
+    this.setDataValue("finishes", (valor && valor.length ? valor : null) as never);
+  }
+
   /** Calculado, nunca gravado: a mesma conta do orçamento. */
   get total(): number {
     return calcularItem({
@@ -102,7 +132,9 @@ class OrderItem extends Model<OrderItem> {
       unitPrice: this.unitPrice,
       discount: this.discount,
       pricingMode: this.pricingMode,
-      minMeasure: this.minMeasure
+      minMeasure: this.minMeasure,
+      unitCost: this.unitCost,
+      finishes: this.finishes
     }).total;
   }
 

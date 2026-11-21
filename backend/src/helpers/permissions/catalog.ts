@@ -204,6 +204,13 @@ export const MODULES: Record<string, ModuloDePermissao> = {
         nivel: "operar",
         requer: ["crm:edit", "crm:viewValues"]
       },
+      overridePrice: {
+        label: "Vender abaixo do preço do catálogo",
+        descricao:
+          "Permite baixar o preço de um produto ou acabamento do catálogo no orçamento. Sem isto, o preço pode subir mas não descer: quem forma o preço decide até onde ele vai. Desconto continua sendo a permissão de desconto.",
+        nivel: "gerenciar",
+        requer: ["crm:editItems"]
+      },
       manageAttachments: {
         label: "Anexar e remover material do pedido",
         descricao:

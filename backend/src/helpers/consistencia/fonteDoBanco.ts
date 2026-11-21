@@ -10,6 +10,9 @@ import Board from "../../models/Board";
 import PipelineStage from "../../models/PipelineStage";
 import FinancialAccount from "../../models/FinancialAccount";
 import Company from "../../models/Company";
+import Product from "../../models/Product";
+import ProductSupply from "../../models/ProductSupply";
+import Supply from "../../models/Supply";
 import { CATALOGO_DE_CONFIGURACOES } from "../configuracoes/catalogo";
 import {
   Conexao,
@@ -19,6 +22,7 @@ import {
   Etapa,
   Fila,
   FonteDeDados,
+  ProdutoCalculado,
   Quadro,
   StatusDeTicket
 } from "./tipos";
@@ -164,6 +168,32 @@ const fonteDoBanco = (
               address: c.address || null
             } as DadosDaEmpresa)
           : null;
+      }),
+
+    produtosCalculados: () =>
+      lembrar("produtosCalculados", async () => {
+        const linhas = await Product.findAll({
+          where: { companyId, priceMode: "calculado" },
+          attributes: ["id", "name", "active"],
+          include: [
+            {
+              model: ProductSupply,
+              as: "composicao",
+              attributes: ["id"],
+              include: [{ model: Supply, as: "supply", attributes: ["name", "active"] }]
+            }
+          ],
+          transaction
+        });
+        return linhas.map<ProdutoCalculado>(p => ({
+          id: p.id,
+          name: p.name,
+          active: p.active !== false,
+          componentes: (p.composicao || []).length,
+          insumosInativos: (p.composicao || [])
+            .filter(c => c.supply && c.supply.active === false)
+            .map(c => c.supply.name)
+        }));
       })
   };
 };

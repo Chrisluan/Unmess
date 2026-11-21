@@ -150,6 +150,10 @@ const GerarPedidoService = async ({
         height: item.height,
         pricingMode: item.pricingMode,
         minMeasure: item.minMeasure,
+        // A fotografia do orçamento segue para o pedido como está: custo e
+        // acabamentos do dia em que o cliente aprovou.
+        unitCost: item.unitCost,
+        finishes: item.finishes.length ? item.finishes : null,
         notes: item.notes,
         position: posicao,
         productId: item.productId || null,

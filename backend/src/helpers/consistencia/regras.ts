@@ -279,5 +279,47 @@ export const REGRAS: Regra[] = [
       if (contas.length === 0 || contas.some(c => c.kind === "cash" && c.active)) return [];
       return ["Não há conta financeira ativa do tipo caixa: o PDV não abre."];
     }
+  },
+
+  // ── Formação de preço ────────────────────────────────────────────────────
+  {
+    id: "preco-lucro-impossivel",
+    titulo: "Percentual de lucro de 100% ou mais",
+    severidade: "bloqueia",
+    gatilhos: ["configuracao"],
+    resolver: { rota: "/settings", rotulo: "Ajustar a formação de preço" },
+    verificar: async dados => {
+      if ((await dados.configuracao("precoModo")) !== "lucro") return [];
+      const percentual = Number(await dados.configuracao("precoPercentual"));
+      if (percentual < 100) return [];
+      return [
+        `No modo lucro o percentual é a fatia do preço que fica para a empresa: ${percentual}% não deixa espaço para o custo, e nenhum preço calculado pode ser atualizado.`
+      ];
+    }
+  },
+  {
+    id: "produto-calculado-sem-composicao",
+    titulo: "Produto de preço calculado sem insumos",
+    severidade: "bloqueia",
+    gatilhos: ["produto", "insumo"],
+    resolver: { rota: "/products", rotulo: "Montar a composição" },
+    verificar: async dados =>
+      (await dados.produtosCalculados())
+        .filter(p => p.active && p.componentes === 0)
+        .map(p => `"${p.name}" calcula o preço pelo custo, mas não tem nenhum insumo: o custo é zero e o preço também.`)
+  },
+  {
+    id: "produto-com-insumo-inativo",
+    titulo: "Produto usa insumo desativado",
+    severidade: "aviso",
+    gatilhos: ["produto", "insumo"],
+    resolver: { rota: "/products", rotulo: "Revisar a composição" },
+    verificar: async dados =>
+      (await dados.produtosCalculados())
+        .filter(p => p.active && p.insumosInativos.length > 0)
+        .map(
+          p =>
+            `"${p.name}" ainda usa ${p.insumosInativos.join(", ")}, que está desativado: o custo continua contando o preço antigo desse insumo.`
+        )
   }
 ];

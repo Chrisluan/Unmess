@@ -12,6 +12,8 @@ import QuickAnswers from "../QuickAnswers";
 import TagsTab from "./TagsTab";
 import AutoMessagesTab from "./AutoMessagesTab";
 import TicketStatusesTab from "./TicketStatusesTab";
+import InsumosTab from "./InsumosTab";
+import AcabamentosTab from "./AcabamentosTab";
 
 /**
  * Cadastro.
@@ -92,6 +94,23 @@ const Cadastros = () => {
 				// ativa isso seria trabalho jogado fora a cada visita à tela.
 				montarSomenteAtiva: true,
 				conteudo: <Products embedded />,
+			},
+			{
+				// Só custo: quem não vê custo não tem o que fazer aqui.
+				chave: "insumos",
+				permissao: "products:viewCost",
+				editar: "products:manage",
+				rotulo: "Insumos",
+				montarSomenteAtiva: true,
+				conteudo: <InsumosTab />,
+			},
+			{
+				chave: "acabamentos",
+				permissao: "products:view",
+				editar: "products:manage",
+				rotulo: "Acabamentos",
+				montarSomenteAtiva: true,
+				conteudo: <AcabamentosTab />,
 			},
 			{
 				chave: "respostas-rapidas",

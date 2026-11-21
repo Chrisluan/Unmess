@@ -56,6 +56,9 @@ export const sync = async (req: Request, res: Response): Promise<Response> => {
    */
   const card = await Deal.findOne({ where: { id: dealId, companyId } });
   if (!card) throw new AppError("ERR_NO_DEAL_FOUND", 404);
+
+  // Preço de catálogo só desce com permissão própria (ver PrecificarItens).
+  const podeBaixarPreco = await usuarioPode(Number(req.user.id), "crm:overridePrice");
   const pedido = await pedidoAtivoDo(card, companyId);
   if (pedido && pedido.dealId !== card.id) {
     if (!(await usuarioPode(Number(req.user.id), "crm:editOrder"))) {
@@ -64,7 +67,7 @@ export const sync = async (req: Request, res: Response): Promise<Response> => {
         403
       );
     }
-    const alterado = await alterarItensDoPedido({ order: pedido, companyId, items });
+    const alterado = await alterarItensDoPedido({ order: pedido, companyId, items, podeBaixarPreco });
     const cardAtualizado = await ShowDealService(card.id, companyId);
     emitirDeal(companyId, { action: "update", deal: cardAtualizado });
     return res.json(
@@ -72,7 +75,7 @@ export const sync = async (req: Request, res: Response): Promise<Response> => {
     );
   }
 
-  const resultado = await SyncDealItemsService({ dealId, companyId, items });
+  const resultado = await SyncDealItemsService({ dealId, companyId, items, podeBaixarPreco });
 
   // O total do negócio mudou, e o card do Kanban precisa refletir isso sem que
   // ninguém recarregue a página -- inclusive para quem está com o quadro aberto

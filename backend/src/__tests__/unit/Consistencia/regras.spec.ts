@@ -15,6 +15,7 @@ type Dados = {
   etapas?: Awaited<ReturnType<FonteDeDados["etapas"]>>;
   conexoes?: Awaited<ReturnType<FonteDeDados["conexoes"]>>;
   contas?: Awaited<ReturnType<FonteDeDados["contasFinanceiras"]>>;
+  produtos?: Awaited<ReturnType<FonteDeDados["produtosCalculados"]>>;
 };
 
 const fonte = (d: Dados): FonteDeDados => ({
@@ -27,7 +28,8 @@ const fonte = (d: Dados): FonteDeDados => ({
   etapas: async () => d.etapas ?? [],
   conexoes: async () => d.conexoes ?? [],
   contasFinanceiras: async () => d.contas ?? [],
-  empresa: async () => null
+  empresa: async () => null,
+  produtosCalculados: async () => d.produtos ?? []
 });
 
 const rodar = async (id: string, d: Dados): Promise<string[]> => {
@@ -229,5 +231,34 @@ describe("Regras de consistência de configuração", () => {
     expect(
       await rodar("pdv-sem-conta-caixa", { contas: [{ id: 1, name: "Banco", kind: "bank", active: true }] })
     ).toHaveLength(1);
+  });
+
+  describe("formação de preço", () => {
+    it("lucro de 100% ou mais é impossível; markup alto não", async () => {
+      expect(await rodar("preco-lucro-impossivel", { configuracoes: { precoModo: "lucro", precoPercentual: "100" } })).toHaveLength(1);
+      expect(await rodar("preco-lucro-impossivel", { configuracoes: { precoModo: "lucro", precoPercentual: "60" } })).toHaveLength(0);
+      expect(await rodar("preco-lucro-impossivel", { configuracoes: { precoModo: "markup", precoPercentual: "300" } })).toHaveLength(0);
+    });
+
+    it("produto calculado ativo precisa de insumo; inativo não conta", async () => {
+      const r = await rodar("produto-calculado-sem-composicao", {
+        produtos: [
+          { id: 1, name: "Banner", active: true, componentes: 0, insumosInativos: [] },
+          { id: 2, name: "Antigo", active: false, componentes: 0, insumosInativos: [] },
+          { id: 3, name: "Adesivo", active: true, componentes: 2, insumosInativos: [] }
+        ]
+      });
+      expect(r).toHaveLength(1);
+      expect(r[0]).toContain("Banner");
+    });
+
+    it("insumo desativado em produto ativo é aviso", async () => {
+      const regra = REGRAS.find(x => x.id === "produto-com-insumo-inativo");
+      expect(regra?.severidade).toBe("aviso");
+      const r = await rodar("produto-com-insumo-inativo", {
+        produtos: [{ id: 1, name: "Banner", active: true, componentes: 2, insumosInativos: ["Lona 280g"] }]
+      });
+      expect(r[0]).toContain("Lona 280g");
+    });
   });
 });

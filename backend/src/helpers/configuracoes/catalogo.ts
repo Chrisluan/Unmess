@@ -12,7 +12,7 @@ import AppError from "../../errors/AppError";
  * mantenha os dois em sincronia ao mudar um deles.
  */
 
-export type TipoDeConfiguracao = "booleano" | "inteiro" | "texto" | "segredo";
+export type TipoDeConfiguracao = "booleano" | "inteiro" | "texto" | "segredo" | "opcao";
 
 export interface DefinicaoDeConfiguracao {
   tipo: TipoDeConfiguracao;
@@ -22,6 +22,8 @@ export interface DefinicaoDeConfiguracao {
   maximo?: number;
   /** Tamanho máximo para `texto`. */
   tamanhoMaximo?: number;
+  /** Valores aceitos para `opcao`. */
+  opcoes?: string[];
 }
 
 export const CATALOGO_DE_CONFIGURACOES: Record<string, DefinicaoDeConfiguracao> = {
@@ -44,6 +46,14 @@ export const CATALOGO_DE_CONFIGURACOES: Record<string, DefinicaoDeConfiguracao> 
 
   // Vendas
   validadePropostaDias: { tipo: "inteiro", padrao: "15", minimo: 0, maximo: 365 },
+
+  // Formação de preço (produtos e acabamentos com preço calculado).
+  // markup: preço = custo × (1 + p%). lucro: preço = custo ÷ (1 − p%), em que
+  // p% é a fatia do preço que fica de lucro -- por isso precisa ser < 100.
+  precoModo: { tipo: "opcao", padrao: "markup", opcoes: ["markup", "lucro"] },
+  precoPercentual: { tipo: "inteiro", padrao: "100", minimo: 0, maximo: 1000 },
+  // Abaixo disto o item do orçamento aparece em alerta. Zero desliga.
+  margemMinima: { tipo: "inteiro", padrao: "0", minimo: 0, maximo: 99 },
 
   // Integrações. Só o servidor gera: ver POST /settings/userApiToken/gerar.
   userApiToken: { tipo: "segredo", padrao: "" }
@@ -86,6 +96,13 @@ export const normalizarValor = (chave: string, valor: unknown): string => {
     case "texto": {
       const texto = valor === null || valor === undefined ? "" : String(valor);
       if (definicao.tamanhoMaximo && texto.length > definicao.tamanhoMaximo) {
+        throw new AppError("ERR_CONFIGURACAO_VALOR_INVALIDO", 400);
+      }
+      return texto;
+    }
+    case "opcao": {
+      const texto = String(valor ?? "").trim();
+      if (!definicao.opcoes?.includes(texto)) {
         throw new AppError("ERR_CONFIGURACAO_VALOR_INVALIDO", 400);
       }
       return texto;

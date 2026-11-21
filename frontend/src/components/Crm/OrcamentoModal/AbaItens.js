@@ -16,6 +16,8 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
 import NotesIcon from "@mui/icons-material/NotesOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import Autocomplete from "@mui/material/Autocomplete";
 
 import api from "../../../services/api";
 import toastError from "../../../errors/toastError";
@@ -25,7 +27,9 @@ import SeletorProduto from "../SeletorProduto";
 import CatalogoProdutos from "../CatalogoProdutos";
 import {
   MODOS_DE_COBRANCA,
+  acabamentoDoCatalogo,
   calcularLinha,
+  rotuloDaBase,
   descricaoDaMedida,
   itemDeProduto,
   itemVazio,
@@ -125,6 +129,35 @@ const useStyles = makeStyles((theme) => ({
   },
 
   avisoMinimo: { color: theme.palette.warning.main, fontWeight: 700 },
+
+  // Margem embaixo do total: informação de quem forma preço, discreta para
+  // não competir com o valor que o cliente vê.
+  margem: {
+    display: "block",
+    fontSize: 11,
+    fontWeight: 600,
+    color: theme.palette.text.secondary,
+    textAlign: "right",
+    paddingRight: 6,
+  },
+  margemBaixa: { color: theme.palette.error.main, fontWeight: 700 },
+
+  acabamentos: {
+    gridColumn: "1 / -1",
+    display: "flex",
+    flexDirection: "column",
+    gap: 6,
+    maxWidth: 640,
+  },
+  linhaAcabamento: {
+    display: "grid",
+    gridTemplateColumns: "minmax(120px, 1fr) 96px 90px 80px 28px",
+    gap: 8,
+    alignItems: "center",
+    fontSize: 12.5,
+  },
+  baseAcabamento: { fontSize: 11, color: theme.palette.text.secondary },
+  totalAcabamento: { textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600 },
 
   total: {
     textAlign: "right",
@@ -282,6 +315,13 @@ const paraEnvio = (itens) =>
     .map((item) => {
       const copia = { ...item };
       delete copia._chave;
+      // Custo é do servidor: ele copia do catálogo e ignora o que vier daqui.
+      delete copia.unitCost;
+      copia.finishes = (item.finishes || []).map((a) => ({
+        finishId: a.finishId,
+        price: Number(a.price) || 0,
+        minPrice: Number(a.minPrice) || 0,
+      }));
       return copia;
     });
 
@@ -332,6 +372,24 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
   const [salvando, setSalvando] = useState(false);
   const [catalogoAberto, setCatalogoAberto] = useState(false);
   const [expandidos, setExpandidos] = useState([]);
+  const [catalogoAcabamentos, setCatalogoAcabamentos] = useState([]);
+  const [margemMinima, setMargemMinima] = useState(0);
+
+  useEffect(() => {
+    let vivo = true;
+    api
+      .get("/acabamentos")
+      .then(({ data }) => {
+        if (!vivo) return;
+        setCatalogoAcabamentos(data.acabamentos || []);
+        setMargemMinima(Number(data.margemMinima) || 0);
+      })
+      // Sem a lista, o item continua editável -- só não oferece acabamento novo.
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   // Retrato do que veio do servidor, para saber se há o que salvar.
   const gravado = useRef("[]");
@@ -351,6 +409,8 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
         pricingMode: i.pricingMode || "unit",
         minMeasure: i.minMeasure || 0,
         notes: i.notes || "",
+        unitCost: i.unitCost === undefined ? null : i.unitCost,
+        finishes: Array.isArray(i.finishes) ? i.finishes : [],
       })
     );
 
@@ -400,6 +460,9 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
           unitPrice: doCatalogo.unitPrice,
           pricingMode: doCatalogo.pricingMode,
           minMeasure: doCatalogo.minMeasure,
+          unitCost: doCatalogo.unitCost,
+          // Trocar de produto troca os acabamentos pelos padrões do novo.
+          finishes: doCatalogo.finishes,
         };
       })
     );
@@ -456,6 +519,23 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
     );
 
   const soma = itens.reduce((s, i) => s + totalDaLinha(i), 0);
+
+  /**
+   * Margem do orçamento, só sobre os itens com custo conhecido. Item digitado
+   * à mão não tem custo, e contá-lo como zero inflaria a margem de todos.
+   */
+  const contas = itens.map(calcularLinha);
+  const comCusto = contas.filter((c) => c.custo !== null);
+  const totalComCusto = comCusto.reduce((s, c) => s + c.total, 0);
+  const margemTotal =
+    comCusto.length && totalComCusto > 0
+      ? ((totalComCusto - comCusto.reduce((s, c) => s + c.custo, 0)) / totalComCusto) * 100
+      : null;
+
+  const textoMargem = (margem) =>
+    `margem ${margem.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+  const abaixoDoMinimo = (margem) =>
+    margemMinima > 0 && margem !== null && margem < margemMinima;
   const semDescricao = itens.filter((i) => !i.description?.trim()).length;
 
   const salvar = async () => {
@@ -469,6 +549,143 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
       setSalvando(false);
     }
   };
+
+  const adicionarAcabamento = (chave, acabamento) =>
+    setItens((atual) =>
+      atual.map((item) => {
+        if (item._chave !== chave || !acabamento) return item;
+        if ((item.finishes || []).some((a) => a.finishId === acabamento.id)) return item;
+        return { ...item, finishes: [...(item.finishes || []), acabamentoDoCatalogo(acabamento)] };
+      })
+    );
+
+  const mudarAcabamento = (chave, finishId, campo, valor) =>
+    setItens((atual) =>
+      atual.map((item) =>
+        item._chave !== chave
+          ? item
+          : {
+              ...item,
+              finishes: (item.finishes || []).map((a) =>
+                a.finishId === finishId ? { ...a, [campo]: valor } : a
+              ),
+            }
+      )
+    );
+
+  const removerAcabamento = (chave, finishId) =>
+    setItens((atual) =>
+      atual.map((item) =>
+        item._chave !== chave
+          ? item
+          : { ...item, finishes: (item.finishes || []).filter((a) => a.finishId !== finishId) }
+      )
+    );
+
+  /**
+   * Acabamentos do item: os escolhidos, cada um com o preço (editável) e o
+   * total, e um campo para acrescentar outro do catálogo.
+   */
+  const blocoAcabamentos = (item, conta) => {
+    const escolhidos = item.finishes || [];
+    const disponiveis = catalogoAcabamentos.filter(
+      (a) => !escolhidos.some((e) => e.finishId === a.id)
+    );
+    if (!escolhidos.length && (!podeEditar || !catalogoAcabamentos.length)) return null;
+
+    return (
+      <div className={classes.acabamentos}>
+        {escolhidos.map((a, i) => (
+          <div className={classes.linhaAcabamento} key={a.finishId}>
+            <span>
+              {a.name}
+              <div className={classes.baseAcabamento}>{rotuloDaBase(a.base)}</div>
+            </span>
+            <TextField
+              size="small"
+              variant="standard"
+              type="number"
+              label="Preço"
+              InputLabelProps={{ shrink: true }}
+              value={numeroDoCampo(a.price)}
+              disabled={!podeEditar}
+              onChange={(e) => mudarAcabamento(item._chave, a.finishId, "price", e.target.value)}
+              inputProps={{ min: 0, step: "0.01", inputMode: "decimal" }}
+            />
+            <TextField
+              size="small"
+              variant="standard"
+              type="number"
+              label="Mínimo"
+              InputLabelProps={{ shrink: true }}
+              value={numeroDoCampo(a.minPrice)}
+              disabled={!podeEditar || a.base === "fixo"}
+              onChange={(e) => mudarAcabamento(item._chave, a.finishId, "minPrice", e.target.value)}
+              inputProps={{ min: 0, step: "0.01", inputMode: "decimal" }}
+            />
+            <span className={classes.totalAcabamento}>
+              {moeda(verValores ? conta.acabamentos[i]?.total : null)}
+            </span>
+            {podeEditar ? (
+              <IconButton
+                size="small"
+                onClick={() => removerAcabamento(item._chave, a.finishId)}
+                aria-label={`Remover ${a.name}`}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            ) : (
+              <span />
+            )}
+          </div>
+        ))}
+
+        {podeEditar && disponiveis.length > 0 && (
+          <Autocomplete
+            size="small"
+            options={disponiveis}
+            value={null}
+            blurOnSelect
+            getOptionLabel={(a) => a.name}
+            renderOption={(props, a) => (
+              <li {...props} key={a.id}>
+                <span style={{ flex: 1 }}>{a.name}</span>
+                <span className={classes.baseAcabamento}>
+                  {rotuloDaBase(a.base)}
+                  {verValores ? ` · ${moeda(a.price)}` : ""}
+                </span>
+              </li>
+            )}
+            onChange={(_e, a) => adicionarAcabamento(item._chave, a)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                variant="standard"
+                placeholder="+ Acabamento (ilhós, bainha, laminação…)"
+              />
+            )}
+            style={{ maxWidth: 360 }}
+          />
+        )}
+      </div>
+    );
+  };
+
+  /** Margem da linha, para quem vê custo. */
+  const margemDaLinha = (conta) =>
+    conta.margem === null || !verValores ? null : (
+      <span
+        className={`${classes.margem} ${abaixoDoMinimo(conta.margem) ? classes.margemBaixa : ""}`}
+        title={
+          abaixoDoMinimo(conta.margem)
+            ? `Abaixo da margem mínima de ${margemMinima}% da empresa`
+            : `Custo ${moeda(conta.custo)}`
+        }
+      >
+        {textoMargem(conta.margem)}
+        {abaixoDoMinimo(conta.margem) ? " ⚠" : ""}
+      </span>
+    );
 
   /** Campo numérico: teclado numérico no celular e vírgula aceita. */
   const campoNumero = (chave, campo, valor, extras = {}) => (
@@ -551,6 +768,18 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
 
   const botoesDaLinha = (item) => (
     <>
+      {catalogoAcabamentos.length > 0 && (
+        <Tooltip title="Acabamentos" arrow>
+          <IconButton
+            size="small"
+            onClick={() => alternarObservacao(item._chave)}
+            aria-label="Acabamentos do item"
+            color={(item.finishes || []).length ? "primary" : "default"}
+          >
+            <LayersOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
       <Tooltip title="Observação" arrow>
         <IconButton
           size="small"
@@ -587,7 +816,8 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
     const mostraDetalhes =
       (item.pricingMode || "unit") !== "unit" ||
       expandidos.includes(item._chave) ||
-      Boolean(item.notes);
+      Boolean(item.notes) ||
+      (item.finishes || []).length > 0;
 
     return (
       <React.Fragment key={item._chave}>
@@ -624,7 +854,12 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
           {campoNumero(item._chave, "unitPrice", item.unitPrice)}
           {campoNumero(item._chave, "discount", item.discount)}
 
-          <span className={classes.total}>{moeda(verValores ? conta.total : null)}</span>
+          <span>
+            <span className={classes.total} style={{ display: "block" }}>
+              {moeda(verValores ? conta.total : null)}
+            </span>
+            {margemDaLinha(conta)}
+          </span>
 
           <div className={classes.acoesLinha}>
             {podeEditar ? botoesDaLinha(item) : <span />}
@@ -643,6 +878,9 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
                 )}
               </span>
             )}
+
+            {(expandidos.includes(item._chave) || (item.finishes || []).length > 0) &&
+              blocoAcabamentos(item, conta)}
 
             {(expandidos.includes(item._chave) || item.notes) && (
               <div className={classes.faixaDetalhe}>{campoObservacao(item)}</div>
@@ -714,12 +952,19 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
           </div>
         )}
 
+        {(expandidos.includes(item._chave) || (item.finishes || []).length > 0) && (
+          <div style={{ marginTop: 10 }}>{blocoAcabamentos(item, conta)}</div>
+        )}
+
         {(expandidos.includes(item._chave) || item.notes) && (
           <div style={{ marginTop: 10 }}>{campoObservacao(item)}</div>
         )}
 
         <div className={classes.rodapeCartao}>
-          <span className={classes.totalCartao}>{moeda(verValores ? conta.total : null)}</span>
+          <span>
+            <span className={classes.totalCartao}>{moeda(verValores ? conta.total : null)}</span>
+            {margemDaLinha(conta)}
+          </span>
           <div>{podeEditar && botoesDaLinha(item)}</div>
         </div>
       </div>
@@ -817,7 +1062,17 @@ const AbaItens = ({ deal, onSalvo, onPendencia }) => {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span className={classes.somaFinal}>{moeda(verValores ? soma : null)}</span>
+          <span>
+            <span className={classes.somaFinal}>{moeda(verValores ? soma : null)}</span>
+            {margemTotal !== null && verValores && (
+              <span
+                className={`${classes.margem} ${abaixoDoMinimo(margemTotal) ? classes.margemBaixa : ""}`}
+              >
+                {textoMargem(margemTotal)}
+                {comCusto.length < itens.length ? " (itens com custo)" : ""}
+              </span>
+            )}
+          </span>
           {podeEditar && (
             <Button
               variant="contained"

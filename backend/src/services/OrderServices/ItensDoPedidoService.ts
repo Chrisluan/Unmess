@@ -6,6 +6,7 @@ import valorLiquidoDoNegocio from "../../helpers/ValorLiquidoDoNegocio";
 import Deal from "../../models/Deal";
 import FinancialEntry from "../../models/FinancialEntry";
 import Order from "../../models/Order";
+import PrecificarItens from "../PrecoServices/PrecificarItens";
 import OrderItem from "../../models/OrderItem";
 import Receivable from "../../models/Receivable";
 import { ItemEntrada, limparItens } from "../DealItemServices/SyncDealItemsService";
@@ -35,6 +36,7 @@ interface Request {
   order: Order;
   companyId: number;
   items: ItemEntrada[];
+  podeBaixarPreco?: boolean;
 }
 
 /**
@@ -50,13 +52,17 @@ interface Request {
 export const alterarItensDoPedido = async ({
   order,
   companyId,
-  items
+  items,
+  podeBaixarPreco = true
 }: Request): Promise<{ order: Order; items: OrderItem[] }> => {
   if (order.canceledAt) throw new AppError("ERR_PEDIDO_CANCELADO", 409);
   if (!Array.isArray(items)) throw new AppError("ERR_INVALID_ITEMS");
 
-  const limpos = limparItens(items);
-  if (limpos.length === 0) throw new AppError("ERR_PEDIDO_SEM_ITENS", 400);
+  if (limparItens(items).length === 0) throw new AppError("ERR_PEDIDO_SEM_ITENS", 400);
+  const anteriores = await OrderItem.findAll({ where: { orderId: order.id, companyId } });
+  const limpos = (
+    await PrecificarItens({ companyId, itens: limparItens(items), anteriores, podeBaixarPreco })
+  ).map(item => ({ ...item, finishes: item.finishes.length ? item.finishes : null }));
 
   // Mesma conta do item gravado: monta instâncias sem salvar só para somar.
   const bruto = limpos.reduce(
@@ -94,13 +100,13 @@ export const alterarItensDoPedido = async ({
       const dados = { ...item, orderId: order.id, companyId };
       if (item.id) {
         // eslint-disable-next-line no-await-in-loop
-        await OrderItem.update(dados, {
+        await OrderItem.update(dados as never, {
           where: { id: item.id, orderId: order.id, companyId },
           transaction
         });
       } else {
         // eslint-disable-next-line no-await-in-loop
-        await OrderItem.create({ ...dados, id: undefined }, { transaction });
+        await OrderItem.create({ ...dados, id: undefined } as never, { transaction });
       }
     }
 

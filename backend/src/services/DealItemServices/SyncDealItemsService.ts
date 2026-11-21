@@ -1,4 +1,5 @@
 import { Op } from "sequelize";
+import PrecificarItens from "../PrecoServices/PrecificarItens";
 import DealItem from "../../models/DealItem";
 import Deal from "../../models/Deal";
 import AppError from "../../errors/AppError";
@@ -17,12 +18,16 @@ export interface ItemEntrada {
   height?: number | string;
   pricingMode?: string;
   minMeasure?: number | string;
+  /** Acabamentos escolhidos: id do catálogo e o preço combinado. */
+  finishes?: Array<{ finishId?: number | string | null; price?: number | string; minPrice?: number | string }>;
 }
 
 interface Request {
   dealId: number | string;
   companyId: number;
   items: ItemEntrada[];
+  /** crm:overridePrice. Quem chama de fora de uma requisição decide. */
+  podeBaixarPreco?: boolean;
 }
 
 const numero = (valor: unknown, padrao = 0): number => {
@@ -54,6 +59,15 @@ export const limparItens = (items: ItemEntrada[]) =>
         ? String(item.pricingMode)
         : "unit",
       minMeasure: numero(item.minMeasure, 0),
+      // Da tela vem só qual acabamento e por quanto; nome, base e custo saem
+      // do catálogo (ver PrecificarItens), e o custo do material também.
+      finishes: (Array.isArray(item.finishes) ? item.finishes : [])
+        .filter(a => a && Number(a.finishId) > 0)
+        .map(a => ({
+          finishId: Number(a.finishId),
+          price: numero(a.price, 0),
+          minPrice: numero(a.minPrice, 0)
+        })),
       position: indice
     }));
 
@@ -73,7 +87,8 @@ export const limparItens = (items: ItemEntrada[]) =>
 const SyncDealItemsService = async ({
   dealId,
   companyId,
-  items
+  items,
+  podeBaixarPreco = true
 }: Request): Promise<{ deal: Deal; items: DealItem[] }> => {
   const deal = await Deal.findOne({ where: { id: dealId, companyId } });
   if (!deal) throw new AppError("ERR_NO_DEAL_FOUND", 404);
@@ -90,8 +105,16 @@ const SyncDealItemsService = async ({
     });
   }
 
-  const limpos = limparItens(items).map(item => ({
+  const anteriores = await DealItem.findAll({ where: { dealId: deal.id, companyId } });
+  const precificados = await PrecificarItens({
+    companyId,
+    itens: limparItens(items),
+    anteriores,
+    podeBaixarPreco
+  });
+  const limpos = precificados.map(item => ({
     ...item,
+    finishes: item.finishes.length ? item.finishes : null,
     dealId: deal.id,
     companyId
   }));
@@ -112,9 +135,9 @@ const SyncDealItemsService = async ({
     if (item.id) {
       // O companyId entra na condição para que um id de outra empresa não possa
       // ser sequestrado para dentro deste negócio.
-      await DealItem.update(item, { where: { id: item.id, dealId: deal.id, companyId } });
+      await DealItem.update(item as never, { where: { id: item.id, dealId: deal.id, companyId } });
     } else {
-      await DealItem.create(item);
+      await DealItem.create(item as never);
     }
   }
 

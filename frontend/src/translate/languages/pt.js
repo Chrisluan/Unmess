@@ -994,6 +994,14 @@ const messages = {
             helper:
               "Quando desligado, cada atendente vê apenas as conversas dos setores dos quais faz parte.",
           },
+          precoPercentual: {
+            label: "Percentual padrão (%)",
+            helper: "O que se soma ao custo (markup) ou a fatia do preço que fica de lucro, conforme a opção acima. Cada produto pode ter o seu.",
+          },
+          margemMinima: {
+            label: "Margem mínima (%)",
+            helper: "Item do orçamento com margem abaixo disto aparece em vermelho para quem vê custo. 0 desliga o alerta.",
+          },
           validadePropostaDias: {
             label: "Validade padrão da proposta (dias)",
             helper: "Orçamento novo já nasce com essa validade, que sai impressa na proposta. Dá para mudar em cada orçamento. 0 deixa sem validade.",

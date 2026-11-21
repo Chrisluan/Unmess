@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 
 import Company from "../../models/Company";
-import { descreverMedida } from "../../helpers/CalcularItem";
+import { AcabamentoDoItem, calcularItem, descreverMedida } from "../../helpers/CalcularItem";
 
 /**
  * Peças comuns dos documentos impressos (proposta, ordem de produção,
@@ -103,7 +103,31 @@ export interface ItemDoDocumento {
   pricingMode: string;
   minMeasure: number;
   notes?: string | null;
+  finishes?: AcabamentoDoItem[];
+  unitCost?: number | null;
 }
+
+const BASE_LEGIVEL: Record<string, string> = {
+  area: "m²",
+  perimetro: "m de contorno",
+  linear: "m",
+  unidade: "un",
+  fixo: ""
+};
+
+/**
+ * Acabamentos do item numa linha: o que a oficina precisa fazer e o que o
+ * cliente está pagando além do material. Com valores, cada um mostra o seu.
+ */
+const linhaDeAcabamentos = (item: ItemDoDocumento, mostrarValores: boolean): string => {
+  if (!item.finishes || item.finishes.length === 0) return "";
+  const { acabamentos } = calcularItem(item);
+  const partes = acabamentos.map(a => {
+    const qtd = a.base === "fixo" || !BASE_LEGIVEL[a.base] ? "" : ` (${quantidade(a.quantidade)} ${BASE_LEGIVEL[a.base]})`;
+    return `${escapar(a.name)}${qtd}${mostrarValores ? ` — ${dinheiro(a.total)}` : ""}`;
+  });
+  return `<div class="medida">Acabamentos: ${partes.join(" · ")}</div>`;
+};
 
 export const tabelaDeItens = (itens: ItemDoDocumento[], mostrarValores: boolean): string => {
   const colunas = mostrarValores ? 6 : 3;
@@ -118,6 +142,7 @@ export const tabelaDeItens = (itens: ItemDoDocumento[], mostrarValores: boolean)
           <td>
             ${escapar(item.description)}
             ${medida ? `<div class="medida">${escapar(medida)}</div>` : ""}
+            ${linhaDeAcabamentos(item, mostrarValores)}
             ${item.notes ? `<div class="obs">${escapar(item.notes)}</div>` : ""}
           </td>
           <td class="num">${quantidade(item.quantity)} ${escapar(item.unit)}</td>

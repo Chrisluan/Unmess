@@ -30,6 +30,10 @@ import DealTag from "../models/DealTag";
 import Sticker from "../models/Sticker";
 import Order from "../models/Order";
 import OrderItem from "../models/OrderItem";
+import Supply from "../models/Supply";
+import Finish from "../models/Finish";
+import ProductSupply from "../models/ProductSupply";
+import ProductFinish from "../models/ProductFinish";
 import Product from "../models/Product";
 import PaymentTerm from "../models/PaymentTerm";
 import FinancialAccount from "../models/FinancialAccount";
@@ -84,6 +88,10 @@ const models = [
   DealTag,
   Order,
   OrderItem,
+  Supply,
+  Finish,
+  ProductSupply,
+  ProductFinish,
   Product,
   Sticker,
   PaymentTerm,

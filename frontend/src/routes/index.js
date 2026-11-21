@@ -28,9 +28,6 @@ import FinanceCaixa from "../pages/Finance/Caixa";
 import FinanceConfiguracao from "../pages/Finance/Configuracao";
 import { TeamChatProvider } from "../context/TeamChat";
 import { RadioDock } from "../components/TeamRadio";
-import TeamChat from "../pages/TeamChat/";
-import { TeamChatProvider } from "../context/TeamChat";
-import { RadioDock } from "../components/TeamRadio";
 
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
@@ -88,16 +85,12 @@ const Routes = () => {
                 <BrandingProvider>
                 <OutgoingMessagesProvider>
                 <TeamChatProvider>
-                <TeamChatProvider>
                 <LoggedInLayout>
-                  <RadioDock />
                   <RadioDock />
                   <Route exact path="/"                   component={Dashboard}        isPrivate permission="dashboard:view" />
                   <Route exact path="/tickets/:ticketId?" component={Tickets}          isPrivate permission="tickets:view" />
                   {/* Chat de equipe e rádio: de toda pessoa da empresa, sem permissão. */}
-                  <Route exact path="/equipe/:channelId?"  component={TeamChat}         isPrivate />
-                  {/* Chat de equipe e rádio: de toda pessoa da empresa, sem permissão. */}
-                  <Route exact path="/equipe/:channelId?"     component={TeamChat}         isPrivate />
+                  <Route exact path="/equipe/:channelId?"  component={TeamChat}         isPrivate />
                   {/* Conexões virou aba de Configurações. A rota fica como
                       redirect para não quebrar link/bookmark antigo. */}
                   <Route exact path="/connections"        component={ConnectionsRedirect} isPrivate permission="connections:view" />
@@ -134,7 +127,6 @@ const Routes = () => {
                   <Route exact path="/companies/:companyId" component={CompanyDetail}  isPrivate superOnly />
                   <Route exact path="/roles"              component={Access}           isPrivate permission="roles:view" />
                 </LoggedInLayout>
-                </TeamChatProvider>
                 </TeamChatProvider>
                 </OutgoingMessagesProvider>
                 </BrandingProvider>

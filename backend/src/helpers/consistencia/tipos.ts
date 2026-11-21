@@ -25,7 +25,9 @@ export type Gatilho =
   | "etapa"
   | "conexao"
   | "financeiro"
-  | "empresa";
+  | "empresa"
+  | "produto"
+  | "insumo";
 
 /** Para onde mandar quem quer resolver: rota do frontend e o texto do botão. */
 export interface Atalho {
@@ -106,6 +108,15 @@ export interface DadosDaEmpresa {
   address: string | null;
 }
 
+/** Produto de preço calculado, com o que a composição dele usa. */
+export interface ProdutoCalculado {
+  id: number;
+  name: string;
+  active: boolean;
+  componentes: number;
+  insumosInativos: string[];
+}
+
 export interface FonteDeDados {
   /** Valor da configuração, já com o padrão do catálogo quando não existe. */
   configuracao(chave: string): Promise<string>;
@@ -117,6 +128,7 @@ export interface FonteDeDados {
   conexoes(): Promise<Conexao[]>;
   contasFinanceiras(): Promise<ContaFinanceira[]>;
   empresa(): Promise<DadosDaEmpresa | null>;
+  produtosCalculados(): Promise<ProdutoCalculado[]>;
 }
 
 export interface Regra {

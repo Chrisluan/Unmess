@@ -66,6 +66,8 @@ const NUMBER_SETTINGS = {
 	autoCloseInactiveHours: "0",
 	reopenTicketWindowHours: "2",
 	validadePropostaDias: "15",
+	precoPercentual: "100",
+	margemMinima: "0",
 };
 
 const BOOLEAN_SETTINGS = [
@@ -236,6 +238,36 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 				</Typography>
 				<Divider />
 				{renderNumber("validadePropostaDias")}
+			</Paper>
+
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					Formação de preço
+				</Typography>
+				<Divider />
+				<div className={classes.settingRow}>
+					<TextField
+						select
+						className={classes.numberField}
+						label="Percentual sobre"
+						variant="outlined"
+						margin="dense"
+						SelectProps={{ native: true }}
+						value={getSettingValue("precoModo") || "markup"}
+						onChange={e => saveSetting("precoModo", e.target.value)}
+					>
+						<option value="markup">o custo (markup)</option>
+						<option value="lucro">a venda (lucro)</option>
+					</TextField>
+					<Typography variant="caption" color="textSecondary" className={classes.helper}>
+						Markup de 100% dobra o custo: preço = custo × (1 + %). Lucro de 50%
+						também dobra: metade do preço fica para a empresa, preço = custo ÷ (1 − %).
+						Vale para produtos e acabamentos de preço calculado; mudar aqui refaz o
+						preço deles na hora, sem tocar orçamentos já feitos.
+					</Typography>
+				</div>
+				{renderNumber("precoPercentual")}
+				{renderNumber("margemMinima")}
 			</Paper>
 
 			<Paper className={classes.section} variant="outlined">

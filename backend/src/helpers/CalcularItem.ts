@@ -9,6 +9,31 @@
 
 export type ModoDeCobranca = "unit" | "area" | "linear";
 
+/**
+ * Acabamento escolhido no item, como foi gravado: uma fotografia do catálogo
+ * no dia (nome, base, preço e custo), para o orçamento não mudar sozinho
+ * quando o catálogo mudar.
+ */
+export interface AcabamentoDoItem {
+  finishId?: number | null;
+  name: string;
+  /** area | perimetro | linear | unidade | fixo */
+  base: string;
+  price?: number | string | null;
+  minPrice?: number | string | null;
+  cost?: number | string | null;
+  minCost?: number | string | null;
+}
+
+export interface AcabamentoCalculado {
+  name: string;
+  base: string;
+  /** Quanto da base foi cobrado no item todo (m², metros, peças). */
+  quantidade: number;
+  total: number;
+  custo: number;
+}
+
 export interface EntradaCalculo {
   quantity?: number | string | null;
   width?: number | string | null;
@@ -18,6 +43,9 @@ export interface EntradaCalculo {
   pricingMode?: string | null;
   /** Mínimo cobrado por peça, na unidade do modo. Zero = sem mínimo. */
   minMeasure?: number | string | null;
+  /** Custo de uma unidade de medida do material. Nulo = desconhecido. */
+  unitCost?: number | string | null;
+  finishes?: AcabamentoDoItem[] | null;
 }
 
 export interface ResultadoCalculo {
@@ -29,7 +57,14 @@ export interface ResultadoCalculo {
   medidaTotal: number;
   /** Verdadeiro quando o mínimo entrou no lugar da medida real. */
   aplicouMinimo: boolean;
+  /** Material: medida (ou peças) × preço, antes dos acabamentos. */
+  materiais: number;
+  acabamentos: AcabamentoCalculado[];
   total: number;
+  /** Custo da linha; nulo quando o custo do material é desconhecido. */
+  custo: number | null;
+  /** (total − custo) ÷ total, em %. Nulo sem custo ou com total zero. */
+  margem: number | null;
 }
 
 const numero = (valor: unknown, padrao = 0): number => {
@@ -70,16 +105,63 @@ export const calcularItem = (item: EntradaCalculo): ResultadoCalculo => {
   const medidaCobrada = aplicouMinimo ? minimo : medidaUnitaria;
   const medidaTotal = arredondar(medidaCobrada * pecas, 3);
 
-  const bruto = modo === "unit" ? pecas * preco : medidaTotal * preco;
+  const materiais = arredondar(modo === "unit" ? pecas * preco : medidaTotal * preco);
+
+  /**
+   * Acabamentos. A base é medida na peça real -- o mínimo do material não
+   * aumenta a bainha de ninguém -- e o mínimo do acabamento vale para a linha
+   * inteira: é o que custa parar a máquina para fazê-lo.
+   */
+  const porPeca = (base: string): number => {
+    if (base === "area") return largura * altura;
+    if (base === "perimetro") return 2 * (largura + altura);
+    if (base === "linear") return largura;
+    return 1;
+  };
+  const acabamentos: AcabamentoCalculado[] = (Array.isArray(item.finishes) ? item.finishes : [])
+    .filter(a => a && a.name)
+    .map(a => {
+      const fixo = a.base === "fixo";
+      const quantidade = fixo ? 1 : arredondar(porPeca(a.base) * pecas, 3);
+      const cobrar = (unitario: unknown, piso: unknown) =>
+        fixo ? numero(unitario) : Math.max(numero(piso), quantidade * numero(unitario));
+      return {
+        name: a.name,
+        base: a.base,
+        quantidade,
+        total: arredondar(cobrar(a.price, a.minPrice)),
+        custo: arredondar(cobrar(a.cost, a.minCost))
+      };
+    });
+  const somaAcabamentos = acabamentos.reduce((s, a) => s + a.total, 0);
+
+  // Nunca negativo: um desconto maior que o item zeraria a linha, e um total
+  // negativo entraria somando ao contrário no orçamento.
+  const total = arredondar(Math.max(0, materiais + somaAcabamentos - desconto));
+
+  /**
+   * Custo. O material consome a medida real (a perda já está no custo do
+   * insumo); o mínimo cobrado do cliente não é consumo. Sem custo do material
+   * não há custo da linha: somar só os acabamentos daria uma margem falsa.
+   */
+  const temCusto = item.unitCost !== null && item.unitCost !== undefined && item.unitCost !== "";
+  const consumo = modo === "unit" ? pecas : medidaUnitaria * pecas;
+  const custo = temCusto
+    ? arredondar(consumo * numero(item.unitCost) + acabamentos.reduce((s, a) => s + a.custo, 0))
+    : null;
+  const margem =
+    custo === null || total <= 0 ? null : arredondar(((total - custo) / total) * 100, 1);
 
   return {
     medidaUnitaria,
     medidaCobrada,
     medidaTotal,
     aplicouMinimo,
-    // Nunca negativo: um desconto maior que o item zeraria a linha, e um total
-    // negativo entraria somando ao contrário no orçamento.
-    total: arredondar(Math.max(0, bruto - desconto))
+    materiais,
+    acabamentos,
+    total,
+    custo,
+    margem
   };
 };
 

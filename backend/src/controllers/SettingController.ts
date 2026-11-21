@@ -8,6 +8,7 @@ import UpdateSettingService from "../services/SettingServices/UpdateSettingServi
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
 import GetSetting from "../helpers/GetSetting";
 import { normalizarValor } from "../helpers/configuracoes/catalogo";
+import RecalcularPrecosService from "../services/PrecoServices/RecalcularPrecosService";
 import { comConsistencia, saudeDaEmpresa } from "../helpers/consistencia/motor";
 
 /**
@@ -74,6 +75,8 @@ const avisarTelas = (companyId: number, setting: unknown): void => {
   });
 };
 
+const CHAVES_DE_PRECO = ["precoModo", "precoPercentual"];
+
 export const update = async (
   req: Request,
   res: Response
@@ -86,9 +89,13 @@ export const update = async (
 
   // Recusa a mudança que deixaria outra configuração sem efeito. Ver
   // helpers/consistencia.
-  const setting = await comConsistencia(companyId, "configuracao", transaction =>
-    UpdateSettingService({ key, value, companyId, transaction })
-  );
+  const setting = await comConsistencia(companyId, "configuracao", async transaction => {
+    const gravada = await UpdateSettingService({ key, value, companyId, transaction });
+    // Mudou a regra de preço: tudo que tem preço calculado é refeito na mesma
+    // transação -- se a regra for recusada, os preços voltam junto.
+    if (CHAVES_DE_PRECO.includes(key)) await RecalcularPrecosService({ companyId, transaction });
+    return gravada;
+  });
 
   avisarTelas(companyId, setting);
 
