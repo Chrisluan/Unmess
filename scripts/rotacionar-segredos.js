@@ -39,7 +39,7 @@ const gerarSegredo = () => crypto.randomBytes(48).toString("base64url");
 const lerEnv = arquivo => {
   const texto = fs.readFileSync(arquivo, "utf8");
   const valor = chave => {
-    const achado = texto.match(new RegExp(`^\\s*${chave}\\s*=\\s*(.*)$`, "m"));
+    const achado = texto.match(new RegExp(`^[ \\t]*${chave}[ \\t]*=[ \\t]*([^\\r\\n]*)`, "m"));
     return achado ? achado[1].trim() : null;
   };
   return { texto, valor };
@@ -54,8 +54,16 @@ const lerEnv = arquivo => {
  */
 const substituir = (texto, chave, valor) => {
   const linha = `${chave}=${valor}`;
-  const padrao = new RegExp(`^\\s*${chave}\\s*=.*$`, "m");
-  return padrao.test(texto) ? texto.replace(padrao, linha) : `${texto}\n${linha}`;
+  // [ \t] e [^\r\n], nunca \s e .: com `m`, o ^ também casa logo depois de
+  // um \r, e um \s* ali engolia o \n seguinte -- a substituição deixava a
+  // linha anterior grudada nesta por um \r sozinho. O dotenv lia certo, mas
+  // grep, PowerShell e qualquer conferência à mão deixavam de ver a chave.
+  const padrao = new RegExp(`^[ \\t]*${chave}[ \\t]*=[^\\r\\n]*`, "m");
+  const saida = padrao.test(texto)
+    ? texto.replace(padrao, () => linha)
+    : `${texto.replace(/\s*$/, "")}\r\n${linha}\r\n`;
+  // Desfaz as linhas que execuções antigas deixaram grudadas por \r sozinho.
+  return saida.replace(/\r(?!\n)/g, "\r\n");
 };
 
 /** Executa SQL pelo cliente do MySQL, com a senha pelo ambiente e nunca na linha de comando. */

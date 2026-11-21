@@ -102,8 +102,11 @@ Escrever "  Conexao conferida com a senha nova." "Green"
 # Sem a linha DB_PASS, o -replace nao faz nada: a senha seria trocada no
 # MySQL e nao ficaria gravada em lugar nenhum -- foi assim que ela ja se
 # perdeu antes. Nesse caso a linha e acrescentada.
-if ($conteudo -match '(?m)^\s*DB_PASS\s*=') {
-    $conteudo = $conteudo -replace '(?m)^\s*DB_PASS\s*=.*$', "DB_PASS=$novaSenha"
+# [^\r\n] e nao .*: no .NET o ponto engole \r, e numa linha grudada por \r
+# sozinho (deixada por versoes antigas da rotacao) apagaria a chave seguinte.
+$conteudo = $conteudo -replace "\r(?!\n)", "`r`n"
+if ($conteudo -match '(?m)^[ \t]*DB_PASS[ \t]*=') {
+    $conteudo = $conteudo -replace '(?m)^[ \t]*DB_PASS[ \t]*=[^\r\n]*', "DB_PASS=$novaSenha"
 } else {
     $conteudo = $conteudo.TrimEnd() + "`r`nDB_PASS=$novaSenha`r`n"
 }

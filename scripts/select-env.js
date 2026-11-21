@@ -76,8 +76,10 @@ function preservarSegredos(modelo, arquivoAtual) {
   if (!fs.existsSync(arquivoAtual)) return modelo;
 
   const atuais = {};
-  for (const linha of fs.readFileSync(arquivoAtual, "utf8").split(/\r?\n/)) {
-    const achado = linha.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
+  // \r sozinho também é quebra de linha: é como o dotenv lê, e versões antigas
+  // da rotação deixaram linhas separadas assim.
+  for (const linha of fs.readFileSync(arquivoAtual, "utf8").split(/\r\n|\n|\r/)) {
+    const achado = linha.match(/^[ \t]*([A-Z0-9_]+)[ \t]*=[ \t]*(.*?)[ \t]*$/);
     if (achado && achado[2]) atuais[achado[1]] = achado[2];
   }
 
