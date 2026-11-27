@@ -20,7 +20,7 @@ import AsaasProvider from "../BillingServices/AsaasProvider";
 
 export const PROVEDOR_PADRAO = "asaas";
 
-export const integracaoDaEmpresa = (
+export const integracaoDaEmpresa = async (
   companyId: number,
   transaction?: Transaction
 ): Promise<CompanyIntegration | null> =>

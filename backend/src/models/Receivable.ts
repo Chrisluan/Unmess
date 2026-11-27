@@ -119,7 +119,7 @@ class Receivable extends Model<Receivable> {
   pixCopiaECola: string;
 
   /** Imagem do QR Code em base64 (PNG), como o gateway entrega. */
-  @Column(DataType.TEXT("medium"))
+  @Column(DataType.TEXT({ length: "medium" }))
   pixQrCode: string;
 
   @Column

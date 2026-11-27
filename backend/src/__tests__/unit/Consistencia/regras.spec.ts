@@ -16,6 +16,7 @@ type Dados = {
   conexoes?: Awaited<ReturnType<FonteDeDados["conexoes"]>>;
   contas?: Awaited<ReturnType<FonteDeDados["contasFinanceiras"]>>;
   produtos?: Awaited<ReturnType<FonteDeDados["produtosCalculados"]>>;
+  integracao?: Awaited<ReturnType<FonteDeDados["integracaoDeCobranca"]>>;
 };
 
 const fonte = (d: Dados): FonteDeDados => ({
@@ -29,7 +30,8 @@ const fonte = (d: Dados): FonteDeDados => ({
   conexoes: async () => d.conexoes ?? [],
   contasFinanceiras: async () => d.contas ?? [],
   empresa: async () => null,
-  produtosCalculados: async () => d.produtos ?? []
+  produtosCalculados: async () => d.produtos ?? [],
+  integracaoDeCobranca: async () => d.integracao ?? null
 });
 
 const rodar = async (id: string, d: Dados): Promise<string[]> => {
