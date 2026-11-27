@@ -366,7 +366,18 @@ const AbaReceber = ({ cadastros, onPendentesChange }) => {
                   <TableCell className={classes.dinheiro}>
                     {dataCurta(linha.dueDate)}
                   </TableCell>
-                  <TableCell>{linha.description}</TableCell>
+                  <TableCell>
+                    {linha.description}
+                    {/* De que venda é a parcela: leva de volta ao card. */}
+                    {linha.order && (
+                      <div style={{ fontSize: 11.5, opacity: 0.75 }}>
+                        <a href={`/crm?deal=${linha.order.dealId}`}>
+                          Pedido nº {linha.order.number}
+                          {linha.order.quoteNumber ? ` · Orçamento nº ${linha.order.quoteNumber}` : ""}
+                        </a>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {linha.customer?.tradeName || linha.customer?.name || "—"}
                   </TableCell>

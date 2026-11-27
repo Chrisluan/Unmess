@@ -511,7 +511,7 @@ const UserAccessModal = ({
             Deixar só o cargo
           </Button>
         )}
-        <Button onClick={onClose} color="secondary" variant="outlined" disabled={salvando}>
+        <Button onClick={onClose} color="inherit" disabled={salvando}>
           Cancelar
         </Button>
         <Box position="relative">

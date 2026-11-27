@@ -33,6 +33,10 @@ companyRoutes.put(
   CompanyController.updateBranding
 );
 
+// Dados da empresa que saem no cabeçalho de proposta, O.P. e cobrança.
+companyRoutes.get("/company/dados", isAuth, requiresCompany, hasPermission("settings:view"), CompanyController.dadosParaDocumentos);
+companyRoutes.put("/company/dados", isAuth, requiresCompany, hasPermission("settings:edit"), CompanyController.atualizarDadosParaDocumentos);
+
 companyRoutes.get("/companies", isAuth, isSuper, CompanyController.index);
 
 companyRoutes.get(

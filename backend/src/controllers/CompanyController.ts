@@ -11,6 +11,7 @@ import ShowBrandingService from "../services/CompanyServices/ShowBrandingService
 import UpdateBrandingService from "../services/CompanyServices/UpdateBrandingService";
 import getCompanyId from "../helpers/GetCompanyId";
 import AppError from "../errors/AppError";
+import Company from "../models/Company";
 
 type IndexQuery = {
   searchParam: string;
@@ -158,4 +159,46 @@ export const remove = async (
   });
 
   return res.status(200).json({ message: "Company deleted" });
+};
+
+
+const CAMPOS_DOS_DOCUMENTOS = ["legalName", "document", "address", "phone", "email"] as const;
+
+/**
+ * Razão social, documento, endereço e contato da empresa logada.
+ *
+ * São os dados do cabeçalho da proposta, da ordem de produção e da cobrança.
+ * Ficam separados da ficha completa (plano, mensalidade), que é assunto do
+ * super-admin.
+ */
+export const dadosParaDocumentos = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const company = await Company.findByPk(getCompanyId(req), {
+    attributes: ["id", "name", ...CAMPOS_DOS_DOCUMENTOS]
+  });
+  if (!company) throw new AppError("ERR_NO_COMPANY_FOUND", 404);
+  return res.json(company);
+};
+
+export const atualizarDadosParaDocumentos = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const company = await Company.findByPk(getCompanyId(req));
+  if (!company) throw new AppError("ERR_NO_COMPANY_FOUND", 404);
+
+  const dados = CAMPOS_DOS_DOCUMENTOS.reduce<Record<string, string | null>>((acc, campo) => {
+    const valor = req.body?.[campo];
+    if (valor !== undefined) acc[campo] = String(valor ?? "").trim().slice(0, 255) || null;
+    return acc;
+  }, {});
+
+  if (dados.email && !/^[^s@]+@[^s@]+.[^s@]+$/.test(dados.email)) {
+    throw new AppError("ERR_INVALID_EMAIL", 400);
+  }
+
+  await company.update(dados);
+  return res.json(company);
 };

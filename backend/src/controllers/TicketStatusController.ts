@@ -6,6 +6,7 @@ import ListTicketStatusesService from "../services/TicketStatusServices/ListTick
 import CreateTicketStatusService from "../services/TicketStatusServices/CreateTicketStatusService";
 import UpdateTicketStatusService from "../services/TicketStatusServices/UpdateTicketStatusService";
 import DeleteTicketStatusService from "../services/TicketStatusServices/DeleteTicketStatusService";
+import { comConsistencia } from "../helpers/consistencia/motor";
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
   const statuses = await ListTicketStatusesService(getCompanyId(req));
@@ -16,13 +17,10 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 export const store = async (req: Request, res: Response): Promise<Response> => {
   const { name, color, type, isDefault } = req.body;
 
-  const status = await CreateTicketStatusService({
-    name,
-    color,
-    type,
-    isDefault,
-    companyId: getCompanyId(req)
-  });
+  const companyId = getCompanyId(req);
+  const status = await comConsistencia(companyId, "statusDeTicket", transaction =>
+    CreateTicketStatusService({ name, color, type, isDefault, companyId, transaction })
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("ticketStatus", {
@@ -40,14 +38,20 @@ export const update = async (
   const { ticketStatusId } = req.params;
   const { name, color, type, isDefault } = req.body;
 
-  const status = await UpdateTicketStatusService({
-    id: ticketStatusId,
-    name,
-    color,
-    type,
-    isDefault,
-    companyId: getCompanyId(req)
-  });
+  // Desmarcar o padrão ou mudar o tipo pode deixar o fechamento automático
+  // sem motivo; o motor recusa e diz o que falta.
+  const companyId = getCompanyId(req);
+  const status = await comConsistencia(companyId, "statusDeTicket", transaction =>
+    UpdateTicketStatusService({
+      id: ticketStatusId,
+      name,
+      color,
+      type,
+      isDefault,
+      companyId,
+      transaction
+    })
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("ticketStatus", {
@@ -64,7 +68,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { ticketStatusId } = req.params;
 
-  await DeleteTicketStatusService(ticketStatusId, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  await comConsistencia(companyId, "statusDeTicket", transaction =>
+    DeleteTicketStatusService(ticketStatusId, companyId, transaction)
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("ticketStatus", {

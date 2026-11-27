@@ -12,6 +12,7 @@ import ShowTicketService from "../TicketServices/ShowTicketService";
 import CreateTicketService from "../TicketServices/CreateTicketService";
 import ShowContactService from "../ContactServices/ShowContactService";
 import { logger } from "../../utils/logger";
+import chatIdDoContato from "../../helpers/ChatIdDoContato";
 
 // Mapa mínimo de extensão → mimetype. Evita depender de "mime-types", que
 // hoje só existe como dependência transitiva e sem @types no projeto.
@@ -128,9 +129,7 @@ const ForwardMessageService = async ({
       return targetTicket;
     }
 
-    const chatId = `${targetTicket.contact.number}@${
-      targetTicket.isGroup ? "g" : "c"
-    }.us`;
+    const chatId = chatIdDoContato(targetTicket.contact, targetTicket.isGroup);
 
     await whatsappProvider.sendMedia(
       targetTicket.whatsappId,

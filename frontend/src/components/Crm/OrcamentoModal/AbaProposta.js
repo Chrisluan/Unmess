@@ -56,7 +56,9 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const moeda = (valor) =>
-  Number(valor || 0).toLocaleString("pt-BR", {
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -75,10 +77,28 @@ const paraCampoHora = (iso) => (iso ? String(iso).slice(11, 16) : "");
 const AbaProposta = ({ deal, onSalvo }) => {
   const classes = useStyles();
   const { can } = usePermissions();
-  const podeEditar = can("crm:edit");
+  // As condições comerciais congelam no pedido: depois dele, a proposta é
+  // registro do que foi aprovado (o backend também recusa).
+  const travado = deal?.papel === "orcamento_aprovado" || deal?.papel === "producao";
+  const podeEditar = can("crm:edit") && !travado;
+  const verValores = can("crm:viewValues");
+  // Desconto é permissão própria: o servidor recusa o campo de quem não a tem,
+  // então a tela também não pode mandá-lo — antes ele ia em todo salvamento, e
+  // quem não pode descontar não conseguia nem corrigir a data de entrega.
+  const podeDescontar = can("crm:discount") && verValores;
 
   const [form, setForm] = useState({});
   const [salvando, setSalvando] = useState(false);
+  const [condicoes, setCondicoes] = useState([]);
+
+  // Condições cadastradas no financeiro: escolher uma aqui é o que faz a
+  // cobrança do pedido já sair com as parcelas certas.
+  useEffect(() => {
+    api
+      .get("/condicoes-de-pagamento")
+      .then(({ data }) => setCondicoes(data?.condicoes || []))
+      .catch(() => setCondicoes([]));
+  }, []);
 
   useEffect(() => {
     setForm({
@@ -94,6 +114,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
       discountType: deal.discountType || "value",
       origin: deal.origin || "",
       notes: deal.notes || "",
+      validUntil: paraCampoData(deal.validUntil),
+      paymentTermId: deal.paymentTermId || "",
     });
   }, [deal]);
 
@@ -119,6 +141,12 @@ const AbaProposta = ({ deal, onSalvo }) => {
           : null;
 
       await api.put(`/deals/${deal.id}`, {
+        ...(podeDescontar
+          ? {
+              discount: Number(form.discount) || 0,
+              discountType: form.discountType,
+            }
+          : {}),
         title: form.title,
         deliveryAt,
         deliveryToArrange: form.deliveryToArrange,
@@ -126,8 +154,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
         carrier: form.deliveryMode === "delivery" ? form.carrier : null,
         paymentCondition: form.paymentCondition,
         installments: Number(form.installments) || 1,
-        discount: Number(form.discount) || 0,
-        discountType: form.discountType,
+        paymentTermId: form.paymentTermId ? Number(form.paymentTermId) : null,
+        validUntil: form.validUntil ? `${form.validUntil}T23:59:59` : null,
         origin: form.origin,
         notes: form.notes,
       });
@@ -191,6 +219,17 @@ const AbaProposta = ({ deal, onSalvo }) => {
           />
 
           <TextField
+            label="Proposta válida até"
+            type="date"
+            size="small"
+            variant="outlined"
+            InputLabelProps={{ shrink: true }}
+            value={form.validUntil || ""}
+            disabled={!podeEditar}
+            onChange={(e) => mudar("validUntil", e.target.value)}
+          />
+
+          <TextField
             label="Origem"
             size="small"
             variant="outlined"
@@ -244,7 +283,26 @@ const AbaProposta = ({ deal, onSalvo }) => {
 
         <div className={classes.totais}>
           <TextField
-            label="Condição de pagamento"
+            select
+            label="Condição cadastrada"
+            size="small"
+            variant="outlined"
+            SelectProps={{ native: true }}
+            InputLabelProps={{ shrink: true }}
+            value={form.paymentTermId || ""}
+            disabled={!podeEditar}
+            onChange={(e) => mudar("paymentTermId", e.target.value)}
+          >
+            <option value="">Nenhuma (à vista)</option>
+            {condicoes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </TextField>
+
+          <TextField
+            label="Observação do pagamento"
             size="small"
             variant="outlined"
             placeholder="À vista, 30/60, PIX…"
@@ -272,7 +330,7 @@ const AbaProposta = ({ deal, onSalvo }) => {
             SelectProps={{ native: true }}
             InputLabelProps={{ shrink: true }}
             value={form.discountType || "value"}
-            disabled={!podeEditar}
+            disabled={!podeEditar || !podeDescontar}
             onChange={(e) => mudar("discountType", e.target.value)}
           >
             <option value="value">R$</option>
@@ -284,8 +342,8 @@ const AbaProposta = ({ deal, onSalvo }) => {
             type="number"
             size="small"
             variant="outlined"
-            value={form.discount || 0}
-            disabled={!podeEditar}
+            value={verValores ? form.discount || 0 : ""}
+            disabled={!podeEditar || !podeDescontar}
             onChange={(e) => mudar("discount", e.target.value)}
             inputProps={{ min: 0, step: "0.01" }}
           />
@@ -296,20 +354,20 @@ const AbaProposta = ({ deal, onSalvo }) => {
             <Typography variant="caption" color="textSecondary">
               Valor dos itens
             </Typography>
-            <div className={classes.resultado}>{moeda(bruto)}</div>
+            <div className={classes.resultado}>{moeda(verValores ? bruto : null)}</div>
           </div>
           <div>
             <Typography variant="caption" color="textSecondary">
               Desconto
             </Typography>
-            <div className={classes.resultado}>− {moeda(abatimento)}</div>
+            <div className={classes.resultado}>{verValores ? `− ${moeda(abatimento)}` : "—"}</div>
           </div>
           <div>
             <Typography variant="caption" color="textSecondary">
               Valor total
             </Typography>
             <div className={classes.resultado} style={{ fontWeight: 700 }}>
-              {moeda(liquido)}
+              {moeda(verValores ? liquido : null)}
             </div>
           </div>
         </div>

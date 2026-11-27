@@ -1,11 +1,9 @@
 import React from "react";
 
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+
+import Janela from "../../Janela";
 
 /**
  * Pergunta o que fazer quando um card chega ao fim de um quadro.
@@ -16,38 +14,32 @@ import Button from "@mui/material/Button";
  * seguinte.
  *
  * Nos dois caminhos o card permanece visível na coluna final, marcado como
- * concluído. A escolha é só sobre nascer ou não um card adiante.
+ * concluído. A escolha é só sobre nascer ou não um card adiante -- por isso
+ * "Só concluir" é uma ação de verdade (à esquerda), e não o cancelar.
  */
 const AvancarQuadroModal = ({ open, dealTitle, onClose, onConfirm }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-    <DialogTitle>Concluir e gerar pedido?</DialogTitle>
-
-    <DialogContent>
-      <DialogContentText component="div">
-        <p style={{ marginTop: 0 }}>
-          {dealTitle ? <strong>{dealTitle}</strong> : "Este card"} chegou ao fim
-          deste quadro.
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          Deseja abrir o pedido no próximo quadro? Uma cópia será criada lá,
-          referenciando o número deste orçamento. De um jeito ou de outro, este
-          card continua aqui, marcado como concluído.
-        </p>
-      </DialogContentText>
-    </DialogContent>
-
-    <DialogActions>
-      <Button onClick={onClose} color="inherit">
-        Cancelar
-      </Button>
-      {/* Concluir sem gerar é uma escolha legítima, não um cancelamento --
-          por isso os dois botões de ação, e o cancelar separado. */}
-      <Button onClick={() => onConfirm(false)}>Só concluir</Button>
-      <Button onClick={() => onConfirm(true)} variant="contained">
-        Gerar pedido
-      </Button>
-    </DialogActions>
-  </Dialog>
+  <Janela
+    open={open}
+    onClose={onClose}
+    icone={<FlagOutlinedIcon />}
+    tom="sucesso"
+    tamanho="xs"
+    titulo="Concluir e gerar pedido?"
+    subtitulo={
+      <>
+        {dealTitle ? <strong>{dealTitle}</strong> : "Este card"} chegou ao fim deste quadro.
+      </>
+    }
+    acaoExtra={{ rotulo: "Só concluir", onClick: () => onConfirm(false) }}
+    rotuloConfirmar="Gerar pedido"
+    onConfirmar={() => onConfirm(true)}
+  >
+    <Typography variant="body2" color="text.secondary">
+      Uma cópia será criada no próximo quadro, referenciando o número deste
+      orçamento. De um jeito ou de outro, este card continua aqui, marcado como
+      concluído.
+    </Typography>
+  </Janela>
 );
 
 export default AvancarQuadroModal;

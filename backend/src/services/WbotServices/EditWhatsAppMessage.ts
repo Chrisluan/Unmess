@@ -2,6 +2,7 @@ import AppError from "../../errors/AppError";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import { whatsappProvider } from "../../providers/WhatsApp";
+import chatIdDoContato from "../../helpers/ChatIdDoContato";
 
 const EditWhatsAppMessage = async (
   messageId: string,
@@ -47,7 +48,7 @@ const EditWhatsAppMessage = async (
     throw new AppError("ERR_EDIT_MEDIA_MESSAGE");
   }
 
-  const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;
+  const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 
   await whatsappProvider.editMessage(
     ticket.whatsappId,

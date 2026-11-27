@@ -971,6 +971,7 @@ const messages = {
           connections: "Números de WhatsApp",
           businessHours: "Horário de Atendimento",
           branding: "Identidade Visual",
+          health: "Saúde da configuração",
         },
         general: {
           sections: {
@@ -993,6 +994,18 @@ const messages = {
             helper:
               "Quando desligado, cada atendente vê apenas as conversas dos setores dos quais faz parte.",
           },
+          precoPercentual: {
+            label: "Percentual padrão (%)",
+            helper: "O que se soma ao custo (markup) ou a fatia do preço que fica de lucro, conforme a opção acima. Cada produto pode ter o seu.",
+          },
+          margemMinima: {
+            label: "Margem mínima (%)",
+            helper: "Item do orçamento com margem abaixo disto aparece em vermelho para quem vê custo. 0 desliga o alerta.",
+          },
+          validadePropostaDias: {
+            label: "Validade padrão da proposta (dias)",
+            helper: "Orçamento novo já nasce com essa validade, que sai impressa na proposta. Dá para mudar em cada orçamento. 0 deixa sem validade.",
+          },
           autoCloseInactiveHours: {
             label: "Encerrar conversas paradas após (horas)",
             helper: "0 desliga o encerramento automático. Verificado a cada 5 minutos pelo servidor.",
@@ -1008,7 +1021,7 @@ const messages = {
           },
           notificationSound: {
             label: "Som de notificação",
-            helper: "Toca um alerta sonoro quando chega mensagem em uma conversa que não está aberta.",
+            helper: "Toca um clique quando chega mensagem em conversa que não está aberta — o tom muda a cada toque para não cansar. Conversas suas e transferências para você têm um som próprio, mais chamativo.",
           },
         },
         buttons: {
@@ -1309,6 +1322,37 @@ const messages = {
         generic: "Não foi possível concluir a operação. Tente novamente.",
       },
       backendErrors: {
+        ERR_PEDIDO_JA_GERADO: "Este orçamento já tem pedido gerado.",
+        ERR_PEDIDO_FORA_DO_FUNIL: "Só um orçamento do funil de vendas gera pedido.",
+        ERR_PEDIDO_SEM_ITENS: "Inclua ao menos um item antes de gerar o pedido.",
+        ERR_PEDIDO_SEM_CLIENTE: "Cadastre o cliente antes de gerar o pedido: cobrança e nota precisam de nome e documento.",
+        ERR_PEDIDO_NAO_ENCONTRADO: "Pedido não encontrado.",
+        ERR_PEDIDO_CANCELADO: "Este pedido está cancelado.",
+        ERR_PEDIDO_COM_RECEBIMENTO: "O pedido já tem recebimento registrado. Estorne os recebimentos antes de cancelar.",
+        ERR_PEDIDO_ABAIXO_DO_RECEBIDO: "Com essa alteração o pedido ficaria abaixo do que já foi recebido.",
+        ERR_ORCAMENTO_TRAVADO_POR_PEDIDO: "Este orçamento já virou pedido e não muda mais. Cancele o pedido para corrigir.",
+        ERR_COBRANCA_ACIMA_DO_PEDIDO: "O valor das parcelas passa do que falta cobrar do pedido.",
+        ERR_CONTATO_JA_TEM_CLIENTE: "Este contato já tem um cliente cadastrado.",
+        ERR_PAYMENT_TERM_NOT_FOUND: "Condição de pagamento não encontrada.",
+        ERR_INVALID_EMAIL: "E-mail inválido.",
+        ERR_CONFIGURACAO_DESCONHECIDA: "Essa configuração não existe.",
+        ERR_CONFIGURACAO_VALOR_INVALIDO: "Valor inválido para essa configuração.",
+        ERR_CONFIGURACAO_SOMENTE_SERVIDOR: "Esse valor é gerado pelo sistema.",
+        ERR_CLOSING_STATUS_INVALID: "Escolha um motivo de encerramento válido.",
+        ERR_TICKET_STATUS_INVALID_TYPE: "Tipo de motivo inválido.",
+        ERR_BUSINESS_HOURS_INVALID: "Horário de atendimento inválido.",
+        ERR_BUSINESS_HOURS_INVALID_TIME: "Use o formato de hora HH:MM.",
+        ERR_NO_CUSTOMER_FOUND: "Cliente não encontrado.",
+        ERR_TEAM_CHANNEL_NOT_FOUND: "Canal não encontrado.",
+        ERR_TEAM_CHANNEL_NAME_REQUIRED: "Dê um nome ao canal.",
+        ERR_TEAM_CHANNEL_NAME_TOO_LONG: "O nome do canal pode ter até 60 caracteres.",
+        ERR_TEAM_CHANNEL_DUPLICATED: "Já existe um canal com esse nome.",
+        ERR_TEAM_CHANNEL_LAST: "A empresa precisa de pelo menos um canal.",
+        ERR_TEAM_DIRECT_INVALID: "Não é possível conversar com essa pessoa.",
+        ERR_TEAM_MESSAGE_EMPTY: "Escreva alguma coisa antes de enviar.",
+        ERR_TEAM_MESSAGE_TOO_LONG: "A mensagem pode ter até 4.000 caracteres.",
+        ERR_TEAM_MESSAGE_NOT_FOUND: "Mensagem não encontrada.",
+        ERR_TEAM_MESSAGE_NOT_YOURS: "Só quem escreveu pode alterar esta mensagem.",
         ERR_NO_OTHER_WHATSAPP: "Deve haver pelo menos um WhatsApp padrão.",
         ERR_NO_DEF_WAPP_FOUND:
           "Nenhum WhatsApp padrão encontrado. Verifique a página de conexões.",

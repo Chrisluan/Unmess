@@ -68,9 +68,14 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
+      // A conversa reaberta começa um atendimento novo: o motivo do
+      // encerramento anterior não vale mais. Sem limpar, o próximo
+      // encerramento reaproveitava o motivo antigo em silêncio, furando a
+      // exigência de motivo e sujando o relatório.
       await ticket.update({
         status: "pending",
         userId: null,
+        closingStatusId: null,
         unreadMessages: naoLidasIniciais
       });
     }
@@ -97,9 +102,14 @@ const FindOrCreateTicketService = async (
     });
 
     if (ticket) {
+      // A conversa reaberta começa um atendimento novo: o motivo do
+      // encerramento anterior não vale mais. Sem limpar, o próximo
+      // encerramento reaproveitava o motivo antigo em silêncio, furando a
+      // exigência de motivo e sujando o relatório.
       await ticket.update({
         status: "pending",
         userId: null,
+        closingStatusId: null,
         unreadMessages: naoLidasIniciais
       });
     }

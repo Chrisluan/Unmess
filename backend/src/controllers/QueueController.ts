@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getIO } from "../libs/socket";
 import getCompanyId from "../helpers/GetCompanyId";
+import { comConsistencia } from "../helpers/consistencia/motor";
 import CreateQueueService from "../services/QueueService/CreateQueueService";
 import DeleteQueueService from "../services/QueueService/DeleteQueueService";
 import ListQueuesService from "../services/QueueService/ListQueuesService";
@@ -46,7 +47,10 @@ export const update = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
 
-  const queue = await UpdateQueueService(queueId, req.body, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  const queue = await comConsistencia(companyId, "fila", transaction =>
+    UpdateQueueService(queueId, req.body, companyId, transaction)
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("queue", {
@@ -63,7 +67,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { queueId } = req.params;
 
-  await DeleteQueueService(queueId, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  await comConsistencia(companyId, "fila", transaction =>
+    DeleteQueueService(queueId, companyId, transaction)
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("queue", {

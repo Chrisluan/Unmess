@@ -28,6 +28,8 @@ import { MessageType, MessageAck } from "../providers/WhatsApp/types";
 import IsWithinBusinessHours from "../helpers/IsWithinBusinessHours";
 import { ROTULO_AUDIO } from "../helpers/RotuloAudio";
 import Setting from "../models/Setting";
+import { GetSettingBoolean } from "../helpers/GetSetting";
+import chatIdDoContato from "../helpers/ChatIdDoContato";
 
 const writeFileAsync = promisify(writeFile);
 
@@ -231,7 +233,7 @@ const handleQueueLogic = async (
         try {
           await whatsappProvider.sendMessage(
             whatsappId,
-            `${contactPayload.number}@c.us`,
+            chatIdDoContato(contactPayload, false),
             body
           );
         } catch (error) {
@@ -275,7 +277,7 @@ const sendQueueGreeting = async (
   try {
     await whatsappProvider.sendMessage(
       whatsappId,
-      `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+      chatIdDoContato(contactPayload, contactPayload.isGroup),
       // O ‎ marca a mensagem como enviada pelo sistema, para o handler
       // não reprocessá-la ao vê-la voltar.
       formatBody(`‎${saudacao}`, ticket)
@@ -352,11 +354,9 @@ export const handleMessage = async (
       contextPayload.unreadMessages === 1 &&
       processedMessage.type !== "vcard"
     ) {
-      const outOfHoursSetting = await Setting.findOne({
-        where: { key: "outOfHoursMessageEnabled", companyId }
-      });
-
-      if (outOfHoursSetting?.value === "enabled") {
+      // Pelo helper, como o resto do sistema: comparar "enabled" direto
+      // tratava um "true" gravado por outra tela como desligado.
+      if (await GetSettingBoolean("outOfHoursMessageEnabled", companyId, false)) {
         const isOpen = await IsWithinBusinessHours(companyId);
 
         if (!isOpen) {
@@ -368,7 +368,7 @@ export const handleMessage = async (
             try {
               await whatsappProvider.sendMessage(
                 contextPayload.whatsappId,
-                `${contactPayload.number}@${contactPayload.isGroup ? "g" : "c"}.us`,
+                chatIdDoContato(contactPayload, contactPayload.isGroup),
                 formatBody(`\u200e${messageSetting.value}`, ticket)
               );
             } catch (error) {

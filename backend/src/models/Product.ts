@@ -10,9 +10,14 @@ import {
   AllowNull,
   Default,
   ForeignKey,
-  BelongsTo
+  BelongsTo,
+  HasMany
 } from "sequelize-typescript";
 import Company from "./Company";
+// eslint-disable-next-line import/no-cycle
+import ProductSupply from "./ProductSupply";
+// eslint-disable-next-line import/no-cycle
+import ProductFinish from "./ProductFinish";
 
 /**
  * Produto ou serviço do catálogo.
@@ -91,6 +96,30 @@ class Product extends Model<Product> {
   @Default(true)
   @Column
   active: boolean;
+
+  /**
+   * manual: preço e custo digitados, como sempre foi.
+   * calculado: custo = soma da composição (insumos), preço = custo × markup.
+   * Os dois ficam gravados em `cost`/`price` -- recalculados quando a
+   * composição, um insumo ou o markup da empresa mudam -- para que o PDV, o
+   * catálogo e o orçamento leiam o mesmo número sem refazer a conta.
+   */
+  @Default("manual")
+  @Column(DataType.STRING(10))
+  priceMode: string;
+
+  /** Markup (ou lucro) próprio, em %. Nulo = o da empresa. */
+  @Column(DataType.DECIMAL(7, 2))
+  get markupPercent(): number | null {
+    const bruto = this.getDataValue("markupPercent");
+    return bruto === null || bruto === undefined ? null : Number(bruto);
+  }
+
+  @HasMany(() => ProductSupply)
+  composicao: ProductSupply[];
+
+  @HasMany(() => ProductFinish)
+  acabamentos: ProductFinish[];
 
   /** Margem sobre o preço de venda, calculada e nunca gravada. */
   get margin(): number {

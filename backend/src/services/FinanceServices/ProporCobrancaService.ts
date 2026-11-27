@@ -8,6 +8,8 @@ import calcularParcelas, {
   ParcelaCalculada
 } from "../../helpers/CalcularParcelas";
 import valorLiquidoDoNegocio from "../../helpers/ValorLiquidoDoNegocio";
+import { pedidoAtivoDo } from "../OrderServices/GerarPedidoService";
+import { restanteACobrar } from "../OrderServices/SituacaoDoPedido";
 
 interface Request {
   dealId: number | string;
@@ -60,6 +62,42 @@ const ProporCobrancaService = async ({
 
   if (!deal) throw new AppError("ERR_NO_DEAL_FOUND", 404);
 
+  /**
+   * Com pedido, a proposta é do pedido: valor, condição e data base vêm do
+   * que foi aprovado, e só o que falta cobrar entra nas parcelas.
+   */
+  const pedido = await pedidoAtivoDo(deal, companyId);
+  if (pedido) {
+    const escolhidaDoPedido = paymentTermId || pedido.paymentTermId;
+    const termo = escolhidaDoPedido
+      ? await PaymentTerm.findOne({ where: { id: escolhidaDoPedido, companyId } })
+      : null;
+    const cliente = pedido.customerId
+      ? await Customer.findOne({ where: { id: pedido.customerId, companyId }, attributes: ["id", "name"] })
+      : null;
+    const restante = await restanteACobrar(pedido, companyId);
+    const liquido = valorLiquidoDoNegocio(pedido);
+    return {
+      dealId: pedido.dealId || deal.id,
+      orderId: pedido.id,
+      customerId: pedido.customerId || null,
+      customerName: cliente?.name || null,
+      descricao: `Pedido nº ${pedido.number} — ${pedido.title || deal.title}`,
+      valorBruto: pedido.value,
+      desconto: Number((pedido.value - liquido).toFixed(2)),
+      total: Math.max(0, restante),
+      paymentTermId: termo?.id || null,
+      paymentTermName: termo?.name || "À vista",
+      parcelas: calcularParcelas({
+        total: Math.max(0, restante),
+        dayOffsets: termo ? termo.dayOffsets : [0],
+        percentages: termo ? termo.percentages : null,
+        baseDate: pedido.approvedAt || pedido.createdAt || new Date()
+      }),
+      jaTemCobranca: restante <= 0.005
+    };
+  }
+
   const escolhida = paymentTermId || deal.paymentTermId;
 
   const term = escolhida
@@ -86,7 +124,7 @@ const ProporCobrancaService = async ({
   });
 
   const jaTemCobranca =
-    (await Receivable.count({ where: { dealId: deal.id, companyId } })) > 0;
+    (await Receivable.count({ where: { dealId: deal.id, companyId, canceledAt: null } })) > 0;
 
   const bruto = Number(deal.value || 0);
 

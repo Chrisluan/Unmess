@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { randomBytes } from "crypto";
 
 import { getIO } from "../libs/socket";
 import getCompanyId from "../helpers/GetCompanyId";
@@ -6,6 +7,18 @@ import getCompanyId from "../helpers/GetCompanyId";
 import UpdateSettingService from "../services/SettingServices/UpdateSettingService";
 import ListSettingsService from "../services/SettingServices/ListSettingsService";
 import GetSetting from "../helpers/GetSetting";
+import { normalizarValor } from "../helpers/configuracoes/catalogo";
+import RecalcularPrecosService from "../services/PrecoServices/RecalcularPrecosService";
+import { comConsistencia, saudeDaEmpresa } from "../helpers/consistencia/motor";
+
+/**
+ * O que está inconsistente nas configurações da empresa agora, com o atalho
+ * para resolver cada item.
+ */
+export const saude = async (req: Request, res: Response): Promise<Response> => {
+  const problemas = await saudeDaEmpresa(getCompanyId(req));
+  return res.status(200).json({ problemas });
+};
 
 /**
  * Chaves que o atendente comum precisa ler para a tela de chat funcionar
@@ -55,24 +68,61 @@ export const attendance = async (
   return res.status(200).json(result);
 };
 
+const avisarTelas = (companyId: number, setting: unknown): void => {
+  getIO().to(`company-${companyId}`).emit("settings", {
+    action: "update",
+    setting
+  });
+};
+
+const CHAVES_DE_PRECO = ["precoModo", "precoPercentual"];
+
 export const update = async (
   req: Request,
   res: Response
 ): Promise<Response> => {
   const { settingKey: key } = req.params;
-  const { value } = req.body;
+  const companyId = getCompanyId(req);
+
+  // Só chaves do catálogo, no formato do catálogo. Ver helpers/configuracoes.
+  const value = normalizarValor(key, req.body?.value);
+
+  // Recusa a mudança que deixaria outra configuração sem efeito. Ver
+  // helpers/consistencia.
+  const setting = await comConsistencia(companyId, "configuracao", async transaction => {
+    const gravada = await UpdateSettingService({ key, value, companyId, transaction });
+    // Mudou a regra de preço: tudo que tem preço calculado é refeito na mesma
+    // transação -- se a regra for recusada, os preços voltam junto.
+    if (CHAVES_DE_PRECO.includes(key)) await RecalcularPrecosService({ companyId, transaction });
+    return gravada;
+  });
+
+  avisarTelas(companyId, setting);
+
+  return res.status(200).json(setting);
+};
+
+/**
+ * Gera um novo token de API para a empresa.
+ *
+ * O token era sorteado no navegador com Math.random, que não é aleatoriedade
+ * de verdade, e gravado pela rota genérica -- qualquer texto servia, inclusive
+ * um curto ou repetido. Agora quem sorteia é o servidor, com 256 bits.
+ */
+export const gerarTokenDeApi = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const companyId = getCompanyId(req);
+  const value = randomBytes(32).toString("hex");
 
   const setting = await UpdateSettingService({
-    key,
+    key: "userApiToken",
     value,
-    companyId: getCompanyId(req)
+    companyId
   });
 
-  const io = getIO();
-  io.to(`company-${req.user.companyId}`).emit("settings", {
-    action: "update",
-    setting
-  });
+  avisarTelas(companyId, setting);
 
   return res.status(200).json(setting);
 };

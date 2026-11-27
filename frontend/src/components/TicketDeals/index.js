@@ -26,6 +26,8 @@ import toastError from "../../errors/toastError";
 import usePermissions from "../../hooks/usePermissions";
 import abrirOrdemDeServico from "../../helpers/ordemDeServico";
 import { descreverNegocio } from "../Crm/identidade";
+import { totalDaLinha, itemVazio } from "../Crm/calculoItem";
+import TrilhaComercial from "../TrilhaComercial";
 
 const useStyles = makeStyles(theme => ({
   bloco: {
@@ -87,10 +89,10 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const moeda = valor =>
-  Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const totalDaLinha = item =>
-  Math.max(0, Number(item.quantity || 0) * Number(item.unitPrice || 0) - Number(item.discount || 0));
 
 /**
  * Pedidos ligados a esta conversa.
@@ -125,7 +127,9 @@ const TicketDeals = ({ onCarregado }) => {
   const [novoTitulo, setNovoTitulo] = useState("");
   const [criando, setCriando] = useState(false);
 
-  const podeEditar = can("crm:edit");
+  const podeEditar = can("crm:editItems");
+  const verValores = can("crm:viewValues");
+  const podeEmitirOS = can("crm:issueOrder");
   const podeCriar = can("crm:create");
 
   const carregar = useCallback(async () => {
@@ -152,16 +156,11 @@ const TicketDeals = ({ onCarregado }) => {
       return;
     }
     setAberto(deal.id);
-    setRascunho(
-      (deal.items || []).map(i => ({
-        id: i.id,
-        description: i.description,
-        quantity: i.quantity,
-        unit: i.unit || "un",
-        unitPrice: i.unitPrice,
-        discount: i.discount || 0,
-      }))
-    );
+    // O item inteiro vai no rascunho, não só os campos que este painel edita:
+    // o PUT substitui a lista toda, e um item sem medidas, modo de cobrança e
+    // produto voltava do servidor como "unidade" -- um banner de 3 × 1,5 m²
+    // passava a custar o preço de um metro.
+    setRascunho((deal.items || []).map(i => ({ ...i, unit: i.unit || "un", discount: i.discount || 0 })));
   };
 
   const mudarItem = (indice, campo, valor) => {
@@ -173,7 +172,7 @@ const TicketDeals = ({ onCarregado }) => {
   const adicionarLinha = () =>
     setRascunho(atual => [
       ...atual,
-      { description: "", quantity: 1, unit: "un", unitPrice: 0, discount: 0 },
+      itemVazio(),
     ]);
 
   const removerLinha = indice =>
@@ -245,6 +244,8 @@ const TicketDeals = ({ onCarregado }) => {
 
   return (
     <div className={classes.bloco}>
+      {/* De onde a venda veio e onde ela está, a partir desta conversa. */}
+      {deals.length > 0 && <TrilhaComercial ticketId={ticketId} atualizarEm={deals} />}
       <div className={classes.cabecalho}>
         <Typography component="h3" style={{ fontWeight: 600, fontSize: "0.875rem", margin: 0 }}>
           Pedidos e orçamentos
@@ -329,7 +330,7 @@ const TicketDeals = ({ onCarregado }) => {
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span className={classes.total}>{moeda(soma)}</span>
+                <span className={classes.total}>{moeda(verValores ? soma : null)}</span>
                 <ExpandMoreIcon
                   fontSize="small"
                   style={{
@@ -395,7 +396,7 @@ const TicketDeals = ({ onCarregado }) => {
 
                 <div className={classes.linhaTotal}>
                   <span>Total</span>
-                  <span>{moeda(soma)}</span>
+                  <span>{moeda(verValores ? soma : null)}</span>
                 </div>
 
                 <div className={classes.acoes}>
@@ -423,13 +424,15 @@ const TicketDeals = ({ onCarregado }) => {
                   >
                     Ver no CRM
                   </Button>
-                  <Button
-                    size="small"
-                    startIcon={<PrintIcon />}
-                    onClick={() => emitirOrdem(deal.id)}
-                  >
-                    Ordem de serviço
-                  </Button>
+                  {podeEmitirOS && (
+                    <Button
+                      size="small"
+                      startIcon={<PrintIcon />}
+                      onClick={() => emitirOrdem(deal.id)}
+                    >
+                      Ordem de serviço
+                    </Button>
+                  )}
                 </div>
 
                 {deal.archivedAt && (

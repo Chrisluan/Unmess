@@ -29,6 +29,12 @@ import DealAttachment from "../models/DealAttachment";
 import DealTag from "../models/DealTag";
 import Sticker from "../models/Sticker";
 import Order from "../models/Order";
+import OrderItem from "../models/OrderItem";
+import Supply from "../models/Supply";
+import Finish from "../models/Finish";
+import ProductSupply from "../models/ProductSupply";
+import ProductFinish from "../models/ProductFinish";
+import CompanyIntegration from "../models/CompanyIntegration";
 import Product from "../models/Product";
 import PaymentTerm from "../models/PaymentTerm";
 import FinancialAccount from "../models/FinancialAccount";
@@ -42,6 +48,9 @@ import CashSaleItem from "../models/CashSaleItem";
 import Supplier from "../models/Supplier";
 import Payable from "../models/Payable";
 import CompanyInvoice from "../models/CompanyInvoice";
+import TeamChannel from "../models/TeamChannel";
+import TeamChannelMember from "../models/TeamChannelMember";
+import TeamMessage from "../models/TeamMessage";
 
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
@@ -79,6 +88,12 @@ const models = [
   DealAttachment,
   DealTag,
   Order,
+  OrderItem,
+  Supply,
+  Finish,
+  ProductSupply,
+  ProductFinish,
+  CompanyIntegration,
   Product,
   Sticker,
   PaymentTerm,
@@ -92,7 +107,10 @@ const models = [
   CashSession,
   CashMovement,
   CashSale,
-  CashSaleItem
+  CashSaleItem,
+  TeamChannel,
+  TeamChannelMember,
+  TeamMessage
 ];
 
 sequelize.addModels(models);

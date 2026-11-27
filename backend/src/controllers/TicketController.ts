@@ -20,7 +20,12 @@ import getCompanyId from "../helpers/GetCompanyId";
 import { TAB_RULES } from "../helpers/TicketTabRules";
 import { usuarioPode } from "../helpers/permissions/resolve";
 import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
+import { garantirAcessoAoTicket } from "../helpers/permissions/acessoAoTicket";
 import AppError from "../errors/AppError";
+import UserQueue from "../models/UserQueue";
+import CreateInternalNoteService from "../services/MessageServices/CreateInternalNoteService";
+import ListarDestinosDeTransferenciaService from "../services/TicketServices/ListarDestinosDeTransferenciaService";
+import { logger } from "../utils/logger";
 
 type IndexQuery = {
   searchParam: string;
@@ -85,6 +90,23 @@ export const index = async (req: Request, res: Response): Promise<Response> => {
 
   if (queueIdsStringified) {
     queueIds = JSON.parse(queueIdsStringified);
+  }
+
+  // As filas que chegam na query são pedido da tela, não direito da pessoa:
+  // sem `tickets:viewAll` elas são cortadas para as filas que ela realmente
+  // tem. Antes bastava mandar outros ids na URL para listar as conversas de
+  // um setor alheio.
+  if (!(await usuarioPode(Number(userId), "tickets:viewAll"))) {
+    const minhas = (
+      await UserQueue.findAll({
+        where: { userId: Number(userId) },
+        attributes: ["queueId"]
+      })
+    ).map(f => f.queueId);
+
+    queueIds = queueIdsStringified
+      ? queueIds.filter(id => minhas.includes(Number(id)))
+      : minhas;
   }
 
   if (whatsappIdsStringified) {
@@ -159,6 +181,8 @@ export const store = async (req: Request, res: Response): Promise<Response> => {
 export const show = async (req: Request, res: Response): Promise<Response> => {
   const { ticketId } = req.params;
 
+  await garantirAcessoAoTicket(req, ticketId);
+
   const contact = await ShowTicketService(ticketId, getCompanyId(req));
 
   return res.status(200).json(contact);
@@ -179,11 +203,27 @@ export const markAsRead = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
 
+  await garantirAcessoAoTicket(req, ticketId);
+
   const ticket = await ShowTicketService(ticketId, getCompanyId(req));
 
   await SetTicketMessagesAsRead(ticket);
 
   return res.status(200).json({ ticketId: +ticketId, unreadMessages: 0 });
+};
+
+/**
+ * Setores e atendentes para onde a conversa pode ser transferida.
+ */
+export const destinosDeTransferencia = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  const destinos = await ListarDestinosDeTransferenciaService(
+    getCompanyId(req)
+  );
+
+  return res.status(200).json(destinos);
 };
 
 export const update = async (
@@ -192,7 +232,9 @@ export const update = async (
 ): Promise<Response> => {
   const { ticketId } = req.params;
   const ticketData: TicketData = req.body;
-  const { isTransfer } = req.body;
+  const { isTransfer, notaDeTransferencia } = req.body;
+
+  await garantirAcessoAoTicket(req, ticketId);
 
   /**
    * Transferir é uma permissão separada de responder, e é aqui que ela vale.
@@ -219,8 +261,33 @@ export const update = async (
     ticketData,
     ticketId,
     companyId: getCompanyId(req),
-    isTransfer
+    isTransfer,
+    atorId: Number(req.user.id)
   });
+
+  /**
+   * O recado de quem passa a conversa adiante.
+   *
+   * Sem ele, quem recebe precisa reler o histórico inteiro para descobrir o
+   * que já foi combinado. Vira nota interna: fica na linha do tempo, para a
+   * equipe, e nunca vai para o cliente.
+   */
+  const recado =
+    typeof notaDeTransferencia === "string" ? notaDeTransferencia.trim() : "";
+
+  if (estaTransferindo && recado) {
+    try {
+      await CreateInternalNoteService({
+        ticketId: ticket.id,
+        body: recado.slice(0, 2000),
+        userId: Number(req.user.id),
+        companyId: getCompanyId(req)
+      });
+    } catch (err) {
+      // A transferência já aconteceu; perder o recado não pode desfazê-la.
+      logger.error("Erro ao gravar o recado da transferência:", err);
+    }
+  }
 
   if (ticket.status === "closed") {
     const whatsapp = await ShowWhatsAppService(ticket.whatsappId);
@@ -243,6 +310,8 @@ export const remove = async (
   res: Response
 ): Promise<Response> => {
   const { ticketId } = req.params;
+
+  await garantirAcessoAoTicket(req, ticketId);
 
   const ticket = await DeleteTicketService(ticketId, getCompanyId(req));
 

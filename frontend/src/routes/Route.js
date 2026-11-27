@@ -32,45 +32,58 @@ const Route = ({
   const { isAuth, loading, user } = useContext(AuthContext);
   const { can, canAny, isSuper } = usePermissions();
 
-  if (loading) return <BackdropLoading />;
+  /**
+   * As conferências só valem para a rota que está de fato na tela.
+   *
+   * Dentro do layout as rotas não ficam num Switch: todas são montadas, e só o
+   * RouterRoute decide qual desenha. As conferências ficavam *fora* dele,
+   * então rodavam para todas as rotas em toda página — e a de /companies, que
+   * é só do super, mandava qualquer administrador de empresa para /tickets ao
+   * abrir Configurações, Cadastros ou qualquer tela que não fosse Conversas.
+   */
+  const decidir = (props) => {
+    if (loading) return <BackdropLoading />;
 
-  // Não autenticado tentando acessar rota privada
-  if (!isAuth && isPrivate) {
-    return <Redirect to={{ pathname: "/login", state: { from: rest.location } }} />;
-  }
+    // Não autenticado tentando acessar rota privada
+    if (!isAuth && isPrivate) {
+      return <Redirect to={{ pathname: "/login", state: { from: props.location } }} />;
+    }
 
-  // Autenticado tentando acessar rota pública (login)
-  if (isAuth && !isPrivate) {
-    if (user?.profile === "super" && !user?.companyId) {
+    // Autenticado tentando acessar rota pública (login)
+    if (isAuth && !isPrivate) {
+      if (user?.profile === "super" && !user?.companyId) {
+        return <Redirect to="/select-company" />;
+      }
+      return <Redirect to="/tickets" />;
+    }
+
+    // Rota superOnly — apenas super pode acessar
+    if (superOnly && user?.profile !== "super") {
+      return <Redirect to="/tickets" />;
+    }
+
+    // Super sem empresa tentando acessar rota normal → manda selecionar empresa
+    if (isAuth && isPrivate && !superOnly && user?.profile === "super" && !user?.companyId) {
       return <Redirect to="/select-company" />;
     }
-    return <Redirect to="/tickets" />;
-  }
 
-  // Rota superOnly — apenas super pode acessar
-  if (superOnly && user?.profile !== "super") {
-    return <Redirect to="/tickets" />;
-  }
+    /**
+     * A permissão da rota, sem exceção para administrador.
+     *
+     * O Administrador é um cargo com todas as permissões, então ele passa por
+     * `can(...)` como qualquer pessoa. O super da plataforma continua por
+     * cima: ele opera dentro de uma empresa sem ser membro dela, e o backend
+     * faz o mesmo — as duas pontas concordam.
+     */
+    if (isAuth && isPrivate && !isSuper) {
+      if (permission && !can(permission)) return <Redirect to="/tickets" />;
+      if (anyOf && !canAny(anyOf)) return <Redirect to="/tickets" />;
+    }
 
-  // Super sem empresa tentando acessar rota normal → manda selecionar empresa
-  if (isAuth && isPrivate && !superOnly && user?.profile === "super" && !user?.companyId) {
-    return <Redirect to="/select-company" />;
-  }
+    return Component ? <Component {...props} /> : null;
+  };
 
-  /**
-   * A permissão da rota, sem exceção para administrador.
-   *
-   * O Administrador é um cargo com todas as permissões, então ele passa por
-   * `can(...)` como qualquer pessoa. O super da plataforma continua por cima:
-   * ele opera dentro de uma empresa sem ser membro dela, e o backend faz o
-   * mesmo — as duas pontas concordam.
-   */
-  if (isAuth && isPrivate && !isSuper) {
-    if (permission && !can(permission)) return <Redirect to="/tickets" />;
-    if (anyOf && !canAny(anyOf)) return <Redirect to="/tickets" />;
-  }
-
-  return <RouterRoute {...rest} component={Component} />;
+  return <RouterRoute {...rest} render={decidir} />;
 };
 
 export default Route;

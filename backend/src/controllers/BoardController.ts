@@ -9,6 +9,7 @@ import ReorderBoardsService from "../services/BoardServices/ReorderBoardsService
 import DeleteBoardService from "../services/BoardServices/DeleteBoardService";
 import AppError from "../errors/AppError";
 import getCompanyId from "../helpers/GetCompanyId";
+import { comConsistencia } from "../helpers/consistencia/motor";
 import { escopoDaRequisicao } from "../helpers/permissions/escopoDaRequisicao";
 
 interface BoardData {
@@ -59,11 +60,10 @@ export const update = async (
   const boardData: BoardData = req.body;
   const { boardId } = req.params;
 
-  const board = await UpdateBoardService({
-    boardData,
-    boardId,
-    companyId: getCompanyId(req)
-  });
+  const companyId = getCompanyId(req);
+  const board = await comConsistencia(companyId, "quadro", transaction =>
+    UpdateBoardService({ boardData, boardId, companyId, transaction })
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("board", {
@@ -108,7 +108,10 @@ export const remove = async (
 ): Promise<Response> => {
   const { boardId } = req.params;
 
-  await DeleteBoardService(boardId, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  await comConsistencia(companyId, "quadro", transaction =>
+    DeleteBoardService(boardId, companyId, transaction)
+  );
 
   const io = getIO();
   io.to(`company-${req.user.companyId}`).emit("board", {

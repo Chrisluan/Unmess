@@ -270,7 +270,7 @@ const RoleModal = ({ open, onClose, roleId, catalogo, onSaved }) => {
         <Typography className={classes.rodapeContagem}>
           {form.permissions.length} permissão(ões) neste cargo
         </Typography>
-        <Button onClick={onClose} color="secondary" variant="outlined" disabled={salvando}>
+        <Button onClick={onClose} color="inherit" disabled={salvando}>
           Cancelar
         </Button>
         <Box position="relative">

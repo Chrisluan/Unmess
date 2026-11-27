@@ -1,6 +1,5 @@
 import React from "react";
 import Routes from "./routes";
-import "react-toastify/dist/ReactToastify.css";
 
 /**
  * O tema é aplicado pelo ThemeProvider dentro de Routes (contexto de modo

@@ -8,6 +8,8 @@ const ticketRoutes = express.Router();
 
 ticketRoutes.get("/tickets/tab-rules",    isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.tabRules);
 ticketRoutes.get("/tickets",              isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.index);
+// Antes de "/tickets/:ticketId", senão o Express lê o caminho como um id.
+ticketRoutes.get("/tickets/destinos-de-transferencia", isAuth, requiresCompany, hasPermission("tickets:transfer"), TicketController.destinosDeTransferencia);
 ticketRoutes.get("/tickets/:ticketId",    isAuth, requiresCompany, hasPermission("tickets:view"),   TicketController.show);
 ticketRoutes.post("/tickets",             isAuth, requiresCompany, hasPermission("tickets:create"), TicketController.store);
 // Ler é o que a rota faz; por isso "tickets:view" e não "tickets:edit".

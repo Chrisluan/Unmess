@@ -116,7 +116,7 @@ const ehImagem = (mimetype) => String(mimetype || "").startsWith("image/");
 const AbaMaterial = ({ deal, onSalvo }) => {
   const classes = useStyles();
   const { can } = usePermissions();
-  const podeEditar = can("crm:edit");
+  const podeEditar = can("crm:manageAttachments");
 
   const [anexos, setAnexos] = useState([]);
   const [carregando, setCarregando] = useState(true);

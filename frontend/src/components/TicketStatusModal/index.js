@@ -158,7 +158,7 @@ const TicketStatusModal = ({ open, onClose, ticketStatus }) => {
 							/>
 						</DialogContent>
 						<DialogActions>
-							<Button onClick={handleClose} color="secondary" variant="outlined">
+							<Button onClick={handleClose} color="inherit">
 								{i18n.t("settings.ticketStatuses.buttons.cancel")}
 							</Button>
 							<Button type="submit" color="primary" variant="contained">

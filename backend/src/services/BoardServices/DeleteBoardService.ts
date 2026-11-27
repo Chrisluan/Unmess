@@ -1,3 +1,5 @@
+import { Transaction } from "sequelize";
+
 import AppError from "../../errors/AppError";
 import Board from "../../models/Board";
 import Deal from "../../models/Deal";
@@ -12,29 +14,31 @@ import Deal from "../../models/Deal";
  */
 const DeleteBoardService = async (
   id: string | number,
-  companyId: number
+  companyId: number,
+  transaction?: Transaction
 ): Promise<void> => {
-  const board = await Board.findOne({ where: { id, companyId } });
+  const board = await Board.findOne({ where: { id, companyId }, transaction });
 
   if (!board) {
     throw new AppError("ERR_NO_BOARD_FOUND", 404);
   }
 
-  const total = await Board.count({ where: { companyId } });
+  const total = await Board.count({ where: { companyId }, transaction });
 
   if (total <= 1) {
     throw new AppError("ERR_LAST_BOARD");
   }
 
   const cardsAtivos = await Deal.count({
-    where: { boardId: board.id, companyId, status: "open" }
+    where: { boardId: board.id, companyId, status: "open" },
+    transaction
   });
 
   if (cardsAtivos > 0) {
     throw new AppError("ERR_BOARD_NOT_EMPTY");
   }
 
-  await board.destroy();
+  await board.destroy({ transaction });
 };
 
 export default DeleteBoardService;

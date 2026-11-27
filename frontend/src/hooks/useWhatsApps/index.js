@@ -63,8 +63,12 @@ const useWhatsApps = () => {
 	// delas, e conexões de WhatsApp só existem dentro de uma empresa.
 	const semEmpresa = user?.profile === "super" && !user?.companyId;
 
+	// Conexões só existem para quem pode vê-las: pedir sem a permissão devolvia
+	// 403 e um aviso de "sem permissão" em toda tela, sem a pessoa ter feito nada.
+	const podeVer = Array.isArray(user?.permissions) && user.permissions.includes("connections:view");
+
 	useEffect(() => {
-		if (semEmpresa) {
+		if (semEmpresa || !podeVer) {
 			setLoading(false);
 			return;
 		}
@@ -81,7 +85,7 @@ const useWhatsApps = () => {
 			}
 		};
 		fetchSession();
-	}, [semEmpresa]);
+	}, [semEmpresa, podeVer]);
 
 	useEffect(() => {
 		const socket = openSocket();

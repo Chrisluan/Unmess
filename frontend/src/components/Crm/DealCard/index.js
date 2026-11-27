@@ -7,7 +7,9 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Avatar from "@mui/material/Avatar";
 import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
 import {
   formatarValor,
@@ -31,7 +33,11 @@ const useStyles = makeStyles((theme) => ({
   },
 
   card: {
+    position: "relative",
     padding: theme.spacing(1.25),
+    // O botão de excluir só aparece ao passar o mouse (ou ao focar pelo
+    // teclado): fixo em todo card, viraria uma coluna de lixeiras.
+    "&:hover $excluir, &:focus-within $excluir": { opacity: 1 },
     borderRadius: 0,
     cursor: "pointer",
     borderLeft: "3px solid transparent",
@@ -43,6 +49,24 @@ const useStyles = makeStyles((theme) => ({
 
   arrastavel: {
     cursor: "grab",
+  },
+
+  excluir: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    zIndex: 1,
+    padding: 4,
+    opacity: 0,
+    transition: "opacity 120ms",
+    background: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    "&:hover": {
+      color: theme.palette.error.main,
+      background: theme.palette.background.paper,
+    },
+    // Na tela de toque não existe "passar o mouse".
+    "@media (hover: none)": { opacity: 1 },
   },
 
   // O card em movimento fica esmaecido para a linha de inserção ficar legível.
@@ -274,6 +298,7 @@ const DealCard = ({
   onDragStart,
   onDragEnd,
   onClick,
+  onExcluir,
 }) => {
   const classes = useStyles();
 
@@ -322,6 +347,24 @@ const DealCard = ({
           : undefined
       }
     >
+      {onExcluir && (
+        <Tooltip title="Excluir card" arrow>
+          <IconButton
+            size="small"
+            className={classes.excluir}
+            aria-label={`Excluir ${deal.title}`}
+            draggable={false}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onExcluir();
+            }}
+          >
+            <DeleteOutlineIcon style={{ fontSize: 17 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+
       {/* O material vem antes de tudo: numa gráfica, "banner 3x1" não diz o
           que é o trabalho, e a arte diz de relance. */}
       {capa && (

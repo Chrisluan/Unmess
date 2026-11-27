@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import AppError from "../../errors/AppError";
 import Board from "../../models/Board";
 import PipelineStage from "../../models/PipelineStage";
@@ -24,15 +24,18 @@ interface Request {
   stageData: StageData;
   stageId: string | number;
   companyId: number;
+  transaction?: Transaction;
 }
 
 const UpdatePipelineStageService = async ({
   stageData,
   stageId,
-  companyId
+  companyId,
+  transaction
 }: Request): Promise<PipelineStage> => {
   const stage = await PipelineStage.findOne({
-    where: { id: stageId, companyId }
+    where: { id: stageId, companyId },
+    transaction
   });
 
   if (!stage) {
@@ -44,7 +47,8 @@ const UpdatePipelineStageService = async ({
 
   if (name && name !== stage.name) {
     const nameExists = await PipelineStage.findOne({
-      where: { name, boardId: stage.boardId, id: { [Op.ne]: stage.id } }
+      where: { name, boardId: stage.boardId, id: { [Op.ne]: stage.id } },
+      transaction
     });
 
     if (nameExists) {
@@ -67,13 +71,14 @@ const UpdatePipelineStageService = async ({
   if (isInitial) {
     await PipelineStage.update(
       { isInitial: false },
-      { where: { boardId: stage.boardId, id: { [Op.ne]: stage.id } } }
+      { where: { boardId: stage.boardId, id: { [Op.ne]: stage.id } }, transaction }
     );
   }
 
   if (targetStageId) {
     const alvo = await PipelineStage.findOne({
-      where: { id: targetStageId, companyId }
+      where: { id: targetStageId, companyId },
+      transaction
     });
 
     if (!alvo) {
@@ -93,7 +98,8 @@ const UpdatePipelineStageService = async ({
 
   if (targetBoardId) {
     const quadroAlvo = await Board.findOne({
-      where: { id: targetBoardId, companyId }
+      where: { id: targetBoardId, companyId },
+      transaction
     });
 
     if (!quadroAlvo) {
@@ -103,7 +109,13 @@ const UpdatePipelineStageService = async ({
 
   const tipoAntigo = stage.type;
 
-  await stage.update(stageData);
+  // Só os campos da etapa: o corpo da requisição chegava inteiro e dava para
+  // mudar a etapa de quadro ou de empresa.
+  const { color, probability, isWon, active } = stageData;
+  await stage.update(
+    { name, color, type, isFinal, isInitial, targetBoardId, targetStageId, probability, isWon, active },
+    { transaction }
+  );
 
   // Virar coluna de perda encerra quem já estava lá dentro; sair dela reabre.
   if (type && type !== tipoAntigo) {
@@ -112,7 +124,7 @@ const UpdatePipelineStageService = async ({
         status: type === "lost" ? "lost" : "open",
         closedAt: type === "lost" ? new Date() : null
       },
-      { where: { stageId: stage.id, companyId, status: { [Op.ne]: "moved" } } }
+      { where: { stageId: stage.id, companyId, status: { [Op.ne]: "moved" } }, transaction }
     );
   }
 

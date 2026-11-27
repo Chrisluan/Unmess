@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import MenuItem from "@mui/material/MenuItem";
 import Menu from "@mui/material/Menu";
@@ -9,13 +9,11 @@ import ConfirmationModal from "../ConfirmationModal";
 import TransferTicketModal from "../TransferTicketModal";
 import toastError from "../../errors/toastError";
 import { Can } from "../Can";
-import { AuthContext } from "../../context/Auth/AuthContext";
 
 const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransferir, onDevolver }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const isMounted = useRef(true);
-	const { user } = useContext(AuthContext);
 
 	useEffect(() => {
 		return () => {
@@ -68,9 +66,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransfer
 				open={menuOpen}
 				onClose={handleClose}
 			>
-				<MenuItem onClick={handleOpenTransferModal}>
-					{i18n.t("ticketOptionsMenu.transfer")}
-				</MenuItem>
+				<Can permission="tickets:transfer">
+					<MenuItem onClick={handleOpenTransferModal}>
+						{i18n.t("ticketOptionsMenu.transfer")}
+					</MenuItem>
+				</Can>
 				{onDevolver && (
 					<MenuItem
 						onClick={() => {
@@ -81,15 +81,13 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransfer
 						{i18n.t("messagesList.header.buttons.return")}
 					</MenuItem>
 				)}
-				<Can
-					role={user.profile}
-					perform="ticket-options:deleteTicket"
-					yes={() => (
-						<MenuItem onClick={handleOpenConfirmationModal}>
-							{i18n.t("ticketOptionsMenu.delete")}
-						</MenuItem>
-					)}
-				/>
+				{/* Usava a API antiga do Can (role/perform), que não existe mais:
+				    o item nunca aparecia, nem para quem tem a permissão. */}
+				<Can permission="tickets:delete">
+					<MenuItem onClick={handleOpenConfirmationModal} sx={{ color: "error.main" }}>
+						{i18n.t("ticketOptionsMenu.delete")}
+					</MenuItem>
+				</Can>
 			</Menu>
 			<ConfirmationModal
 				title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${
@@ -113,6 +111,7 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onTransfer
 				ticketWhatsappId={ticket.whatsappId}
 				currentQueueId={ticket.queueId}
 				currentUserId={ticket.userId}
+				contatoConhecido={Boolean(ticket.contact?.isKnown)}
 			/>
 			)}
 		</>

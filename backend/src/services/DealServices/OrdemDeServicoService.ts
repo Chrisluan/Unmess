@@ -13,6 +13,12 @@ import valorLiquidoDoNegocio from "../../helpers/ValorLiquidoDoNegocio";
 interface Request {
   dealId: number | string;
   companyId: number;
+  /**
+   * Quem emite sem `crm:viewValues` recebe a O.S. de produção: itens, medidas
+   * e observações, sem preço, desconto nem total. O papel que vai para a
+   * oficina não precisa de dinheiro, e a pessoa não pode ler o que não vê.
+   */
+  mostrarValores?: boolean;
 }
 
 const dinheiro = (valor: number): string =>
@@ -47,7 +53,11 @@ const escapar = (texto: unknown): string =>
  * qualquer impressora, e evita quebrar uma linha do pedido ao meio entre duas
  * páginas.
  */
-const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<string> => {
+const OrdemDeServicoService = async ({
+  dealId,
+  companyId,
+  mostrarValores = true
+}: Request): Promise<string> => {
   const deal = await Deal.findOne({
     where: { id: dealId, companyId },
     include: [
@@ -139,15 +149,19 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
             ${item.notes ? `<div class="obs">${escapar(item.notes)}</div>` : ""}
           </td>
           <td class="num">${quantidade(item.quantity)} ${escapar(item.unit)}</td>
-          <td class="num">${dinheiro(item.unitPrice)}</td>
+          ${
+            mostrarValores
+              ? `<td class="num">${dinheiro(item.unitPrice)}</td>
           <td class="num">${item.discount > 0 ? `− ${dinheiro(item.discount)}` : "—"}</td>
-          <td class="num forte">${dinheiro(item.total)}</td>
+          <td class="num forte">${dinheiro(item.total)}</td>`
+              : ""
+          }
         </tr>`
     )
     .join("");
 
   const semItens = `
-        <tr><td colspan="6" class="vazio">Nenhum item registrado neste pedido.</td></tr>`;
+        <tr><td colspan="${mostrarValores ? 6 : 3}" class="vazio">Nenhum item registrado neste pedido.</td></tr>`;
 
   return `<!doctype html>
 <html lang="pt-BR">
@@ -359,9 +373,13 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
           <th style="width:8mm">#</th>
           <th>Descrição</th>
           <th class="num" style="width:22mm">Qtd.</th>
-          <th class="num" style="width:26mm">Unitário</th>
+          ${
+            mostrarValores
+              ? `<th class="num" style="width:26mm">Unitário</th>
           <th class="num" style="width:24mm">Desconto</th>
-          <th class="num" style="width:28mm">Total</th>
+          <th class="num" style="width:28mm">Total</th>`
+              : ""
+          }
         </tr>
       </thead>
       <tbody>${itens.length ? linhas : semItens}</tbody>
@@ -374,7 +392,7 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
           <td class="num">${itens.length}</td>
         </tr>
         ${
-          desconto > 0
+          mostrarValores && desconto > 0
             ? `<tr>
                  <td class="rotulo">Subtotal</td>
                  <td class="num">${dinheiro(somaDosItens)}</td>
@@ -385,10 +403,14 @@ const OrdemDeServicoService = async ({ dealId, companyId }: Request): Promise<st
                </tr>`
             : ""
         }
-        <tr class="final">
+        ${
+          mostrarValores
+            ? `<tr class="final">
           <td>Total</td>
           <td class="num">${dinheiro(total)}</td>
-        </tr>
+        </tr>`
+            : ""
+        }
       </table>
     </div>
 

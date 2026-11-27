@@ -404,9 +404,8 @@ const CustomerModal = ({
               <DialogActions>
                 <Button
                   onClick={handleClose}
-                  color="secondary"
+                  color="inherit"
                   disabled={isSubmitting}
-                  variant="outlined"
                 >
                   {i18n.t("customerModal.buttons.cancel")}
                 </Button>

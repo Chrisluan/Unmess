@@ -203,22 +203,77 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
           defaultProps: { elevation: 0 },
           styleOverrides: { root: { border: `1px solid ${c.linha}` } }
         },
+        /**
+         * Base de todos os diálogos.
+         *
+         * Cada modal tinha o próprio respiro, a própria borda entre corpo e
+         * rodapé e a própria ordem de botões. O que fica aqui vale até para os
+         * que ainda não passaram para o componente Janela: mesmo raio, mesmo
+         * espaçamento, botões alinhados à direita com o mesmo vão.
+         */
         MuiDialog: {
           styleOverrides: {
-            paper: { borderRadius: 16, boxShadow: c.sombraFlutuante }
+            paper: {
+              borderRadius: 16,
+              boxShadow: c.sombraFlutuante,
+              border: `1px solid ${c.linha}`
+            },
+            paperFullScreen: { borderRadius: 0, border: "none" }
+          }
+        },
+        MuiBackdrop: {
+          styleOverrides: {
+            root: {
+              "&:not(.MuiBackdrop-invisible)": {
+                backgroundColor: ehEscuro ? "rgba(0,0,0,.6)" : "rgba(29,33,41,.42)"
+              }
+            }
           }
         },
         MuiDialogTitle: {
-          styleOverrides: { root: { fontWeight: 700, fontSize: "1.125rem" } }
+          styleOverrides: {
+            root: {
+              fontWeight: 700,
+              fontSize: "1.0625rem",
+              letterSpacing: "-0.01em",
+              padding: "18px 24px 10px"
+            }
+          }
+        },
+        MuiDialogContent: {
+          styleOverrides: {
+            root: { padding: "8px 24px 20px" },
+            // A linha de baixo fica por conta do rodapé; as duas juntas
+            // desenhavam um traço dobrado.
+            dividers: { padding: "16px 24px", borderColor: c.linha, borderBottom: "none" }
+          }
+        },
+        MuiDialogContentText: {
+          styleOverrides: { root: { color: c.texto2, fontSize: "0.875rem" } }
+        },
+        MuiDialogActions: {
+          styleOverrides: {
+            root: {
+              padding: "12px 20px",
+              gap: 8,
+              borderTop: `1px solid ${c.linha}`,
+              backgroundColor: c.superficie2,
+              "& > :not(style) ~ :not(style)": { marginLeft: 0 }
+            }
+          }
         },
         MuiPopover: {
           styleOverrides: {
-            paper: { border: `1px solid ${c.linha}`, boxShadow: c.sombraFlutuante }
+            paper: {
+              border: `1px solid ${c.linha}`,
+              boxShadow: c.sombraFlutuante,
+              borderRadius: raio
+            }
           }
         },
         MuiMenu: {
           styleOverrides: {
-            paper: { border: `1px solid ${c.linha}`, boxShadow: c.sombraFlutuante, borderRadius: 12 },
+            paper: { border: `1px solid ${c.linha}`, boxShadow: c.sombraFlutuante, borderRadius: raio },
             list: { padding: 6 }
           }
         },
@@ -230,20 +285,6 @@ export const buildTheme = (mode = "light", locale = {}, { textoGrande = false } 
               "&.Mui-selected": { backgroundColor: c.primariaSuave, color: c.primariaSuaveTexto }
             }
           }
-        },
-
-        MuiDialogTitle: {
-          styleOverrides: {
-            root: { fontWeight: 700, letterSpacing: "-0.015em" }
-          }
-        },
-
-        MuiMenu: {
-          styleOverrides: { paper: { borderRadius: raio } }
-        },
-
-        MuiPopover: {
-          styleOverrides: { paper: { borderRadius: raio } }
         },
 
         MuiChip: {

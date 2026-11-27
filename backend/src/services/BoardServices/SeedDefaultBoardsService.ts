@@ -22,6 +22,7 @@ const SeedDefaultBoardsService = async (
         name: modelo.name,
         color: modelo.color,
         order: indice,
+        isSalesFunnel: Boolean(modelo.isSalesFunnel),
         companyId
       },
       { transaction }
@@ -34,6 +35,7 @@ const SeedDefaultBoardsService = async (
         type: stage.type,
         isInitial: Boolean(stage.isInitial),
         isFinal: Boolean(stage.isFinal),
+        isWon: Boolean(stage.isWon),
         order: posicao,
         boardId: board.id,
         companyId

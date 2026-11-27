@@ -8,8 +8,7 @@ import DefinirCapaService from "../services/DealAttachmentServices/DefinirCapaSe
 import DeleteDealAttachmentService from "../services/DealAttachmentServices/DeleteDealAttachmentService";
 import ShowDealService from "../services/DealServices/ShowDealService";
 import getCompanyId from "../helpers/GetCompanyId";
-import { getIO } from "../libs/socket";
-import { companyRoom } from "../libs/socketRooms";
+import emitirDeal from "../libs/emitirDeal";
 
 /**
  * Avisa quem está com o quadro aberto que o card mudou.
@@ -20,9 +19,7 @@ import { companyRoom } from "../libs/socketRooms";
 const avisarQuadro = async (dealId: string, companyId: number) => {
   const deal = await ShowDealService(dealId, companyId);
 
-  getIO()
-    .to(companyRoom(companyId))
-    .emit("deal", { action: "update", deal });
+  emitirDeal(companyId, { action: "update", deal });
 };
 
 export const index = async (req: Request, res: Response): Promise<Response> => {
