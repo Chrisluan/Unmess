@@ -98,7 +98,7 @@ const EmitirCobrancaService = async ({
     }
 
     // Cliente: o da parcela, ou o do pedido de onde ela veio.
-    let customerId = parcela.customerId;
+    let customerId: number | null = parcela.customerId;
     if (!customerId && parcela.orderId) {
       const pedido = await Order.findOne({
         where: { id: parcela.orderId, companyId },

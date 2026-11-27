@@ -79,7 +79,7 @@ const CAMPOS_DA_PARCELA: Array<[string, any]> = [
   ["invoiceUrl", { type: DataTypes.STRING(500), allowNull: true }],
   ["linhaDigitavel", { type: DataTypes.STRING(120), allowNull: true }],
   ["pixCopiaECola", { type: DataTypes.TEXT, allowNull: true }],
-  ["pixQrCode", { type: DataTypes.TEXT("medium"), allowNull: true }],
+  ["pixQrCode", { type: DataTypes.TEXT({ length: "medium" }), allowNull: true }],
   ["emittedAt", { type: DataTypes.DATE, allowNull: true }],
   ["gatewayCheckedAt", { type: DataTypes.DATE, allowNull: true }]
 ];
