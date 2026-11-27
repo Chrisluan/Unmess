@@ -10,12 +10,10 @@ import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import InsertChartOutlinedIcon from "@mui/icons-material/InsertChartOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import HeadsetMicOutlinedIcon from "@mui/icons-material/HeadsetMicOutlined";
-import HeadsetMicOutlinedIcon from "@mui/icons-material/HeadsetMicOutlined";
 
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
 import { AuthContext } from "../context/Auth/AuthContext";
 import usePermissions from "../hooks/usePermissions";
-import { useTeamChat } from "../context/TeamChat";
 import { useTeamChat } from "../context/TeamChat";
 import { ehRotaDeAjustes, secoesVisiveis } from "./ajustesItens";
 
@@ -119,7 +117,6 @@ const MainListItems = () => {
   const { can } = usePermissions();
   const [numeroCaido, setNumeroCaido] = useState(false);
   const equipe = useTeamChat();
-  const equipe = useTeamChat();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -140,18 +137,6 @@ const MainListItems = () => {
           rotulo="Conversas"
           Icone={ChatBubbleOutlineIcon}
           ativo={caminho.startsWith("/tickets")}
-        />
-      )}
-      {/* Equipe não tem permissão: conversar com o colega é de todo mundo.
-          Fica de fora só o super sem empresa escolhida, que não tem colegas. */}
-      {user?.companyId && (
-        <ItemTrilho
-          to="/equipe"
-          rotulo="Equipe"
-          Icone={HeadsetMicOutlinedIcon}
-          ativo={caminho.startsWith("/equipe")}
-          contador={equipe?.naoLidas || 0}
-          dica={equipe?.radio?.estado === "dentro" ? "Você está no rádio" : null}
         />
       )}
       {/* Equipe não tem permissão: conversar com o colega é de todo mundo.
