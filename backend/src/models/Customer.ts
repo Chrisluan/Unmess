@@ -1,6 +1,7 @@
 import {
   Table,
   Column,
+  DataType,
   CreatedAt,
   UpdatedAt,
   Model,
@@ -83,6 +84,28 @@ class Customer extends Model<Customer> {
 
   @Column
   notes: string;
+
+  /**
+   * Id deste cliente em cada gateway de cobrança, por ambiente:
+   * {"asaas:sandbox": "cus_..."}. Evita criar o mesmo cliente lá a cada boleto.
+   */
+  @Column(DataType.JSON)
+  get gatewayIds(): Record<string, string> {
+    const bruto = this.getDataValue("gatewayIds") as unknown;
+    if (!bruto) return {};
+    if (typeof bruto === "string") {
+      try {
+        return JSON.parse(bruto);
+      } catch {
+        return {};
+      }
+    }
+    return bruto as Record<string, string>;
+  }
+
+  set gatewayIds(valor: Record<string, string>) {
+    this.setDataValue("gatewayIds", valor as never);
+  }
 
   @CreatedAt
   createdAt: Date;

@@ -11,6 +11,9 @@ import {
 import Ticket from "../../models/Ticket";
 import Contact from "../../models/Contact";
 import Setting from "../../models/Setting";
+import TicketStatus from "../../models/TicketStatus";
+import User from "../../models/User";
+import Queue from "../../models/Queue";
 import formatBody from "../../helpers/Mustache";
 import SendWhatsAppMessage from "../WbotServices/SendWhatsAppMessage";
 import ShowWhatsAppService from "../WhatsappService/ShowWhatsAppService";
@@ -36,6 +39,9 @@ interface Request {
   ticketId: string | number;
   companyId?: number;
   isTransfer?: boolean;
+  // Quem fez a mudança. Vai junto no aviso de transferência para que a
+  // própria pessoa não seja notificada do que acabou de fazer.
+  atorId?: number;
 }
 
 interface Response {
@@ -48,7 +54,8 @@ const UpdateTicketService = async ({
   ticketData,
   ticketId,
   companyId,
-  isTransfer = false
+  isTransfer = false,
+  atorId
 }: Request): Promise<Response> => {
   const {
     status,
@@ -68,6 +75,26 @@ const UpdateTicketService = async ({
   if (removeQueue) queueId = null;
 
   const ticket = await ShowTicketService(ticketId, companyId);
+
+  // O destino tem de ser da mesma empresa do ticket. Sem esta checagem, um id
+  // de atendente ou de setor de outro cliente do SaaS era aceito e a conversa
+  // ia parar dentro de outra empresa.
+  if (userId) {
+    const destino = await User.findOne({
+      where: { id: userId, companyId: ticket.companyId },
+      attributes: ["id"]
+    });
+    if (!destino) throw new AppError("ERR_NO_USER_FOUND", 404);
+  }
+
+  if (queueId) {
+    const setor = await Queue.findOne({
+      where: { id: queueId, companyId: ticket.companyId },
+      attributes: ["id"]
+    });
+    if (!setor) throw new AppError("ERR_QUEUE_NOT_FOUND", 404);
+  }
+
   await SetTicketMessagesAsRead(ticket);
 
   if (whatsappId && ticket.whatsappId !== whatsappId) {
@@ -96,6 +123,19 @@ const UpdateTicketService = async ({
 
     if (requireClosingStatus && !resultingClosingStatusId) {
       throw new AppError("ERR_CLOSING_STATUS_REQUIRED", 400);
+    }
+  }
+
+  // O motivo tem de ser desta empresa e de encerramento. Antes qualquer id
+  // passava: um motivo de outra empresa do SaaS, um status de "pendente", ou
+  // um id inexistente que estourava como erro 500 na chave estrangeira.
+  if (closingStatusId) {
+    const motivo = await TicketStatus.findOne({
+      where: { id: closingStatusId, companyId: ticket.companyId },
+      attributes: ["id", "type"]
+    });
+    if (!motivo || motivo.type !== "closed") {
+      throw new AppError("ERR_CLOSING_STATUS_INVALID", 400);
     }
   }
 
@@ -170,11 +210,9 @@ const UpdateTicketService = async ({
 
   if (wasTransferred && ticket.companyId) {
     try {
-      const transferSetting = await Setting.findOne({
-        where: { key: "transferMessageEnabled", companyId: ticket.companyId }
-      });
-
-      if (transferSetting?.value === "enabled") {
+      if (
+        await GetSettingBoolean("transferMessageEnabled", ticket.companyId, false)
+      ) {
         const messageSetting = await Setting.findOne({
           where: { key: "transferMessage", companyId: ticket.companyId }
         });
@@ -208,7 +246,19 @@ const UpdateTicketService = async ({
     .to(ticketRoom(ticket.companyId, ticketId))
     .emit("ticket", {
       action: "update",
-      ticket
+      ticket,
+      // Quem recebe uma conversa transferida precisa saber na hora, com som
+      // próprio — o ticket sozinho não diz que ele acabou de chegar.
+      ...(wasTransferred
+        ? {
+            transferencia: {
+              deUsuarioId: oldUserId ?? null,
+              paraUsuarioId: ticket.userId ?? null,
+              paraSetorId: ticket.queueId ?? null,
+              porUsuarioId: atorId ?? null
+            }
+          }
+        : {})
     });
 
   return { ticket, oldStatus, oldUserId };

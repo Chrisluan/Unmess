@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import getCompanyId from "../helpers/GetCompanyId";
+import { comConsistencia } from "../helpers/consistencia/motor";
 import ListBusinessHoursService from "../services/BusinessHourServices/ListBusinessHoursService";
 import UpsertBusinessHoursService from "../services/BusinessHourServices/UpsertBusinessHoursService";
 import {
@@ -21,7 +22,10 @@ export const update = async (
 ): Promise<Response> => {
   const { days } = req.body;
 
-  const hours = await UpsertBusinessHoursService(days, getCompanyId(req));
+  const companyId = getCompanyId(req);
+  const hours = await comConsistencia(companyId, "horario", transaction =>
+    UpsertBusinessHoursService(days, companyId, transaction)
+  );
 
   return res.status(200).json(hours);
 };

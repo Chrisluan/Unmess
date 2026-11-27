@@ -4,6 +4,7 @@ import openSocket from "../../services/socket-io";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
+import usePermissions from "../../hooks/usePermissions";
 
 import PaginaComAbas from "../../components/PaginaComAbas";
 import Products from "../Products";
@@ -11,6 +12,8 @@ import QuickAnswers from "../QuickAnswers";
 import TagsTab from "./TagsTab";
 import AutoMessagesTab from "./AutoMessagesTab";
 import TicketStatusesTab from "./TicketStatusesTab";
+import InsumosTab from "./InsumosTab";
+import AcabamentosTab from "./AcabamentosTab";
 
 /**
  * Cadastro.
@@ -34,15 +37,18 @@ const Cadastros = () => {
 	// mesma lista que Configurações carrega. É a única aba daqui que depende
 	// dela — as outras quatro falam com endpoints próprios.
 	const [settings, setSettings] = useState([]);
+	const { can } = usePermissions();
+	const podeVerAjustes = can("settings:view");
 
 	const fetchSettings = useCallback(async () => {
+		if (!podeVerAjustes) return;
 		try {
 			const { data } = await api.get("/settings");
 			setSettings(data || []);
 		} catch (err) {
 			toastError(err);
 		}
-	}, []);
+	}, [podeVerAjustes]);
 
 	useEffect(() => {
 		fetchSettings();
@@ -88,6 +94,23 @@ const Cadastros = () => {
 				// ativa isso seria trabalho jogado fora a cada visita à tela.
 				montarSomenteAtiva: true,
 				conteudo: <Products embedded />,
+			},
+			{
+				// Só custo: quem não vê custo não tem o que fazer aqui.
+				chave: "insumos",
+				permissao: "products:viewCost",
+				editar: "products:manage",
+				rotulo: "Insumos",
+				montarSomenteAtiva: true,
+				conteudo: <InsumosTab />,
+			},
+			{
+				chave: "acabamentos",
+				permissao: "products:view",
+				editar: "products:manage",
+				rotulo: "Acabamentos",
+				montarSomenteAtiva: true,
+				conteudo: <AcabamentosTab />,
 			},
 			{
 				chave: "respostas-rapidas",

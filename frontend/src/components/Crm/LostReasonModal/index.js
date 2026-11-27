@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from "react";
 
-import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogTitle from "@mui/material/DialogTitle";
+import MenuItem from "@mui/material/MenuItem";
+import ThumbDownOffAltOutlinedIcon from "@mui/icons-material/ThumbDownOffAltOutlined";
 
 import api from "../../../services/api";
 import { i18n } from "../../../translate/i18n";
+import Janela, { SecaoDaJanela } from "../../Janela";
 
 /**
  * Pergunta o motivo quando um card vai parar numa coluna de perda.
@@ -24,7 +21,7 @@ import { i18n } from "../../../translate/i18n";
  * "achou caro" e "preço alto" são a mesma coisa contada três vezes. O campo de
  * complemento fica junto, para o que não couber na categoria.
  *
- * Agora o motivo é obrigatório -- o backend recusa a perda sem ele.
+ * O motivo é obrigatório -- o backend recusa a perda sem ele.
  */
 const LostReasonModal = ({ open, dealTitle, onClose, onConfirm }) => {
   const [motivo, setMotivo] = useState("");
@@ -54,61 +51,54 @@ const LostReasonModal = ({ open, dealTitle, onClose, onConfirm }) => {
   const podeConfirmar = motivo && (!precisaDetalhe || detalhe.trim());
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>{i18n.t("crm.lostModal.title")}</DialogTitle>
-
-      <DialogContent>
-        <DialogContentText>
-          {i18n.t("crm.lostModal.message", { title: dealTitle || "" })}
-        </DialogContentText>
-
+    <Janela
+      open={open}
+      onClose={onClose}
+      icone={<ThumbDownOffAltOutlinedIcon />}
+      tom="atencao"
+      tamanho="xs"
+      titulo={i18n.t("crm.lostModal.title")}
+      subtitulo={i18n.t("crm.lostModal.message", { title: dealTitle || "" })}
+      rotuloCancelar={i18n.t("crm.buttons.cancel")}
+      rotuloConfirmar={i18n.t("crm.lostModal.confirm")}
+      onConfirmar={() => onConfirm(motivo, detalhe.trim())}
+      confirmarDesabilitado={!podeConfirmar}
+    >
+      <SecaoDaJanela rotulo="Motivo">
         <TextField
           select
           fullWidth
           autoFocus
-          margin="dense"
+          size="small"
           variant="outlined"
-          label="Motivo"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
-          SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}
+          SelectProps={{ displayEmpty: true }}
         >
-          <option value="">Selecione…</option>
+          <MenuItem value="" disabled>
+            <em>Selecione…</em>
+          </MenuItem>
           {motivos.map((m) => (
-            <option key={m.id} value={m.id}>
+            <MenuItem key={m.id} value={m.id}>
               {m.label}
-            </option>
+            </MenuItem>
           ))}
         </TextField>
+      </SecaoDaJanela>
 
+      <SecaoDaJanela rotulo={precisaDetalhe ? "Qual motivo?" : "Complemento (opcional)"}>
         <TextField
           fullWidth
           multiline
-          rows={2}
-          margin="dense"
+          minRows={2}
+          size="small"
           variant="outlined"
-          label={precisaDetalhe ? "Qual motivo?" : "Complemento (opcional)"}
           placeholder="O que mais ajuda a entender essa perda"
           value={detalhe}
           onChange={(e) => setDetalhe(e.target.value)}
         />
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose} color="secondary" variant="outlined">
-          {i18n.t("crm.buttons.cancel")}
-        </Button>
-        <Button
-          onClick={() => onConfirm(motivo, detalhe.trim())}
-          color="primary"
-          variant="contained"
-          disabled={!podeConfirmar}
-        >
-          {i18n.t("crm.lostModal.confirm")}
-        </Button>
-      </DialogActions>
-    </Dialog>
+      </SecaoDaJanela>
+    </Janela>
   );
 };
 

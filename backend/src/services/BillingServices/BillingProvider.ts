@@ -24,8 +24,13 @@ export interface PedidoDeCobranca {
   /** ISO curto: "2026-09-10". */
   vencimento: string;
   descricao: string;
-  /** boleto | pix — cartão recorrente fica para quando houver assinatura. */
-  tipo?: "boleto" | "pix";
+  /**
+   * boleto | pix | indefinido (o cliente escolhe na fatura). Cartão recorrente
+   * fica para quando houver assinatura.
+   */
+  tipo?: "boleto" | "pix" | "indefinido";
+  /** Referência nossa gravada lá ("rcv:123"), para achar a parcela de volta. */
+  referenciaExterna?: string;
 }
 
 export interface CobrancaEmitida {
@@ -39,10 +44,20 @@ export interface CobrancaEmitida {
   linhaDigitavel?: string | null;
   /** Copia-e-cola do Pix. */
   pixCopiaECola?: string | null;
+  /** QR Code do Pix, PNG em base64. */
+  pixQrCode?: string | null;
   /** Página de cobrança hospedada pelo gateway. */
   urlFatura?: string | null;
+  /** Líquido, depois da tarifa do gateway. */
   valorPago?: number | null;
+  /** Valor cobrado do cliente (bruto). */
+  valor?: number | null;
+  vencimento?: string | null;
   pagoEm?: Date | null;
+  /** Como o cliente pagou (ou vai pagar). */
+  forma?: "boleto" | "pix" | "cartao" | null;
+  /** refunded quando o pagamento foi devolvido ao cliente. */
+  estornada?: boolean;
 }
 
 export interface BillingProvider {

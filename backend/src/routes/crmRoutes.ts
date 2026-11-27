@@ -7,6 +7,7 @@ import noEscopoDoQuadro from "../middleware/noEscopoDoQuadro";
 import * as DealController from "../controllers/DealController";
 import * as DealActivityController from "../controllers/DealActivityController";
 import * as DealItemController from "../controllers/DealItemController";
+import * as OrderController from "../controllers/OrderController";
 import * as DealAttachmentController from "../controllers/DealAttachmentController";
 import uploadConfig from "../config/upload";
 import { TIPOS_DE_TAREFA } from "../helpers/TiposDeTarefa";
@@ -64,18 +65,29 @@ crmRoutes.get("/tipos-de-tarefa", isAuth, requiresCompany, hasPermission("crm:vi
   res.json({ tipos: TIPOS_DE_TAREFA })
 );
 crmRoutes.get("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.index);
-crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealItemController.sync);
-crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealItemController.ordemDeServico);
+crmRoutes.put("/deals/:dealId/items",     isAuth, requiresCompany, hasPermission("crm:editItems"), noEscopoDoQuadro, DealItemController.sync);
+// O botão antigo "Ordem de serviço" passa a escolher o documento certo
+// (proposta, ordem de produção ou o modelo antigo) -- ver OrderController.
+crmRoutes.get("/deals/:dealId/ordem-servico", isAuth, requiresCompany, hasPermission("crm:issueOrder"), noEscopoDoQuadro, OrderController.documentoDoCard);
+
+// ── Orçamento → pedido ─────────────────────────────────────────────────────
+crmRoutes.get("/deals/:dealId/proposta",           isAuth, requiresCompany, hasPermission("crm:issueOrder"),  noEscopoDoQuadro, OrderController.proposta);
+crmRoutes.post("/deals/:dealId/pedido",            isAuth, requiresCompany, hasPermission("crm:generateOrder"), noEscopoDoQuadro, OrderController.gerar);
+crmRoutes.get("/orders/:orderId",                  isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.pedidoNoEscopo, OrderController.show);
+crmRoutes.get("/orders/:orderId/ordem-producao",   isAuth, requiresCompany, hasPermission("crm:issueOrder"),  OrderController.pedidoNoEscopo, OrderController.ordemDeProducao);
+crmRoutes.post("/orders/:orderId/cancelar",        isAuth, requiresCompany, hasPermission("crm:cancelOrder"), OrderController.pedidoNoEscopo, OrderController.cancelar);
+crmRoutes.get("/condicoes-de-pagamento",           isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.condicoesDePagamento);
+crmRoutes.get("/comercial/trilha",                 isAuth, requiresCompany, hasPermission("crm:view"),        OrderController.trilha);
 
 // ── Material do pedido ──────────────────────────────────────────────────────
 // A arte, o arquivo de impressão, a referência que o cliente mandou. Ler exige
 // só ver o CRM; anexar e apagar mexem no pedido, e pedem crm:edit.
 crmRoutes.get("/deals/:dealId/attachments",                    isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.index);
-crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, upload.array("files"), DealAttachmentController.store);
+crmRoutes.post("/deals/:dealId/attachments",                   isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, upload.array("files"), DealAttachmentController.store);
 crmRoutes.get("/deals/:dealId/midias-da-conversa",             isAuth, requiresCompany, hasPermission("crm:view"), noEscopoDoQuadro, DealAttachmentController.midiasDaConversa);
-crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.importar);
-crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.definirCapa);
-crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:edit"), noEscopoDoQuadro, DealAttachmentController.remove);
+crmRoutes.post("/deals/:dealId/attachments/da-conversa",       isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.importar);
+crmRoutes.put("/deals/:dealId/attachments/:attachmentId/capa", isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.definirCapa);
+crmRoutes.delete("/deals/:dealId/attachments/:attachmentId",   isAuth, requiresCompany, hasPermission("crm:manageAttachments"), noEscopoDoQuadro, DealAttachmentController.remove);
 
 // Visao inversa: os negocios de uma conversa, usada pelo painel do chat.
 crmRoutes.get("/tickets/:ticketId/deals", isAuth, requiresCompany, hasPermission("crm:view"), DealItemController.byTicket);

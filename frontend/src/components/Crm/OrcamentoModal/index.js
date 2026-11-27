@@ -24,6 +24,7 @@ import AbaItens from "./AbaItens";
 import AbaMaterial from "./AbaMaterial";
 import AbaTarefas from "./AbaTarefas";
 import AbaWhatsApp from "./AbaWhatsApp";
+import BarraDoPedido from "./BarraDoPedido";
 import ConfirmationModal from "../../ConfirmationModal";
 import { identidadeDoNegocio } from "../identidade";
 
@@ -139,7 +140,9 @@ const SITUACOES = {
 };
 
 const moeda = (valor) =>
-  Number(valor || 0).toLocaleString("pt-BR", {
+  valor === null || valor === undefined
+    ? "—"
+    : Number(valor || 0).toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
@@ -242,10 +245,12 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
       <div className={classes.topo}>
         <span className={classes.tituloJanela}>{identidade.rotulo}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {/* Passa o card inteiro: a confirmação mostra número e título, e
+              sabe se a exclusão leva junto os cards de outros quadros. */}
           {onExcluir && deal && (
             <IconButton
               size="small"
-              onClick={() => onExcluir(deal.id)}
+              onClick={() => onExcluir(deal)}
               title={`Excluir ${identidade.rotulo.toLowerCase()}`}
               aria-label={`Excluir ${identidade.rotulo.toLowerCase()}`}
             >
@@ -316,6 +321,11 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
                 Orçamento nº {identidade.orcamentoDeOrigem}
               </span>
             )}
+            {identidade.pedidoGerado && (
+              <span className={classes.numeroOrigem}>
+                Pedido nº {identidade.pedidoGerado}
+              </span>
+            )}
 
             <div className={classes.campoFaixa}>
               <div>
@@ -335,6 +345,8 @@ const OrcamentoModal = ({ open, dealId, onClose, onSalvo, onExcluir }) => {
               <div className={classes.valorNumero}>{moeda(deal.value)}</div>
             </div>
           </div>
+
+          <BarraDoPedido deal={deal} onAlterado={aoAlterar} />
 
           <div
             className={`${classes.corpo} ${compacto ? classes.corpoCompacto : ""}`}

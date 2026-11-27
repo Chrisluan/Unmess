@@ -77,6 +77,14 @@ class FinancialEntry extends Model<FinancialEntry> {
   @Column
   isTransfer: boolean;
 
+  /**
+   * Id do pagamento no gateway, quando a baixa veio dele (webhook ou
+   * conciliação). Único por empresa no banco: o mesmo pagamento avisado duas
+   * vezes não vira duas baixas.
+   */
+  @Column(DataType.STRING(80))
+  externalId: string;
+
   @CreatedAt
   createdAt: Date;
 

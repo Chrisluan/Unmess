@@ -11,17 +11,18 @@ import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import PaletteOutlinedIcon from "@mui/icons-material/PaletteOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
+import RuleOutlinedIcon from "@mui/icons-material/RuleOutlined";
 
-export const ABAS_CONFIGURACOES = ["geral", "conexoes", "horarios", "status", "etiquetas", "mensagens", "marca"];
+export const ABAS_CONFIGURACOES = ["geral", "conexoes", "horarios", "status", "etiquetas", "mensagens", "marca", "saude"];
 
 export const SECOES_AJUSTES = [
   {
     titulo: "Atendimento",
     itens: [
-      { rotulo: "Números de WhatsApp", para: "/Settings?aba=conexoes", permissao: "settings:view", Icone: WhatsAppIcon },
+      { rotulo: "Números de WhatsApp", para: "/Settings?aba=conexoes", permissao: "connections:view", Icone: WhatsAppIcon },
       { rotulo: "Filas", para: "/Queues", permissao: "queues:view", Icone: AccountTreeOutlinedIcon },
       { rotulo: "Respostas rápidas", para: "/quickAnswers", permissao: "quickAnswers:view", Icone: BoltOutlinedIcon },
-      { rotulo: "Etiquetas", para: "/Settings?aba=etiquetas", permissao: "settings:view", Icone: LocalOfferOutlinedIcon },
+      { rotulo: "Etiquetas", para: "/Settings?aba=etiquetas", permissao: "tags:view", Icone: LocalOfferOutlinedIcon },
       { rotulo: "Horário de atendimento", para: "/Settings?aba=horarios", permissao: "settings:view", Icone: ScheduleOutlinedIcon },
       { rotulo: "Motivos de encerramento", para: "/Settings?aba=status", permissao: "settings:view", Icone: TaskAltOutlinedIcon },
       { rotulo: "Mensagens automáticas", para: "/Settings?aba=mensagens", permissao: "settings:view", Icone: SmsOutlinedIcon }
@@ -44,7 +45,8 @@ export const SECOES_AJUSTES = [
     titulo: "Conta",
     itens: [
       { rotulo: "Geral", para: "/Settings?aba=geral", permissao: "settings:view", Icone: TuneOutlinedIcon },
-      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:view", Icone: PaletteOutlinedIcon }
+      { rotulo: "Identidade visual", para: "/Settings?aba=marca", permissao: "settings:view", Icone: PaletteOutlinedIcon },
+      { rotulo: "Saúde da configuração", para: "/Settings?aba=saude", permissao: "settings:view", Icone: RuleOutlinedIcon }
     ]
   },
   {

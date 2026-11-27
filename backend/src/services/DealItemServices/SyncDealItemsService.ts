@@ -1,9 +1,11 @@
 import { Op } from "sequelize";
+import PrecificarItens from "../PrecoServices/PrecificarItens";
 import DealItem from "../../models/DealItem";
 import Deal from "../../models/Deal";
 import AppError from "../../errors/AppError";
+import { pedidoAtivoDo } from "../OrderServices/GerarPedidoService";
 
-interface ItemEntrada {
+export interface ItemEntrada {
   id?: number;
   description: string;
   quantity?: number | string;
@@ -16,12 +18,16 @@ interface ItemEntrada {
   height?: number | string;
   pricingMode?: string;
   minMeasure?: number | string;
+  /** Acabamentos escolhidos: id do catálogo e o preço combinado. */
+  finishes?: Array<{ finishId?: number | string | null; price?: number | string; minPrice?: number | string }>;
 }
 
 interface Request {
   dealId: number | string;
   companyId: number;
   items: ItemEntrada[];
+  /** crm:overridePrice. Quem chama de fora de uma requisição decide. */
+  podeBaixarPreco?: boolean;
 }
 
 const numero = (valor: unknown, padrao = 0): number => {
@@ -30,29 +36,11 @@ const numero = (valor: unknown, padrao = 0): number => {
 };
 
 /**
- * Grava a lista de itens de um negócio de uma vez só.
- *
- * A tela edita a lista inteira -- adiciona uma linha, muda a quantidade de
- * outra, apaga uma terceira -- e mandar isso como três chamadas separadas
- * deixaria o pedido inconsistente se a conexão caísse no meio. Aqui a lista
- * chega completa e substitui a anterior, o que também resolve a ordem das
- * linhas sem um endpoint só para reordenar.
- *
- * O valor do negócio é recalculado ao final: a partir do momento em que existem
- * itens, o total do card do Kanban passa a ser a soma deles, e não mais um
- * número digitado que ninguém sabe de onde veio.
+ * Normaliza a lista que veio da tela. Usada também pelos itens do pedido:
+ * orçamento e pedido têm de aceitar exatamente as mesmas linhas.
  */
-const SyncDealItemsService = async ({
-  dealId,
-  companyId,
+export const limparItens = (items: ItemEntrada[]) =>
   items
-}: Request): Promise<{ deal: Deal; items: DealItem[] }> => {
-  const deal = await Deal.findOne({ where: { id: dealId, companyId } });
-  if (!deal) throw new AppError("ERR_NO_DEAL_FOUND", 404);
-
-  if (!Array.isArray(items)) throw new AppError("ERR_INVALID_ITEMS");
-
-  const limpos = items
     .filter(item => item?.description?.trim())
     .map((item, indice) => ({
       id: item.id,
@@ -71,10 +59,65 @@ const SyncDealItemsService = async ({
         ? String(item.pricingMode)
         : "unit",
       minMeasure: numero(item.minMeasure, 0),
-      position: indice,
-      dealId: deal.id,
-      companyId
+      // Da tela vem só qual acabamento e por quanto; nome, base e custo saem
+      // do catálogo (ver PrecificarItens), e o custo do material também.
+      finishes: (Array.isArray(item.finishes) ? item.finishes : [])
+        .filter(a => a && Number(a.finishId) > 0)
+        .map(a => ({
+          finishId: Number(a.finishId),
+          price: numero(a.price, 0),
+          minPrice: numero(a.minPrice, 0)
+        })),
+      position: indice
     }));
+
+/**
+ * Grava a lista de itens de um negócio de uma vez só.
+ *
+ * A tela edita a lista inteira -- adiciona uma linha, muda a quantidade de
+ * outra, apaga uma terceira -- e mandar isso como três chamadas separadas
+ * deixaria o pedido inconsistente se a conexão caísse no meio. Aqui a lista
+ * chega completa e substitui a anterior, o que também resolve a ordem das
+ * linhas sem um endpoint só para reordenar.
+ *
+ * O valor do negócio é recalculado ao final: a partir do momento em que existem
+ * itens, o total do card do Kanban passa a ser a soma deles, e não mais um
+ * número digitado que ninguém sabe de onde veio.
+ */
+const SyncDealItemsService = async ({
+  dealId,
+  companyId,
+  items,
+  podeBaixarPreco = true
+}: Request): Promise<{ deal: Deal; items: DealItem[] }> => {
+  const deal = await Deal.findOne({ where: { id: dealId, companyId } });
+  if (!deal) throw new AppError("ERR_NO_DEAL_FOUND", 404);
+
+  if (!Array.isArray(items)) throw new AppError("ERR_INVALID_ITEMS");
+
+  // Orçamento que já virou pedido não muda mais: o que foi aprovado está
+  // congelado no pedido, e mexer aqui faria orçamento e pedido divergirem.
+  const pedido = await pedidoAtivoDo(deal, companyId);
+  if (pedido) {
+    throw new AppError("ERR_ORCAMENTO_TRAVADO_POR_PEDIDO", 409, {
+      orderId: pedido.id,
+      number: pedido.number
+    });
+  }
+
+  const anteriores = await DealItem.findAll({ where: { dealId: deal.id, companyId } });
+  const precificados = await PrecificarItens({
+    companyId,
+    itens: limparItens(items),
+    anteriores,
+    podeBaixarPreco
+  });
+  const limpos = precificados.map(item => ({
+    ...item,
+    finishes: item.finishes.length ? item.finishes : null,
+    dealId: deal.id,
+    companyId
+  }));
 
   const idsMantidos = limpos.map(i => i.id).filter(Boolean) as number[];
 
@@ -92,9 +135,9 @@ const SyncDealItemsService = async ({
     if (item.id) {
       // O companyId entra na condição para que um id de outra empresa não possa
       // ser sequestrado para dentro deste negócio.
-      await DealItem.update(item, { where: { id: item.id, dealId: deal.id, companyId } });
+      await DealItem.update(item as never, { where: { id: item.id, dealId: deal.id, companyId } });
     } else {
-      await DealItem.create(item);
+      await DealItem.create(item as never);
     }
   }
 

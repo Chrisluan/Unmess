@@ -178,6 +178,13 @@ export const MODULES: Record<string, ModuloDePermissao> = {
         descricao: "Vê os quadros e as oportunidades sob sua responsabilidade.",
         nivel: "ver"
       },
+      viewValues: {
+        label: "Ver valores e totais",
+        descricao:
+          "Mostra preços, descontos, totais dos cards, das colunas e os indicadores de faturamento. Sem ela a pessoa trabalha o pedido (itens, medidas, prazos, material) mas não enxerga nenhum número de dinheiro — nem na tela, nem na resposta do servidor.",
+        nivel: "ver",
+        requer: ["crm:view"]
+      },
       create: {
         label: "Criar oportunidade",
         descricao: "Abre negócio novo no funil.",
@@ -186,7 +193,35 @@ export const MODULES: Record<string, ModuloDePermissao> = {
       },
       edit: {
         label: "Editar oportunidade e orçamento",
-        descricao: "Mexe em itens, valores, prazos e na proposta enviada ao cliente.",
+        descricao: "Mexe em dados, prazos e na proposta enviada ao cliente.",
+        nivel: "operar",
+        requer: ["crm:view"]
+      },
+      editItems: {
+        label: "Montar e alterar os itens do orçamento",
+        descricao:
+          "Adiciona, remove e muda itens, medidas e quantidades. É o que altera o valor do pedido — separada de editar a oportunidade porque quem acompanha o cliente nem sempre deve poder mexer na conta. Exige ver os valores: não se monta orçamento às cegas.",
+        nivel: "operar",
+        requer: ["crm:edit", "crm:viewValues"]
+      },
+      overridePrice: {
+        label: "Vender abaixo do preço do catálogo",
+        descricao:
+          "Permite baixar o preço de um produto ou acabamento do catálogo no orçamento. Sem isto, o preço pode subir mas não descer: quem forma o preço decide até onde ele vai. Desconto continua sendo a permissão de desconto.",
+        nivel: "gerenciar",
+        requer: ["crm:editItems"]
+      },
+      manageAttachments: {
+        label: "Anexar e remover material do pedido",
+        descricao:
+          "Sobe a arte, o arquivo de impressão e as referências do cliente, e apaga o que já foi anexado.",
+        nivel: "operar",
+        requer: ["crm:edit"]
+      },
+      issueOrder: {
+        label: "Emitir ordem de serviço",
+        descricao:
+          "Gera a O.S. impressa que vai para a produção. O documento é o que a oficina executa: emitir com o pedido errado vira trabalho perdido.",
         nivel: "operar",
         requer: ["crm:view"]
       },
@@ -204,12 +239,33 @@ export const MODULES: Record<string, ModuloDePermissao> = {
         nivel: "operar",
         requer: ["crm:move"]
       },
+      generateOrder: {
+        label: "Gerar pedido a partir do orçamento",
+        descricao:
+          "Transforma o orçamento aprovado em pedido: congela os itens e as condições, dá número de pedido, marca a venda como ganha e abre o trabalho na produção. Depois disso o orçamento não muda mais.",
+        nivel: "operar",
+        requer: ["crm:close", "crm:viewValues"]
+      },
+      editOrder: {
+        label: "Alterar itens de pedido já gerado",
+        descricao:
+          "Mexe nos itens e medidas de um pedido que já está em produção. É alterar o que o cliente aprovou: o sistema recusa deixar o pedido abaixo do que já foi recebido.",
+        nivel: "gerenciar",
+        requer: ["crm:editItems"]
+      },
+      cancelOrder: {
+        label: "Cancelar pedido",
+        descricao:
+          "Desfaz o pedido: cancela as parcelas em aberto, tira os cards de produção do fluxo e destrava o orçamento. Não é possível com recebimento já registrado.",
+        nivel: "gerenciar",
+        requer: ["crm:view"]
+      },
       discount: {
         label: "Dar desconto",
         descricao:
           "Abate valor do orçamento, na linha ou no total. Sem ela a pessoa monta a proposta com a tabela de preços e mais nada — que é como se cota sem poder queimar margem.",
         nivel: "operar",
-        requer: ["crm:edit"]
+        requer: ["crm:edit", "crm:viewValues"]
       },
       assign: {
         label: "Definir o responsável",
@@ -613,6 +669,28 @@ export const MODULES: Record<string, ModuloDePermissao> = {
           "Horário de atendimento, feriados, status de conversa e ajustes gerais. Vale para a empresa inteira.",
         nivel: "gerenciar",
         requer: ["settings:view"]
+      }
+    }
+  },
+  /**
+   * Chat de equipe e rádio.
+   *
+   * Conversar e falar no rádio não tem permissão: é de toda pessoa logada na
+   * empresa, como o telefone da mesa. Trancar isso atrás de uma caixinha só
+   * criaria a pessoa que não consegue avisar o colega. O que tem dono é a
+   * planta da casa — quais canais existem e como se chamam.
+   */
+  teamChat: {
+    label: "Chat de equipe",
+    descricao: "Canais de texto e rádio (aperte para falar) entre a equipe.",
+    icone: "HeadsetMicOutlined",
+    ordem: 16,
+    acoes: {
+      manage: {
+        label: "Gerenciar canais",
+        descricao:
+          "Cria, renomeia e arquiva canais, e apaga mensagens de qualquer pessoa. Usar o chat e o rádio não depende desta permissão.",
+        nivel: "gerenciar"
       }
     }
   }

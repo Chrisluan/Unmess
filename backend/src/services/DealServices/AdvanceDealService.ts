@@ -5,8 +5,7 @@ import DealActivity from "../../models/DealActivity";
 import PipelineStage from "../../models/PipelineStage";
 import DealTicket from "../../models/DealTicket";
 import sequelize from "../../database";
-import Order from "../../models/Order";
-import ProximoNumeroService from "../SequenceServices/ProximoNumeroService";
+import GerarPedidoService from "../OrderServices/GerarPedidoService";
 import MarcarGanhoService from "./MarcarGanhoService";
 
 interface Request {
@@ -129,6 +128,22 @@ const AdvanceDealService = async ({
   // Chave da cadeia: este card pode já ser derivado de outro.
   const rootDealId = deal.rootDealId || deal.id;
 
+  const saindoDoFunil = Boolean(boardAtual?.isSalesFunnel);
+
+  /**
+   * Sair do funil é gerar o pedido. Vem antes de tudo -- inclusive de marcar
+   * o ganho --, porque se faltar cliente ou item a recusa precisa chegar com
+   * o card intacto, e não com a venda já marcada como ganha.
+   *
+   * Se o pedido já foi gerado pelo botão, este arrasto só leva o trabalho
+   * para a produção: não gera um segundo.
+   */
+  const pedido =
+    saindoDoFunil && destino && gerarProximo
+      ? (await GerarPedidoService({ dealId: deal.id, companyId, userId, reaproveitar: true })).pedido
+      : null;
+  if (pedido) await deal.reload();
+
   /**
    * Coluna marcada como ganho fecha a venda aqui mesmo, ainda que o trabalho
    * siga para o quadro seguinte.
@@ -188,21 +203,10 @@ const AdvanceDealService = async ({
 
   const { board: nextBoard, coluna: colunaDestino } = destino;
 
-  /**
-   * O número da ordem de produção.
-   *
-   * Sai do funil: o trabalho vendido vira produção e ganha número novo, da
-   * contagem da empresa. Já estava fora: continua com o mesmo número, porque
-   * de Produção para Expedição é o mesmo trabalho -- numerar de novo criaria
-   * dois números para uma coisa só.
-   *
-   * Fica antes da transação de propósito: o contador tem transação própria, e
-   * abri-la de dentro desta seguraria as duas ao mesmo tempo.
-   */
-  const saindoDoFunil = Boolean(boardAtual?.isSalesFunnel);
-  const numeroDeProducao = saindoDoFunil
-    ? await ProximoNumeroService(companyId, "order")
-    : deal.orderNumber || null;
+  // O número de produção é o do pedido. Entre Produção e Expedição continua o
+  // mesmo: é o mesmo trabalho.
+  const numeroDeProducao = pedido ? pedido.number : deal.orderNumber || null;
+  const orderId = pedido ? pedido.id : deal.orderId || null;
 
   const novo = await sequelize.transaction(async t => {
     // O card que sai deixa de ocupar posição na coluna de origem.
@@ -238,6 +242,8 @@ const AdvanceDealService = async ({
         // mostrar o id da linha no banco.
         quoteNumber: deal.quoteNumber || null,
         orderNumber: numeroDeProducao,
+        // Itens e documento vêm do pedido: o card de produção não guarda cópia.
+        orderId,
         stageId: colunaDestino.id,
         boardId: nextBoard.id,
         rootDealId,
@@ -254,26 +260,6 @@ const AdvanceDealService = async ({
       { transaction: t }
     );
   });
-
-  /**
-   * Saiu do funil: o que era orçamento passa a ser pedido.
-   *
-   * O pedido ganha numeração própria da empresa e guarda de qual orçamento
-   * nasceu -- são contadores independentes, e por isso tabelas separadas.
-   * Só acontece na saída do funil: entre Produção e Expedição o card continua
-   * sendo o mesmo pedido, e numerar de novo criaria dois números para o mesmo
-   * trabalho.
-   */
-  if (saindoDoFunil) {
-    await Order.create({
-      number: numeroDeProducao as number,
-      quoteNumber: deal.quoteNumber || null,
-      dealId: novo.id,
-      value: deal.value,
-      status: "open",
-      companyId
-    });
-  }
 
   // As conversas de WhatsApp seguem o card: quem está na Produção precisa
   // chegar no mesmo atendimento que originou o pedido.

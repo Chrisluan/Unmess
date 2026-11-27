@@ -128,7 +128,8 @@ export const estornar = async (
 
   await EstornarLancamentoService({
     entryId,
-    companyId: getCompanyId(req)
+    companyId: getCompanyId(req),
+    userId: Number(req.user.id)
   });
 
   return res.json({ message: "Entry reversed" });

@@ -9,13 +9,17 @@ const moeda = new Intl.NumberFormat("pt-BR", {
  * Formata valores de negócio. O DECIMAL do MySQL chega como string em algumas
  * rotas, então normalizamos antes de formatar.
  */
-export const formatarValor = (valor) => moeda.format(Number(valor) || 0);
+// Valor oculto pelo servidor (sem crm:viewValues) chega como null, e zero é um
+// preço de verdade: null vira traço, nunca "R$ 0,00".
+export const formatarValor = (valor) =>
+  valor === null || valor === undefined ? "—" : moeda.format(Number(valor) || 0);
 
 /**
  * Versão curta para o cabeçalho da coluna, onde não cabe o valor por extenso.
  * 12.400 vira "R$ 12,4 mil"; 1.250.000 vira "R$ 1,3 mi".
  */
 export const formatarValorCurto = (valor) => {
+  if (valor === null || valor === undefined) return "—";
   const numero = Number(valor) || 0;
 
   if (Math.abs(numero) >= 1000000) {

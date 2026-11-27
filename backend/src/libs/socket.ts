@@ -7,11 +7,15 @@ import { isAllowedOrigin } from "../helpers/IsAllowedOrigin";
 import {
   companyRoom,
   notificationRoom,
+  salaComValores,
+  salaSemValores,
   statusRoom,
   ticketRoom
 } from "./socketRooms";
 import authConfig from "../config/auth";
 import User from "../models/User";
+import { usuarioPode } from "../helpers/permissions/resolve";
+import { registrarRadio } from "./teamRadio";
 
 let io: SocketIO;
 
@@ -83,6 +87,17 @@ export const initIO = (httpServer: Server): SocketIO => {
     const userId = tokenData?.id;
     const companyId = tokenData?.companyId;
 
+    // Cada conexão entra numa das duas salas de valores do funil. Ver
+    // emitirDeal: é o que impede o dinheiro de sair pelo socket para quem a
+    // API já esconde. Na dúvida (falha ao consultar), a sala sem valores.
+    if (userId && companyId) {
+      usuarioPode(Number(userId), "crm:viewValues")
+        .then(pode =>
+          socket.join(pode ? salaComValores(companyId) : salaSemValores(companyId))
+        )
+        .catch(() => socket.join(salaSemValores(companyId)));
+    }
+
     if (userId && companyId) {
       const existing = socketsByUser.get(userId) ?? new Set<string>();
       const wasOffline = existing.size === 0;
@@ -92,6 +107,17 @@ export const initIO = (httpServer: Server): SocketIO => {
       if (wasOffline) {
         setUserPresence(userId, companyId, true);
       }
+    }
+
+    // Chat de equipe e rádio: a sala pessoal (conversas a dois) e o relé de
+    // voz. Precisam de pessoa e empresa; o super sem empresa escolhida fica
+    // de fora, como fica de fora de todo o resto.
+    if (userId && companyId) {
+      registrarRadio(io, socket, {
+        userId: Number(userId),
+        companyId: Number(companyId),
+        name: tokenData?.username || `#${userId}`
+      });
     }
 
     logger.info("Client Connected");

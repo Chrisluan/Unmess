@@ -59,7 +59,43 @@ if (mode === "network") {
   console.log(`[select-env] ${target}: modo LOCALHOST`);
 }
 
+content = preservarSegredos(content, outputPath);
+
 fs.writeFileSync(outputPath, content);
+
+/**
+ * Mantém os valores que o molde deixa em branco e o .env atual já tem.
+ *
+ * O molde não guarda segredo (rotacionar-segredos.js apaga JWT_SECRET,
+ * JWT_REFRESH_SECRET e DB_PASS dele de propósito). Regerar o .env a partir do
+ * molde puro zerava as chaves de JWT a cada `npm start` -- e o backend passava
+ * a assinar sessões com a chave padrão do código, que qualquer um conhece.
+ * Chave preenchida no molde continua valendo: é configuração, não segredo.
+ */
+function preservarSegredos(modelo, arquivoAtual) {
+  if (!fs.existsSync(arquivoAtual)) return modelo;
+
+  const atuais = {};
+  // \r sozinho também é quebra de linha: é como o dotenv lê, e versões antigas
+  // da rotação deixaram linhas separadas assim.
+  for (const linha of fs.readFileSync(arquivoAtual, "utf8").split(/\r\n|\n|\r/)) {
+    const achado = linha.match(/^[ \t]*([A-Z0-9_]+)[ \t]*=[ \t]*(.*?)[ \t]*$/);
+    if (achado && achado[2]) atuais[achado[1]] = achado[2];
+  }
+
+  const preservadas = [];
+  const resultado = modelo.replace(/^(\s*)([A-Z0-9_]+)(\s*=)[ \t]*(\r?)$/gm, (linha, recuo, chave, igual, cr) => {
+    if (!atuais[chave]) return linha;
+    preservadas.push(chave);
+    return `${recuo}${chave}${igual}${atuais[chave]}${cr}`;
+  });
+
+  if (preservadas.length) {
+    // Só os nomes: o valor é justamente o que não pode aparecer em log.
+    console.log(`[select-env] ${target}: mantidos do .env atual: ${preservadas.join(", ")}`);
+  }
+  return resultado;
+}
 
 function getLocalIPv4() {
   if (process.env.UNMESS_HOST_IP) {

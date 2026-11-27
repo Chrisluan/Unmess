@@ -1,26 +1,20 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 
-import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
-import Dialog from "@mui/material/Dialog";
-
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
+import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import Autocomplete, {
 	createFilterOptions,
 } from '@mui/material/Autocomplete';
 import CircularProgress from "@mui/material/CircularProgress";
 import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormHelperText from "@mui/material/FormHelperText";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
-import ButtonWithSpinner from "../ButtonWithSpinner";
+import Janela, { SecaoDaJanela } from "../Janela";
 import ContactModal from "../ContactModal";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -35,6 +29,9 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 
 	const [options, setOptions] = useState([]);
 	const [loading, setLoading] = useState(false);
+	// Separado da busca: com um estado só, o botão "Iniciar" girava enquanto
+	// a lista de contatos carregava.
+	const [salvando, setSalvando] = useState(false);
 	const [searchParam, setSearchParam] = useState("");
 	const [selectedContact, setSelectedContact] = useState(null);
 	const [newContact, setNewContact] = useState({});
@@ -95,7 +92,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 
 	const handleSaveTicket = async contactId => {
 		if (!contactId) return;
-		setLoading(true);
+		setSalvando(true);
 		try {
 			const { data: ticket } = await api.post("/tickets", {
 				contactId: contactId,
@@ -107,7 +104,7 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 		} catch (err) {
 			toastError(err);
 		}
-		setLoading(false);
+		setSalvando(false);
 		handleClose();
 	};
 
@@ -170,11 +167,20 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 				onClose={handleCloseContactModal}
 				onSave={handleAddNewContactTicket}
 			></ContactModal>
-			<Dialog open={modalOpen} onClose={handleClose} maxWidth="xs" fullWidth>
-				<DialogTitle id="form-dialog-title">
-					{i18n.t("newTicketModal.title")}
-				</DialogTitle>
-				<DialogContent dividers>
+			<Janela
+				open={modalOpen}
+				onClose={handleClose}
+				icone={<ChatBubbleOutlineIcon />}
+				titulo={i18n.t("newTicketModal.title")}
+				subtitulo="Busque o contato pelo nome ou número. Se ele não existir, dá para cadastrar aqui mesmo."
+				tamanho="xs"
+				rotuloCancelar={i18n.t("newTicketModal.buttons.cancel")}
+				rotuloConfirmar={i18n.t("newTicketModal.buttons.ok")}
+				onConfirmar={() => handleSaveTicket(selectedContact.id)}
+				confirmarDesabilitado={!selectedContact || !selectedWhatsappId}
+				carregando={salvando}
+			>
+				<SecaoDaJanela rotulo="Contato">
 					<Autocomplete
 						options={options}
 						loading={loading}
@@ -190,12 +196,13 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 						renderInput={params => (
 							<TextField
 								{...params}
-								label={i18n.t("newTicketModal.fieldLabel")}
+								placeholder={i18n.t("newTicketModal.fieldLabel")}
 								variant="outlined"
+								size="small"
 								autoFocus
 								onChange={e => setSearchParam(e.target.value)}
 								onKeyPress={e => {
-									if (loading || !selectedContact) return;
+									if (loading || salvando || !selectedContact) return;
 									else if (e.key === "Enter") {
 										handleSaveTicket(selectedContact.id);
 									}
@@ -214,55 +221,31 @@ const NewTicketModal = ({ modalOpen, onClose }) => {
 							/>
 						)}
 					/>
-					<FormControl
-						variant="outlined"
-						margin="dense"
-						fullWidth
-						style={{ marginTop: 16 }}
-					>
-						<InputLabel id="new-ticket-whatsapp-label">
-							{i18n.t("newTicketModal.connection")}
-						</InputLabel>
-						<Select
-							labelId="new-ticket-whatsapp-label"
-							label={i18n.t("newTicketModal.connection")}
-							value={selectedWhatsappId}
-							onChange={e => setSelectedWhatsappId(e.target.value)}
-						>
-							{connectedWhatsapps.map(whatsApp => (
-								<MenuItem key={whatsApp.id} value={whatsApp.id}>
-									{whatsApp.name}
-								</MenuItem>
-							))}
-						</Select>
-						<FormHelperText>
-							{connectedWhatsapps.length === 0
-								? i18n.t("newTicketModal.noConnection")
-								: i18n.t("newTicketModal.connectionHelper")}
-						</FormHelperText>
-					</FormControl>
-				</DialogContent>
-				<DialogActions>
-					<Button
-						onClick={handleClose}
-						color="secondary"
-						disabled={loading}
-						variant="outlined"
-					>
-						{i18n.t("newTicketModal.buttons.cancel")}
-					</Button>
-					<ButtonWithSpinner
-						variant="contained"
-						type="button"
-						disabled={!selectedContact || !selectedWhatsappId}
-						onClick={() => handleSaveTicket(selectedContact.id)}
-						color="primary"
-						loading={loading}
-					>
-						{i18n.t("newTicketModal.buttons.ok")}
-					</ButtonWithSpinner>
-				</DialogActions>
-			</Dialog>
+				</SecaoDaJanela>
+				{/* Com um número só, escolher é ruído: ele já vem marcado. */}
+				{connectedWhatsapps.length !== 1 && (
+					<SecaoDaJanela rotulo={i18n.t("newTicketModal.connection")}>
+						<FormControl variant="outlined" size="small" fullWidth>
+							<Select
+								value={selectedWhatsappId}
+								onChange={e => setSelectedWhatsappId(e.target.value)}
+								displayEmpty
+							>
+								{connectedWhatsapps.map(whatsApp => (
+									<MenuItem key={whatsApp.id} value={whatsApp.id}>
+										{whatsApp.name}
+									</MenuItem>
+								))}
+							</Select>
+							<FormHelperText error={connectedWhatsapps.length === 0}>
+								{connectedWhatsapps.length === 0
+									? i18n.t("newTicketModal.noConnection")
+									: i18n.t("newTicketModal.connectionHelper")}
+							</FormHelperText>
+						</FormControl>
+					</SecaoDaJanela>
+				)}
+			</Janela>
 		</>
 	);
 };

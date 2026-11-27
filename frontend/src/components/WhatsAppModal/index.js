@@ -210,9 +210,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 							<DialogActions>
 								<Button
 									onClick={handleClose}
-									color="secondary"
+									color="inherit"
 									disabled={isSubmitting}
-									variant="outlined"
 								>
 									{i18n.t("whatsappModal.buttons.cancel")}
 								</Button>

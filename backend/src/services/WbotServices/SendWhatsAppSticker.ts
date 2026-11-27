@@ -7,6 +7,7 @@ import Sticker from "../../models/Sticker";
 import uploadConfig from "../../config/upload";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
 import { logger } from "../../utils/logger";
+import chatIdDoContato from "../../helpers/ChatIdDoContato";
 
 interface Request {
   sticker: Sticker;
@@ -40,7 +41,7 @@ const SendWhatsAppSticker = async ({
     throw new AppError("ERR_STICKER_FILE_MISSING");
   }
 
-  const chatId = `${ticket.contact.number}@${ticket.isGroup ? "g" : "c"}.us`;
+  const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 
   try {
     const enviada = await whatsappProvider.sendMedia(

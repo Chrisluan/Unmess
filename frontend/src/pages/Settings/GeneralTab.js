@@ -13,6 +13,7 @@ import {
 	Tooltip,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopyOutlined";
+import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
 import makeStyles from '@mui/styles/makeStyles';
 import { toast } from "react-toastify";
 
@@ -20,6 +21,7 @@ import { i18n } from "../../translate/i18n.js";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import { tocarClique, tocarParaMim } from "../../helpers/somDeNotificacao";
 
 const useStyles = makeStyles(theme => ({
 	section: {
@@ -56,20 +58,16 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const generateUuid = () => {
-	// gerador simples, suficiente para um token de acesso à API interna
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-		const r = (Math.random() * 16) | 0;
-		const v = c === "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-};
+const PADROES_LIGADOS = { signMessages: "enabled", notificationSound: "enabled" };
 
 // Chaves numéricas com seus defaults. Servem tanto para inicializar o estado
 // local quanto para saber o que gravar quando o campo vem vazio.
 const NUMBER_SETTINGS = {
 	autoCloseInactiveHours: "0",
 	reopenTicketWindowHours: "2",
+	validadePropostaDias: "15",
+	precoPercentual: "100",
+	margemMinima: "0",
 };
 
 const BOOLEAN_SETTINGS = [
@@ -101,7 +99,9 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [settings]);
 
-	const isEnabled = key => getSettingValue(key) === "enabled";
+	// Sem linha gravada vale o padrão do servidor (helpers/configuracoes): som e
+	// assinatura nascem ligados, e a tela os mostrava desligados.
+	const isEnabled = key => (getSettingValue(key) || PADROES_LIGADOS[key] || "disabled") === "enabled";
 
 	const saveSetting = async (key, value) => {
 		try {
@@ -128,8 +128,8 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 	const handleGenerateToken = async () => {
 		setConfirmarToken(false);
 		try {
-			const newToken = generateUuid();
-			await api.put("/settings/userApiToken", { value: newToken });
+			// Quem sorteia é o servidor: Math.random não serve para segredo.
+			await api.post("/settings/userApiToken/gerar");
 			toast.success(i18n.t("settings.settings.apiToken.generated"));
 			onSettingSaved();
 		} catch (err) {
@@ -162,6 +162,29 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 			<Typography variant="caption" color="textSecondary" className={classes.helper}>
 				{i18n.t(`settings.general.${key}.helper`)}
 			</Typography>
+			{/* Escolher ligar ou não um som sem poder ouvi-lo é decidir no
+			    escuro. O clique varia de tom a cada toque: vale apertar duas
+			    vezes seguidas. */}
+			{key === "notificationSound" && (
+				<div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+					<Button
+						size="small"
+						variant="outlined"
+						startIcon={<VolumeUpOutlinedIcon />}
+						onClick={tocarClique}
+					>
+						Ouvir: mensagem nova
+					</Button>
+					<Button
+						size="small"
+						variant="outlined"
+						startIcon={<VolumeUpOutlinedIcon />}
+						onClick={tocarParaMim}
+					>
+						Ouvir: conversa sua
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 
@@ -207,6 +230,44 @@ const GeneralTab = ({ settings, getSettingValue, onSettingSaved }) => {
 				<Divider />
 				{renderSwitch("signMessages")}
 				{renderSwitch("notificationSound")}
+			</Paper>
+
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					Vendas
+				</Typography>
+				<Divider />
+				{renderNumber("validadePropostaDias")}
+			</Paper>
+
+			<Paper className={classes.section} variant="outlined">
+				<Typography variant="subtitle1" className={classes.sectionTitle}>
+					Formação de preço
+				</Typography>
+				<Divider />
+				<div className={classes.settingRow}>
+					<TextField
+						select
+						className={classes.numberField}
+						label="Percentual sobre"
+						variant="outlined"
+						margin="dense"
+						SelectProps={{ native: true }}
+						value={getSettingValue("precoModo") || "markup"}
+						onChange={e => saveSetting("precoModo", e.target.value)}
+					>
+						<option value="markup">o custo (markup)</option>
+						<option value="lucro">a venda (lucro)</option>
+					</TextField>
+					<Typography variant="caption" color="textSecondary" className={classes.helper}>
+						Markup de 100% dobra o custo: preço = custo × (1 + %). Lucro de 50%
+						também dobra: metade do preço fica para a empresa, preço = custo ÷ (1 − %).
+						Vale para produtos e acabamentos de preço calculado; mudar aqui refaz o
+						preço deles na hora, sem tocar orçamentos já feitos.
+					</Typography>
+				</div>
+				{renderNumber("precoPercentual")}
+				{renderNumber("margemMinima")}
 			</Paper>
 
 			<Paper className={classes.section} variant="outlined">

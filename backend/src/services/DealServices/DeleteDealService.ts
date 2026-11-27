@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import Deal from "../../models/Deal";
+import Order from "../../models/Order";
 import AppError from "../../errors/AppError";
 
 /**
@@ -28,6 +29,32 @@ const DeleteDealService = async (
       [Op.or]: [{ id: raiz }, { rootDealId: raiz }]
     }
   });
+
+  /**
+   * Negócio com pedido ativo não se exclui: o pedido ficaria órfão, sem
+   * orçamento nem card, e as cobranças dele sem origem. O caminho é cancelar
+   * o pedido (que desfaz cobranças em aberto e tira os cards da produção) e
+   * só então excluir, se ainda fizer sentido.
+   */
+  const idsDaCadeia = cadeia.map(item => item.id);
+  const pedidoAtivo = await Order.findOne({
+    where: {
+      companyId,
+      canceledAt: null,
+      [Op.or]: [
+        { dealId: { [Op.in]: idsDaCadeia } },
+        { rootDealId: raiz },
+        { id: { [Op.in]: cadeia.map(item => item.orderId).filter(Boolean) as number[] } }
+      ]
+    },
+    attributes: ["id", "number"]
+  });
+  if (pedidoAtivo) {
+    throw new AppError("ERR_NEGOCIO_COM_PEDIDO", 409, {
+      orderId: pedidoAtivo.id,
+      number: pedidoAtivo.number
+    });
+  }
 
   // Os derivados saem antes da raiz: apagar a raiz primeiro dispara o cascade
   // e some com a lista debaixo dos pés.

@@ -16,7 +16,8 @@
  *     a conexão testada antes de qualquer coisa ser gravada.
  *
  * Uso (PowerShell como Administrador):
- *   node scripts/rotacionar-segredos.js
+ *   node scripts/rotacionar-segredos.js           (JWT e senha do banco)
+ *   node scripts/rotacionar-segredos.js --so-jwt  (só as chaves de JWT)
  *
  * Nada é impresso na tela além de "ok": o motivo de rotacionar é justamente
  * que segredo em terminal vira segredo vazado.
@@ -38,7 +39,7 @@ const gerarSegredo = () => crypto.randomBytes(48).toString("base64url");
 const lerEnv = arquivo => {
   const texto = fs.readFileSync(arquivo, "utf8");
   const valor = chave => {
-    const achado = texto.match(new RegExp(`^\\s*${chave}\\s*=\\s*(.*)$`, "m"));
+    const achado = texto.match(new RegExp(`^[ \\t]*${chave}[ \\t]*=[ \\t]*([^\\r\\n]*)`, "m"));
     return achado ? achado[1].trim() : null;
   };
   return { texto, valor };
@@ -53,8 +54,16 @@ const lerEnv = arquivo => {
  */
 const substituir = (texto, chave, valor) => {
   const linha = `${chave}=${valor}`;
-  const padrao = new RegExp(`^\\s*${chave}\\s*=.*$`, "m");
-  return padrao.test(texto) ? texto.replace(padrao, linha) : `${texto}\n${linha}`;
+  // [ \t] e [^\r\n], nunca \s e .: com `m`, o ^ também casa logo depois de
+  // um \r, e um \s* ali engolia o \n seguinte -- a substituição deixava a
+  // linha anterior grudada nesta por um \r sozinho. O dotenv lia certo, mas
+  // grep, PowerShell e qualquer conferência à mão deixavam de ver a chave.
+  const padrao = new RegExp(`^[ \\t]*${chave}[ \\t]*=[^\\r\\n]*`, "m");
+  const saida = padrao.test(texto)
+    ? texto.replace(padrao, () => linha)
+    : `${texto.replace(/\s*$/, "")}\r\n${linha}\r\n`;
+  // Desfaz as linhas que execuções antigas deixaram grudadas por \r sozinho.
+  return saida.replace(/\r(?!\n)/g, "\r\n");
 };
 
 /** Executa SQL pelo cliente do MySQL, com a senha pelo ambiente e nunca na linha de comando. */
@@ -119,9 +128,15 @@ const acharMysql = () => {
 
   // ---- senha do banco ------------------------------------------------------
 
-  const executavel = acharMysql();
+  // --so-jwt: quando só as chaves de sessão precisam ser geradas (por exemplo,
+  // logo depois de recuperar a senha do banco com redefinir-senha-banco.ps1),
+  // não há motivo para trocar a senha do banco outra vez.
+  const soJwt = process.argv.includes("--so-jwt");
+  const executavel = soJwt ? null : acharMysql();
 
-  if (!executavel) {
+  if (soJwt) {
+    log("senha do banco mantida (--so-jwt)", "✓");
+  } else if (!executavel) {
     log("cliente do MySQL não encontrado; a senha do banco NÃO foi trocada.", "!");
     log("troque-a pelo MySQL Workbench e atualize DB_PASS em backend/.env:", " ");
     log(`ALTER USER '${usuarioBanco}'@'localhost' IDENTIFIED BY '<nova senha>';`, " ");

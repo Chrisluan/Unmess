@@ -19,6 +19,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import usePermissions from "../../hooks/usePermissions";
 
 const useStyles = makeStyles((theme) => ({
   linha: {
@@ -68,6 +69,9 @@ const paraInputDate = (valor) => (valor ? String(valor).slice(0, 10) : "");
 
 const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) => {
   const classes = useStyles();
+  const { can } = usePermissions();
+  const verValores = can("crm:viewValues");
+  const podeAtribuir = can("crm:assign");
   const isMounted = useRef(true);
 
   const [deal, setDeal] = useState(initialState);
@@ -172,6 +176,12 @@ const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) 
       contactId: customerSelecionado?.contactId || null,
     };
 
+    // O servidor recusa (ou descarta) campo que a pessoa não pode mexer; mandar
+    // o que veio vazio na tela só transformava um "salvar o título" em erro 403
+    // ou em valor zerado por cima do preço de verdade.
+    if (!verValores) delete payload.value;
+    if (dealId && !podeAtribuir) delete payload.responsibleUserId;
+
     try {
       const { data } = dealId
         ? await api.put(`/deals/${dealId}`, payload)
@@ -239,6 +249,7 @@ const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) 
               />
 
               <div className={classes.linha}>
+                {verValores && (
                 <Field
                   as={TextField}
                   label={i18n.t("crm.dealModal.form.value")}
@@ -256,6 +267,7 @@ const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) 
                   margin="dense"
                   className={classes.campo}
                 />
+                )}
 
                 <Field
                   as={TextField}
@@ -295,6 +307,7 @@ const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) 
                   select
                   label={i18n.t("crm.dealModal.form.responsible")}
                   name="responsibleUserId"
+                  disabled={Boolean(dealId) && !podeAtribuir}
                   variant="outlined"
                   margin="dense"
                   className={classes.campo}
@@ -325,9 +338,8 @@ const DealModal = ({ open, onClose, dealId, stageId, boardId, stages, onSave }) 
             <DialogActions>
               <Button
                 onClick={handleClose}
-                color="secondary"
+                color="inherit"
                 disabled={isSubmitting}
-                variant="outlined"
               >
                 {i18n.t("crm.buttons.cancel")}
               </Button>

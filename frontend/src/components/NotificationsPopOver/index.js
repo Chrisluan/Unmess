@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
 import { format } from "date-fns";
 import openSocket from "../../services/socket-io";
-import useSound from "use-sound";
 
 import Popover from "@mui/material/Popover";
 import List from "@mui/material/List";
@@ -16,7 +15,7 @@ import { ItemTrilho } from "../../layout/MainListItems";
 import TicketListItem from "../TicketListItem";
 import { i18n } from "../../translate/i18n";
 import useTickets from "../../hooks/useTickets";
-import alertSound from "../../assets/sound.mp3";
+import { prepararSom, tocarClique, tocarParaMim } from "../../helpers/somDeNotificacao";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { AttendanceSettingsContext } from "../../context/Settings/AttendanceSettingsContext";
 
@@ -71,20 +70,21 @@ const NotificationsPopOver = () => {
 	const [, setDesktopNotifications] = useState([]);
 
 	const { tickets } = useTickets({ withUnreadMessages: "true" });
-	const [play] = useSound(alertSound);
-	const soundAlertRef = useRef();
 
 	const historyRef = useRef(history);
 
-	useEffect(() => {
-		soundAlertRef.current = play;
+	// O handler do socket é criado uma vez por usuário; a configuração de som
+	// pode mudar depois, então ele lê sempre o valor mais recente por aqui.
+	const somLigadoRef = useRef(true);
+	somLigadoRef.current = isEnabled("notificationSound");
 
-		if (!("Notification" in window)) {
-			console.log("This browser doesn't support notifications");
-		} else {
+	useEffect(() => {
+		prepararSom();
+
+		if ("Notification" in window && Notification.permission === "default") {
 			Notification.requestPermission();
 		}
-	}, [play]);
+	}, []);
 
 	useEffect(() => {
 		setNotifications(tickets);
@@ -100,6 +100,19 @@ const NotificationsPopOver = () => {
 		socket.on("connect", () => socket.emit("joinNotification"));
 
 		socket.on("ticket", data => {
+			// Conversa transferida para mim por outra pessoa: aviso com o som
+			// "é seu" — antes ela só aparecia na lista, sem ninguém notar.
+			const transferencia = data.action === "update" && data.transferencia;
+			if (
+				transferencia &&
+				user?.id &&
+				transferencia.paraUsuarioId === user.id &&
+				transferencia.porUsuarioId !== user.id &&
+				transferencia.deUsuarioId !== user.id
+			) {
+				avisarTransferencia(data.ticket);
+			}
+
 			if (data.action === "updateUnread" || data.action === "delete") {
 				setNotifications(prevState => {
 					const ticketIndex = prevState.findIndex(t => t.id === data.ticketId);
@@ -156,42 +169,71 @@ const NotificationsPopOver = () => {
 		};
 	}, [user]);
 
+	/**
+	 * Notificação do sistema operacional.
+	 *
+	 * Fica separada do som: sem permissão de notificação (ou num navegador
+	 * sem suporte) o `new Notification` lançava erro e o som nunca tocava.
+	 */
+	const mostrarNotificacao = (titulo, corpo, ticket, icone) => {
+		if (!("Notification" in window) || Notification.permission !== "granted") return;
+		try {
+			const notification = new Notification(titulo, {
+				body: corpo,
+				icon: icone,
+				tag: String(ticket.id),
+				renotify: true,
+			});
+
+			notification.onclick = e => {
+				e.preventDefault();
+				window.focus();
+				historyRef.current.push(`/tickets/${ticket.id}`);
+			};
+
+			setDesktopNotifications(prevState => {
+				const notfiticationIndex = prevState.findIndex(
+					n => n.tag === notification.tag
+				);
+				if (notfiticationIndex !== -1) {
+					prevState[notfiticationIndex] = notification;
+					return [...prevState];
+				}
+				return [notification, ...prevState];
+			});
+		} catch (err) {
+			// Alguns navegadores só aceitam notificação via service worker.
+		}
+	};
+
 	const handleNotifications = data => {
 		const { message, contact, ticket } = data;
 
-		const options = {
-			body: `${message.body} - ${format(new Date(), "HH:mm")}`,
-			icon: contact.profilePicUrl,
-			tag: ticket.id,
-			renotify: true,
-		};
-
-		const notification = new Notification(
+		mostrarNotificacao(
 			`${i18n.t("tickets.notification.message")} ${contact.name}`,
-			options
+			`${message.body} - ${format(new Date(), "HH:mm")}`,
+			ticket,
+			contact.profilePicUrl
 		);
 
-		notification.onclick = e => {
-			e.preventDefault();
-			window.focus();
-			historyRef.current.push(`/tickets/${ticket.id}`);
-		};
-
-		setDesktopNotifications(prevState => {
-			const notfiticationIndex = prevState.findIndex(
-				n => n.tag === notification.tag
-			);
-			if (notfiticationIndex !== -1) {
-				prevState[notfiticationIndex] = notification;
-				return [...prevState];
-			}
-			return [notification, ...prevState];
-		});
-
-		// Som de notificação é configurável por empresa (Configurações › Geral).
-		if (isEnabled("notificationSound")) {
-			soundAlertRef.current();
+		// Som configurável por empresa (Configurações › Geral). Conversa que é
+		// minha tem som próprio, mais chamativo; o resto, o clique.
+		if (somLigadoRef.current) {
+			if (ticket.userId && ticket.userId === user?.id) tocarParaMim();
+			else tocarClique();
 		}
+	};
+
+	const avisarTransferencia = ticket => {
+		if (!ticket) return;
+		const nome = ticket.contact?.name || "um contato";
+		mostrarNotificacao(
+			"Conversa transferida para você",
+			`${nome} - ${format(new Date(), "HH:mm")}`,
+			ticket,
+			ticket.contact?.profilePicUrl
+		);
+		if (somLigadoRef.current) tocarParaMim();
 	};
 
 	const handleClick = () => {

@@ -19,21 +19,21 @@ import api from "../services/api";
  * nova é cortado depois, com `janela.opener = null`, que tem o mesmo efeito e
  * ainda deixa escrever nela.
  */
-const abrirOrdemDeServico = async (dealId) => {
+export const abrirDocumento = async (caminho, nome = "documento") => {
   const janela = window.open("", "_blank");
 
   if (!janela) {
     throw new Error(
-      "O navegador bloqueou a janela da ordem de serviço. Libere os pop-ups deste endereço e tente de novo."
+      `O navegador bloqueou a janela do ${nome}. Libere os pop-ups deste endereço e tente de novo.`
     );
   }
 
   janela.document.write(
-    "<p style='font:14px system-ui;padding:24px'>Gerando ordem de serviço...</p>"
+    `<p style='font:14px system-ui;padding:24px'>Gerando ${nome}...</p>`
   );
 
   try {
-    const { data } = await api.get(`/deals/${dealId}/ordem-servico`, {
+    const { data } = await api.get(caminho, {
       responseType: "text",
     });
 
@@ -58,5 +58,21 @@ const abrirOrdemDeServico = async (dealId) => {
     throw err;
   }
 };
+
+/**
+ * Documento do card: proposta (orçamento), ordem de produção (pedido) ou o
+ * modelo antigo -- o backend escolhe pelo estado do card.
+ */
+const abrirOrdemDeServico = (dealId) =>
+  abrirDocumento(`/deals/${dealId}/ordem-servico`, "documento");
+
+export const abrirProposta = (dealId) =>
+  abrirDocumento(`/deals/${dealId}/proposta`, "proposta");
+
+export const abrirOrdemDeProducao = (orderId, comValores = false) =>
+  abrirDocumento(
+    `/orders/${orderId}/ordem-producao${comValores ? "?valores=1" : ""}`,
+    "ordem de produção"
+  );
 
 export default abrirOrdemDeServico;

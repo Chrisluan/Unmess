@@ -540,6 +540,32 @@ const hasMedia = (msg: WAMessage): boolean => {
 const mapMessageAck = (status: number | null | undefined): MessageAck =>
   status === null || status === undefined ? 0 : traduzirAck(status);
 
+/**
+ * Até quanto tempo atrás uma mensagem do lote de reconexão ainda vira
+ * conversa. Cobre um fim de semana inteiro com o servidor parado sem
+ * ressuscitar históricos antigos.
+ */
+const JANELA_DO_LOTE_OFFLINE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const MARCAR_ONLINE = process.env.WHATSAPP_MARCAR_ONLINE !== "false";
+
+/** Atributos de um frame que podem ir para o log sem expor conteúdo. */
+const ATRIBUTOS_SEGUROS = ["type", "offline", "count", "class", "category", "t", "id", "reason", "code"];
+
+const resumirFrame = (frame: any) => {
+  const attrs = frame?.attrs || {};
+  const seguros: Record<string, string> = {};
+  ATRIBUTOS_SEGUROS.forEach(chave => {
+    if (attrs[chave] !== undefined) seguros[chave] = String(attrs[chave]);
+  });
+  // Do remetente, só o tipo de endereço — nunca o número.
+  if (attrs.from) seguros.de = String(attrs.from).split("@")[1] || "?";
+  const filhos = Array.isArray(frame?.content)
+    ? frame.content.map((c: any) => c?.tag).filter(Boolean)
+    : [];
+  return { tag: frame?.tag, attrs: seguros, filhos };
+};
+
 const shouldHandleMessage = (msg: WAMessage): boolean => {
   const messageType = getContentType(msg.message || undefined);
   const validTypes = [
@@ -624,6 +650,8 @@ const convertToMessagePayload = (msg: WAMessage): MessagePayload => {
 
 type ExtendedKey = WAMessageKey &
   Partial<{
+    recipientPn: string;
+    recipient_pn: string;
     senderPn: string;
     sender_pn: string;
     participantPn: string;
@@ -671,19 +699,57 @@ const convertToContactPayload = async (
 
   let resolvedJid = jid || "";
 
+  /**
+   * De quem é o telefone que interessa depende de quem escreveu.
+   *
+   * Mensagem recebida: o contato é o remetente (senderPn/senderLid). Mensagem
+   * nossa — inclusive a respondida pelo celular — o contato é o destinatário
+   * (recipientPn/recipientLid); o remetente somos nós. Antes só se olhava o
+   * remetente: na resposta pelo celular não havia telefone do cliente, o
+   * identificador interno do WhatsApp (LID) virava "número", e o cadastro do
+   * cliente tinha o telefone real trocado por ele.
+   */
+  const fromMe = Boolean(msg.key?.fromMe);
+
+  if (fromMe) {
+    const lidDoDestinatario = keyExt.recipientLid || keyExt.recipient_lid;
+    const pnDoDestinatario = keyExt.recipientPn || keyExt.recipient_pn;
+    const lidDestino = normalizeLid(
+      resolvedJid.endsWith("@lid") ? resolvedJid : lidDoDestinatario
+    );
+    const pnDestino =
+      pnDoDestinatario && /@s\.whatsapp\.net$/i.test(pnDoDestinatario)
+        ? pnDoDestinatario
+        : resolvedJid.endsWith("@s.whatsapp.net")
+          ? resolvedJid
+          : undefined;
+
+    if (!isJidGroup(resolvedJid)) {
+      const numeroDestino = pnDestino ? jidDecode(pnDestino)?.user || "" : "";
+      const contato =
+        wbot.store?.contacts?.[pnDestino || ""] ||
+        wbot.store?.contacts?.[resolvedJid];
+
+      return {
+        // Sem telefone conhecido, nenhum: o serviço de contatos acha o
+        // cadastro pelo LID e preserva o número que já está lá.
+        name: contato?.name || contato?.notify || numeroDestino || "",
+        number: numeroDestino,
+        lid: lidDestino,
+        isGroup: false
+      };
+    }
+  }
+
   const lidCandidates: (string | undefined)[] = [
     keyExt.senderLid,
     keyExt.participantLid,
-    keyExt.recipientLid,
     ctx?.senderLid,
     ctx?.participantLid,
-    ctx?.recipientLid,
     keyExt.sender_lid,
     keyExt.participant_lid,
-    keyExt.recipient_lid,
     ctx?.sender_lid,
     ctx?.participant_lid,
-    ctx?.recipient_lid,
     (keyExt.senderPn || keyExt.sender_pn)?.includes("@lid")
       ? keyExt.senderPn || keyExt.sender_pn
       : undefined,
@@ -799,10 +865,12 @@ const convertToContactPayload = async (
       ? undefined
       : incomingPushName;
 
+  // Só telefone de verdade vira número. Os dígitos de um LID não são
+  // telefone: gravá-los como número sobrescrevia o cadastro do cliente.
   const number =
     (isJidUser(resolvedJid) && decoded?.user) ||
     jidDecode(preferPn || "")?.user ||
-    normalizedJid.split("@")[0];
+    (isLidUser(resolvedJid) ? "" : normalizedJid.split("@")[0]);
 
   const lidValue = normalizeLid(
     isLidUser(resolvedJid) && decoded?.user ? `${decoded.user}@lid` : lid
@@ -1072,7 +1140,13 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     syncFullHistory: false,
     version: waVersionToUse,
     msgRetryCounterMap,
-    markOnlineOnConnect: false,
+    // Conexão "disponível" recebe as mensagens ao vivo. Marcada como
+    // indisponível, o WhatsApp passou a guardar tudo para ela como pendência
+    // e só entregar quando ela reconecta — a mensagem do cliente aparecia no
+    // celular e não no sistema. O custo: enquanto o Unmess está conectado, o
+    // celular deixa de tocar notificação. WHATSAPP_MARCAR_ONLINE=false volta
+    // ao comportamento antigo.
+    markOnlineOnConnect: MARCAR_ONLINE,
     fireInitQueries: true,
     generateHighQualityLinkPreview: true,
     linkPreviewImageThumbnailWidth: 192,
@@ -1117,6 +1191,189 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     debouncedSaveCreds(whatsapp, state.creds);
   });
 
+  // O Baileys segura os eventos em buffer desde o "connecting" e só os libera
+  // quando o WhatsApp manda o aviso de fim das pendências offline
+  // (`ib/offline`). Os servidores atuais, porém, primeiro anunciam um
+  // `offline_preview` e esperam o cliente pedir o lote — sem o pedido o aviso
+  // de fim nunca vem. Resultado: a conexão aparecia como "conectada" e
+  // enviava normalmente, mas mensagens recebidas, o eco das enviadas e as
+  // confirmações de entrega ficavam presos no buffer para sempre, e nenhuma
+  // conversa nova chegava à tela.
+  /**
+   * Diagnóstico do protocolo: registra cada frame que o WhatsApp manda (menos
+   * as consultas "iq", que são respostas a pedidos nossos), sem conteúdo nem
+   * número. É o que mostra se a mensagem chegou ao servidor e não foi
+   * entregue, ou se foi entregue e se perdeu aqui dentro.
+   */
+  if (process.env.WHATSAPP_LOG_FRAMES !== "false") {
+    wbot.ws.on("frame", (frame: any) => {
+      if (!frame || frame instanceof Uint8Array || frame.tag === "iq") return;
+      logger.info({ info: "Frame do WhatsApp", sessionId, ...resumirFrame(frame) }, "ws frame");
+    });
+  }
+
+  /**
+   * Status (stories) dos contatos.
+   *
+   * O WhatsApp passou a entregar os status como um frame próprio, `<status>`,
+   * em vez de `<message from="status@broadcast">`, e esta versão da biblioteca
+   * não tem quem o trate — então ninguém o confirma. Sem confirmação o servidor
+   * o mantém na fila de pendências, encerra a conexão ~50 min depois
+   * (`stream:error` com `<ack class="status">`, que chega aqui como 500) e o
+   * reentrega na reconexão. Como a fila andava 100 itens por vez e quase todos
+   * eram esses status reentregues, as mensagens de clientes e as confirmações
+   * de entrega das mensagens enviadas ficavam horas atrás deles — ou nunca
+   * chegavam.
+   *
+   * O status não interessa ao atendimento: só é confirmado, sem decifrar, como
+   * faz o whatsmeow. O formato do ack é o padrão da biblioteca (id, to,
+   * class="status", e participant/type copiados do frame).
+   */
+  wbot.ws.on("CB:status", (node: any) => {
+    wbot
+      .sendMessageAck(node)
+      .catch(err =>
+        logger.warn({ info: "Falha ao confirmar status", sessionId, err })
+      );
+  });
+
+  /**
+   * Fila de pendências offline, em lotes.
+   *
+   * Ao conectar, o servidor anuncia quantas pendências tem (`offline_preview`)
+   * e entrega um lote por pedido (`offline_batch`). Pedir um lote só, como
+   * antes, deixava o resto parado até a próxima reconexão, e o fim da fila
+   * (`ib/offline`) nunca vinha — com isso o servidor seguia tratando a conexão
+   * como "em recuperação" e nada chegava ao vivo. Aqui, cada lote completo
+   * puxa o próximo, até o servidor avisar que acabou.
+   */
+  const TAMANHO_DO_LOTE = 100;
+  const TAGS_DA_FILA = new Set(["message", "receipt", "notification", "call", "status"]);
+  let recebidosNoLote = 0;
+  let filaOfflineAberta = false;
+  let lotesPedidos = 0;
+  let proximoLote: NodeJS.Timeout | null = null;
+
+  const pedirLoteOffline = (): void => {
+    if (sessions.get(sessionId) !== wbot || !filaOfflineAberta) return;
+    recebidosNoLote = 0;
+    lotesPedidos += 1;
+    wbot
+      .sendNode({
+        tag: "ib",
+        attrs: {},
+        content: [{ tag: "offline_batch", attrs: { count: String(TAMANHO_DO_LOTE) } }]
+      })
+      .catch(err =>
+        logger.warn({ info: "Falha ao pedir o lote offline", sessionId, err })
+      );
+  };
+
+  wbot.ws.on("frame", (frame: any) => {
+    if (!filaOfflineAberta || !frame || frame instanceof Uint8Array) return;
+    if (!TAGS_DA_FILA.has(frame.tag) || frame.attrs?.offline === undefined) return;
+
+    recebidosNoLote += 1;
+    if (recebidosNoLote >= TAMANHO_DO_LOTE && !proximoLote) {
+      // Um respiro para a biblioteca confirmar o lote antes do próximo.
+      proximoLote = setTimeout(() => {
+        proximoLote = null;
+        pedirLoteOffline();
+      }, 500);
+    }
+  });
+
+  wbot.ws.on("CB:ib,,offline_preview", (node: any) => {
+    logger.info(
+      { info: "Prévia de pendências offline", sessionId, ...resumirFrame(node?.content?.[0]) },
+      "offline_preview"
+    );
+    filaOfflineAberta = true;
+    lotesPedidos = 0;
+    pedirLoteOffline();
+  });
+
+  wbot.ws.on("CB:ib,,offline", (node: any) => {
+    filaOfflineAberta = false;
+    if (proximoLote) {
+      clearTimeout(proximoLote);
+      proximoLote = null;
+    }
+    logger.info(
+      { info: "Fim das pendências offline", sessionId, lotes: lotesPedidos, ...resumirFrame(node?.content?.[0]) },
+      "offline"
+    );
+  });
+
+  // Rede de segurança caso o aviso de fim não venha de jeito nenhum: depois de
+  // alguns segundos abertos, libera o buffer à força. Não faz nada se ele já
+  // foi liberado pelo caminho normal.
+  const liberarBuffer = (): void => {
+    setTimeout(() => {
+      if (sessions.get(sessionId) !== wbot) return;
+      wbot.ev
+        .flush()
+        .catch(err =>
+          logger.warn({ info: "Falha ao liberar eventos retidos", sessionId, err })
+        );
+    }, 8000);
+  };
+
+  /**
+   * Vigia de eventos retidos.
+   *
+   * A biblioteca decifra cada mensagem e só então a entrega como evento — e,
+   * em algumas situações, essa entrega fica presa (o buffer interno de eventos
+   * aguarda uma tarefa que não termina). A conexão continua "conectada",
+   * envia normalmente, mas nada chega: nem mensagem de cliente, nem eco, nem
+   * confirmação de entrega. Só quando o WhatsApp derruba a conexão (~50 min)
+   * o lote acumulado aparece. Era o "fica no reloginho" e o "não aparece na
+   * fila".
+   *
+   * Aqui se compara o que chega cru do WhatsApp com o que sai como evento. Se
+   * chegou mensagem e nenhum evento saiu em 25 s, a conexão é refeita na hora:
+   * a reconexão entrega o lote retido, que agora é aceito pelo filtro acima.
+   */
+  let ultimaMensagemCrua = 0;
+  let ultimoUpsert = Date.now();
+  let ultimaReconexaoForcada = 0;
+
+  wbot.ws.on("CB:message", (node: any) => {
+    const de = String(node?.attrs?.from || "");
+    if (de.endsWith("@broadcast") || de.endsWith("@newsletter")) return;
+    ultimaMensagemCrua = Date.now();
+    logger.info(
+      { info: "Mensagem crua do WhatsApp", sessionId, offline: Boolean(node?.attrs?.offline) },
+      "ws message"
+    );
+  });
+
+  const vigia = setInterval(() => {
+    if (sessions.get(sessionId) !== wbot) {
+      clearInterval(vigia);
+      return;
+    }
+
+    const agora = Date.now();
+    const retida =
+      ultimaMensagemCrua > ultimoUpsert && agora - ultimaMensagemCrua > 25000;
+    const podeForcar = agora - ultimaReconexaoForcada > 2 * 60 * 1000;
+
+    if (retida && podeForcar) {
+      ultimaReconexaoForcada = agora;
+      clearInterval(vigia);
+      logger.warn(
+        { info: "Eventos do WhatsApp retidos; refazendo a conexão", sessionId },
+        "vigia"
+      );
+      try {
+        wbot.end(new Error("Eventos retidos"));
+      } catch (err) {
+        logger.warn({ info: "Falha ao encerrar conexão retida", sessionId, err });
+      }
+    }
+  }, 5000);
+
   wbot.ev.on("messages.upsert", async ({ messages, type }) => {
     messages.forEach(msg => {
       msgCache.save(msg);
@@ -1138,34 +1395,54 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
 
       if (type === "notify") return true;
 
-      if (type === "append" && msg.key.fromMe) return true;
+      // "append" é o lote que o WhatsApp entrega ao reconectar: tudo que chegou
+      // enquanto a conexão não estava recebendo. Antes só as nossas passavam,
+      // e a mensagem do cliente que caía nesse lote era descartada em silêncio
+      // -- nunca virava conversa, nem atrasada. Entra tudo que for recente;
+      // reentregas não duplicam, porque a gravação é por id.
+      if (type === "append") {
+        const enviadaEm = Number(msg.messageTimestamp || 0) * 1000;
+        return Date.now() - enviadaEm < JANELA_DO_LOTE_OFFLINE_MS;
+      }
 
       return false;
     });
 
+    ultimoUpsert = Date.now();
+
+    // Rastro de que o provedor está entregando eventos: sem ele, uma conexão
+    // muda era indistinguível de uma conexão sem movimento.
+    logger.info(
+      { info: "Mensagens recebidas do provedor", sessionId, type, total: messages.length, validas: validMessages.length },
+      "messages.upsert"
+    );
+
     if (validMessages.length === 0) return;
 
-    await Promise.all(
-      validMessages.map(async msg => {
-        try {
-          const {
-            messagePayload,
-            contactPayload,
-            contextPayload,
-            mediaPayload
-          } = await getMessageData(msg, wbot);
+    // Uma de cada vez, na ordem em que chegaram. Em paralelo, as mensagens de
+    // um mesmo contato novo disputavam a criação do contato e do ticket, e a
+    // conversa podia gravar as mensagens fora de ordem.
+    for (const msg of validMessages) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const {
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        } = await getMessageData(msg, wbot);
 
-          await handleMessage(
-            messagePayload,
-            contactPayload,
-            contextPayload,
-            mediaPayload
-          );
-        } catch (err) {
-          logger.error(err, "Error handling message upsert");
-        }
-      })
-    );
+        // eslint-disable-next-line no-await-in-loop
+        await handleMessage(
+          messagePayload,
+          contactPayload,
+          contextPayload,
+          mediaPayload
+        );
+      } catch (err) {
+        logger.error(err, "Error handling message upsert");
+      }
+    }
   });
 
   wbot.ev.on("connection.update", async update => {
@@ -1243,6 +1520,8 @@ const init = async (whatsapp: Whatsapp): Promise<void> => {
     }
 
     if (connection === "open") {
+      liberarBuffer();
+
       await flushPendingCredsSave(sessionId);
 
       // jidDecode separa o device do número: "5544920023577:87@s.whatsapp.net"

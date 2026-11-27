@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useReducer,
   useRef,
+  useLayoutEffect,
   useState,
 } from "react";
 import { useHistory, useLocation } from "react-router-dom";
@@ -607,6 +608,13 @@ const MessagesList = ({ ticketId, isGroup }) => {
   // Mensagem realçada por ter sido alcançada a partir de uma citação.
   const [destacada, setDestacada] = useState(null);
   const fimRef = useRef();
+  const listaRef = useRef();
+  // Pedido de "role até o fim assim que a tela for redesenhada". Rolar na
+  // hora do dispatch, como era, rolava até o fim ANTIGO: a mensagem nova
+  // ainda não estava no DOM e ficava escondida logo abaixo. Na seguinte, a
+  // distância até o fim já passava da margem e o chat "desgrudava" sozinho.
+  const rolarAposRenderRef = useRef(false);
+  const [, setPulsoDeRolagem] = useState(0);
   const hasMoreRef = useRef(false);
   const history = useHistory();
   const location = useLocation();
@@ -675,8 +683,8 @@ const MessagesList = ({ ticketId, isGroup }) => {
             setLoading(false);
           }
 
-          if (pageNumber === 1 && data.messages.length > 1 && !debouncedSearch) {
-            scrollToBottom();
+          if (pageNumber === 1 && data.messages.length > 0 && !debouncedSearch) {
+            pedirRolagemAoFim();
           }
         } catch (err) {
           setLoading(false);
@@ -708,8 +716,11 @@ const MessagesList = ({ ticketId, isGroup }) => {
         if (searchOpenRef.current) return;
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
 
-        if (naFrenteRef.current) {
-          scrollToBottom();
+        // Perto do fim, acompanha. A minha própria mensagem também sempre
+        // leva ao fim — inclusive a enviada pelo celular, que não passa pela
+        // fila de envio desta tela.
+        if (naFrenteRef.current || data.message.fromMe) {
+          pedirRolagemAoFim();
         } else {
           // Longe do fim: em vez de arrastar a tela, avisa que chegou algo e
           // deixa a pessoa decidir quando descer.
@@ -765,26 +776,69 @@ const MessagesList = ({ ticketId, isGroup }) => {
   const pendentesAnteriores = useRef(0);
   useEffect(() => {
     if (quantasPendentes > pendentesAnteriores.current) {
-      scrollToBottom();
+      pedirRolagemAoFim();
     }
     pendentesAnteriores.current = quantasPendentes;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quantasPendentes]);
 
+  /**
+   * Rola a própria lista até o fim.
+   *
+   * Mexe só no scrollTop do contêiner: o scrollIntoView de antes rolava
+   * também tudo o que estivesse em volta (a página, o painel), e às vezes
+   * deslocava o cabeçalho da conversa.
+   */
   const scrollToBottom = (suave = false) => {
-    // A âncora fica depois de tudo, inclusive das mensagens que ainda estão
-    // saindo. Usar a última mensagem carregada parava a rolagem um balão
-    // antes do fim quando havia algo na fila de envio.
-    const alvo = fimRef.current || lastMessageRef.current;
-
-    if (alvo) {
-      alvo.scrollIntoView(
-        suave ? { behavior: "smooth", block: "end" } : { block: "end" }
-      );
+    const lista = listaRef.current;
+    if (lista) {
+      lista.scrollTo({
+        top: lista.scrollHeight,
+        behavior: suave ? "smooth" : "auto",
+      });
     }
     naFrenteRef.current = true;
     setNovasAbaixo(0);
+    setMostrarIrParaFim(false);
   };
+
+  const pedirRolagemAoFim = () => {
+    rolarAposRenderRef.current = true;
+    naFrenteRef.current = true;
+    // Força um render mesmo quando nada mais mudou (envio que já estava na
+    // tela, eco da mensagem): o efeito abaixo é quem rola. Um setState com o
+    // mesmo valor seria descartado pelo React e a rolagem não aconteceria.
+    setPulsoDeRolagem((n) => n + 1);
+  };
+
+  // Depois de desenhar: se alguém pediu, desce até o fim.
+  useLayoutEffect(() => {
+    if (!rolarAposRenderRef.current) return;
+    rolarAposRenderRef.current = false;
+    scrollToBottom();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  /**
+   * Imagem, vídeo e figurinha chegam sem altura e crescem quando carregam,
+   * empurrando o fim para baixo depois que a rolagem já aconteceu. Quem está
+   * acompanhando continua grudado no fim; quem está lendo lá em cima não é
+   * mexido. O evento "load" não sobe pela árvore, por isso a escuta é na fase
+   * de captura.
+   */
+  useEffect(() => {
+    const lista = listaRef.current;
+    if (!lista) return undefined;
+    const aoCarregarMidia = () => {
+      if (naFrenteRef.current) lista.scrollTop = lista.scrollHeight;
+    };
+    lista.addEventListener("load", aoCarregarMidia, true);
+    lista.addEventListener("loadedmetadata", aoCarregarMidia, true);
+    return () => {
+      lista.removeEventListener("load", aoCarregarMidia, true);
+      lista.removeEventListener("loadedmetadata", aoCarregarMidia, true);
+    };
+  }, []);
 
   /**
    * Leva a conversa até uma mensagem específica e a realça.
@@ -857,14 +911,15 @@ const MessagesList = ({ ticketId, isGroup }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alvoDaRota, loading, messagesList.length]);
 
-  // Margem generosa: quem está a cem pixels do fim ainda está "acompanhando",
-  // e para essa pessoa a rolagem automática ajuda em vez de atrapalhar.
-  const MARGEM_FIM = 120;
-
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
 
-    const noFim = scrollHeight - (scrollTop + clientHeight) < MARGEM_FIM;
+    // "Quase no fim" acompanha a altura da tela: um quarto do que se vê (no
+    // mínimo 160 px). Quem está aí ainda está acompanhando, e a rolagem
+    // automática ajuda; quem subiu mais que isso está lendo o histórico, e
+    // aí só aparece o botão para descer.
+    const margem = Math.max(160, clientHeight * 0.25);
+    const noFim = scrollHeight - (scrollTop + clientHeight) < margem;
     naFrenteRef.current = noFim;
     if (noFim && novasAbaixo > 0) setNovasAbaixo(0);
     setMostrarIrParaFim(!noFim);
@@ -1568,6 +1623,7 @@ const MessagesList = ({ ticketId, isGroup }) => {
       />
       <div
         id="messagesList"
+        ref={listaRef}
         className={classes.messagesList}
         onScroll={handleScroll}
       >

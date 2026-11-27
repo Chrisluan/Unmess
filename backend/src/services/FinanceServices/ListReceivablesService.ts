@@ -2,6 +2,7 @@ import { Op, WhereOptions, literal } from "sequelize";
 
 import Receivable from "../../models/Receivable";
 import Customer from "../../models/Customer";
+import Order from "../../models/Order";
 import FinancialEntry from "../../models/FinancialEntry";
 import FinancialCategory from "../../models/FinancialCategory";
 
@@ -85,6 +86,14 @@ const ListReceivablesService = async ({
         model: Customer,
         as: "customer",
         attributes: ["id", "name", "tradeName", "document", "phone"],
+        required: false
+      },
+      {
+        // Pedido e orçamento de origem: é o que liga a parcela de volta ao
+        // que foi vendido (a tela mostra "Pedido nº / Orçamento nº" com link).
+        model: Order,
+        as: "order",
+        attributes: ["id", "number", "quoteNumber", "dealId"],
         required: false
       },
       {

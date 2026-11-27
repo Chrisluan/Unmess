@@ -1,3 +1,4 @@
+import { Transaction } from "sequelize";
 import * as Yup from "yup";
 import AppError from "../../errors/AppError";
 import TicketStatus from "../../models/TicketStatus";
@@ -8,6 +9,7 @@ interface Request {
   type?: string;
   isDefault?: boolean;
   companyId: number;
+  transaction?: Transaction;
 }
 
 const CreateTicketStatusService = async ({
@@ -15,7 +17,8 @@ const CreateTicketStatusService = async ({
   color,
   type = "closed",
   isDefault = false,
-  companyId
+  companyId,
+  transaction
 }: Request): Promise<TicketStatus> => {
   const schema = Yup.object().shape({
     name: Yup.string().required().min(2),
@@ -31,17 +34,14 @@ const CreateTicketStatusService = async ({
   if (isDefault) {
     await TicketStatus.update(
       { isDefault: false },
-      { where: { companyId, type } }
+      { where: { companyId, type }, transaction }
     );
   }
 
-  const status = await TicketStatus.create({
-    name,
-    color,
-    type,
-    isDefault,
-    companyId
-  });
+  const status = await TicketStatus.create(
+    { name, color, type, isDefault, companyId },
+    { transaction }
+  );
 
   return status;
 };

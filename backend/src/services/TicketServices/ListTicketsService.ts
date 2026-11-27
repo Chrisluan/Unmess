@@ -86,7 +86,7 @@ const ListTicketsService = async ({
       model: Contact,
       as: "contact",
       // isKnown vai junto para o frontend distinguir a conversa na lista.
-      attributes: ["id", "name", "number", "profilePicUrl", "isKnown"]
+      attributes: ["id", "name", "number", "lid", "profilePicUrl", "isKnown"]
     },
     {
       model: Queue,
@@ -130,7 +130,7 @@ const ListTicketsService = async ({
         ? {
             model: Contact,
             as: "contact",
-            attributes: ["id", "name", "number", "profilePicUrl", "isKnown"],
+            attributes: ["id", "name", "number", "lid", "profilePicUrl", "isKnown"],
             where: contactWhere,
             required: true
           }

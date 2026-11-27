@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import AppError from "../../errors/AppError";
 import PipelineStage from "../../models/PipelineStage";
 import Deal from "../../models/Deal";
@@ -12,10 +12,12 @@ import Deal from "../../models/Deal";
  */
 const DeletePipelineStageService = async (
   id: string | number,
-  companyId: number
+  companyId: number,
+  transaction?: Transaction
 ): Promise<void> => {
   const stage = await PipelineStage.findOne({
-    where: { id, companyId }
+    where: { id, companyId },
+    transaction
   });
 
   if (!stage) {
@@ -23,7 +25,8 @@ const DeletePipelineStageService = async (
   }
 
   const cardsAtivos = await Deal.count({
-    where: { stageId: stage.id, companyId, status: { [Op.ne]: "moved" } }
+    where: { stageId: stage.id, companyId, status: { [Op.ne]: "moved" } },
+    transaction
   });
 
   if (cardsAtivos > 0) {
@@ -31,7 +34,8 @@ const DeletePipelineStageService = async (
   }
 
   const totalNoQuadro = await PipelineStage.count({
-    where: { boardId: stage.boardId }
+    where: { boardId: stage.boardId },
+    transaction
   });
 
   if (totalNoQuadro <= 1) {
@@ -42,7 +46,8 @@ const DeletePipelineStageService = async (
   // nenhuma saída, senão nada avançaria dali para frente.
   if (stage.isFinal) {
     const outrasFinais = await PipelineStage.count({
-      where: { boardId: stage.boardId, isFinal: true, id: { [Op.ne]: stage.id } }
+      where: { boardId: stage.boardId, isFinal: true, id: { [Op.ne]: stage.id } },
+      transaction
     });
 
     if (outrasFinais === 0) {
@@ -56,7 +61,7 @@ const DeletePipelineStageService = async (
     throw new AppError("ERR_CANNOT_DELETE_INITIAL_STAGE");
   }
 
-  await stage.destroy();
+  await stage.destroy({ transaction });
 };
 
 export default DeletePipelineStageService;

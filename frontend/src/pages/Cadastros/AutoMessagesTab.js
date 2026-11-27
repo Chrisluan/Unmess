@@ -57,6 +57,8 @@ const AutoMessagesTab = ({ getSettingValue, onSettingSaved }) => {
 	};
 
 	const handleTextBlur = async (key, value) => {
+		// Sem mudança, nada a gravar: sair do campo não é uma edição.
+		if ((getSettingValue(key) || "") === value) return;
 		try {
 			await api.put(`/settings/${key}`, { value });
 			toast.success(i18n.t("settings.success"));

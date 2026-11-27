@@ -241,9 +241,8 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 							<DialogActions>
 								<Button
 									onClick={handleClose}
-									color="secondary"
+									color="inherit"
 									disabled={isSubmitting}
-									variant="outlined"
 								>
 									{i18n.t("contactModal.buttons.cancel")}
 								</Button>
