@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import AppError from "../../errors/AppError";
+import ensureTicketWhatsapp from "../../helpers/EnsureTicketWhatsapp";
 import convertToVoiceNote from "../../helpers/ConvertToVoiceNote";
 import Ticket from "../../models/Ticket";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
@@ -22,9 +23,7 @@ const SendWhatsAppMedia = async ({
   body
 }: Request): Promise<ProviderMessage> => {
   try {
-    if (!ticket.whatsappId) {
-      throw new AppError("ERR_TICKET_NO_WHATSAPP");
-    }
+    await ensureTicketWhatsapp(ticket);
 
     const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 

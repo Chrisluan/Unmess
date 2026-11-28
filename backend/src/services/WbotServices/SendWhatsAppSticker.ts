@@ -2,6 +2,7 @@ import path from "path";
 import { existsSync } from "fs";
 
 import AppError from "../../errors/AppError";
+import ensureTicketWhatsapp from "../../helpers/EnsureTicketWhatsapp";
 import Ticket from "../../models/Ticket";
 import Sticker from "../../models/Sticker";
 import uploadConfig from "../../config/upload";
@@ -26,7 +27,7 @@ const SendWhatsAppSticker = async ({
   sticker,
   ticket
 }: Request): Promise<ProviderMessage> => {
-  if (!ticket.whatsappId) throw new AppError("ERR_TICKET_NO_WHATSAPP");
+  await ensureTicketWhatsapp(ticket);
 
   const arquivo = sticker.getDataValue("fileName") as string | null;
   if (!arquivo) throw new AppError("ERR_NO_STICKER_FILE");
