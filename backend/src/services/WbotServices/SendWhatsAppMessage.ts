@@ -1,4 +1,5 @@
 import AppError from "../../errors/AppError";
+import ensureTicketWhatsapp from "../../helpers/EnsureTicketWhatsapp";
 import Message from "../../models/Message";
 import Ticket from "../../models/Ticket";
 import { whatsappProvider, ProviderMessage } from "../../providers/WhatsApp";
@@ -18,9 +19,7 @@ const SendWhatsAppMessage = async ({
   ticket,
   quotedMsg
 }: Request): Promise<ProviderMessage> => {
-  if (!ticket.whatsappId) {
-    throw new AppError("ERR_TICKET_NO_WHATSAPP");
-  }
+  await ensureTicketWhatsapp(ticket);
 
   const chatId = chatIdDoContato(ticket.contact, ticket.isGroup);
 
